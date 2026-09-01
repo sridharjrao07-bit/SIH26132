@@ -4,103 +4,146 @@ from .base import RawPriceRecord
 
 logger = structlog.get_logger()
 
-# Unit conversion multipliers to normalize everything to 1 Quintal (100 kg)
-# e.g., if price is Rs 20 per kg, normalized price is 20 * 100 = Rs 2000 per quintal
-UNIT_CONVERSIONS = {
-    "quintal": 1.0,
-    "qtl": 1.0,
-    "kg": 100.0,
+# Known units → multiplier to convert price to Rs/quintal.
+# If a unit is NOT here, the record is REJECTED (not guessed).
+# A wrong 100× conversion (e.g. kg assumed as quintal) would silently corrupt the DB;
+# the sanity band is meant to catch bad *prices*, not bad *units*.
+UNIT_CONVERSIONS: Dict[str, float] = {
+    "quintal":  1.0,
+    "qtl":      1.0,
+    "100 kg":   1.0,
+    "kg":       100.0,
     "kilogram": 100.0,
-    "ton": 0.1,
-    "tonne": 0.1,
-    "mt": 0.1,
+    "ton":      0.1,
+    "tonne":    0.1,
+    "mt":       0.1,
 }
+
 
 class PriceValidator:
     """
-    Validates and normalizes RawPriceRecords before they are inserted into the database.
+    Validates and normalizes RawPriceRecords before insertion.
+
+    Returns (dict, None) on success, (None, reason_str) on failure so
+    the runner can tally rejected counts with an audit reason.
     """
-    
-    def __init__(self, commodity_id_map: Dict[str, str], sanity_bands: Dict[str, Tuple[float, float]]):
+
+    def __init__(
+        self,
+        commodity_id_map: Dict[str, str],
+        sanity_bands: Dict[str, Tuple[float, float]]
+    ):
         """
-        commodity_id_map: maps (source + '|' + source_key) -> internal commodity_id (UUID string)
-        sanity_bands: maps internal commodity_id -> (sanity_min, sanity_max)
+        commodity_id_map : "{source}|{norm_source_key}" → commodity_id UUID
+        sanity_bands      : commodity_id UUID → (sanity_min, sanity_max) in Rs/quintal
         """
         self.commodity_id_map = commodity_id_map
         self.sanity_bands = sanity_bands
 
-    def normalize_unit(self, price: float, unit: str) -> float:
+    # ── helpers ──────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _norm_key(s: str) -> str:
+        """Whitespace-normalized, lower-cased — mirrors runner._norm_key."""
+        return " ".join((s or "").strip().lower().split())
+
+    def normalize_unit(self, price: float, unit: str) -> Tuple[Optional[float], Optional[str]]:
         """
-        Convert a price from an arbitrary unit to ₹/quintal.
+        Convert price to Rs/quintal.
+        Returns (normalized_price, None) on success, (None, reason) on unknown unit.
         """
-        if not price:
-            return price
-            
+        if price is None:
+            return None, None
         unit_lower = unit.lower().strip()
         multiplier = UNIT_CONVERSIONS.get(unit_lower)
-        if not multiplier:
-            # If we don't know the unit, we assume quintal but log a warning.
-            # In a real system, you might reject it or add a manual mapping.
-            logger.warning("unknown_unit", unit=unit, fallback="assuming quintal")
-            return price
-            
-        return price * multiplier
+        if multiplier is None:
+            return None, f"unknown_unit:{unit!r}"
+        return price * multiplier, None
 
-    def validate_and_normalize(self, record: RawPriceRecord) -> Optional[dict]:
+    # ── main entry point ─────────────────────────────────────────────────────
+
+    def validate_and_normalize(
+        self, record: RawPriceRecord
+    ) -> Tuple[Optional[dict], Optional[str]]:
         """
-        Validates a RawPriceRecord. 
-        Returns a dictionary ready for DB insert (upsert) if valid.
-        Returns None if the record is rejected (validation failed).
+        Returns (db_dict, None) if valid, (None, reason) if rejected.
         """
         log = logger.bind(
             market=record.market_name,
             commodity=record.commodity_name,
             date=str(record.arrival_date),
-            source=record.source
+            source=record.source,
         )
 
-        # 1. Resolve Commodity ID
-        map_key = f"{record.source}|{record.commodity_name}"
+        # 1. Resolve commodity id via normalized alias key
+        map_key = f"{record.source}|{self._norm_key(record.commodity_name)}"
         commodity_id = self.commodity_id_map.get(map_key)
-        
         if not commodity_id:
-            log.warning("rejected_unknown_commodity", reason="No alias mapping found for this source_key")
-            return None
+            reason = f"unknown_commodity:{record.source}|{record.commodity_name}"
+            log.warning("rejected", reason=reason)
+            return None, reason
 
-        # 2. Normalize Prices
-        norm_modal = self.normalize_unit(record.modal_price, record.unit)
-        norm_min = self.normalize_unit(record.min_price, record.unit) if record.min_price else None
-        norm_max = self.normalize_unit(record.max_price, record.unit) if record.max_price else None
+        # 2. Normalize modal price — required
+        norm_modal, err = self.normalize_unit(record.modal_price, record.unit)
+        if err:
+            log.warning("rejected", reason=err)
+            return None, err
 
-        # 3. Basic Ordering Logic (min <= modal <= max)
-        if norm_min and norm_modal < norm_min:
-            log.warning("rejected_price_order", reason="modal < min", modal=norm_modal, min=norm_min)
-            return None
-        if norm_max and norm_modal > norm_max:
-            log.warning("rejected_price_order", reason="modal > max", modal=norm_modal, max=norm_max)
-            return None
+        # 3. Normalize optional min/max; reject if unit is unknown there too
+        norm_min = norm_max = None
+        if record.min_price is not None and record.min_price > 0:
+            norm_min, err = self.normalize_unit(record.min_price, record.unit)
+            if err:
+                log.warning("rejected", reason=err)
+                return None, err
 
-        # 4. Sanity Band Check
+        if record.max_price is not None and record.max_price > 0:
+            norm_max, err = self.normalize_unit(record.max_price, record.unit)
+            if err:
+                log.warning("rejected", reason=err)
+                return None, err
+
+        # 4. Ordering: min ≤ modal ≤ max
+        if norm_min is not None and norm_modal < norm_min:
+            reason = f"price_order:modal({norm_modal})<min({norm_min})"
+            log.warning("rejected", reason=reason)
+            return None, reason
+        if norm_max is not None and norm_modal > norm_max:
+            reason = f"price_order:modal({norm_modal})>max({norm_max})"
+            log.warning("rejected", reason=reason)
+            return None, reason
+
+        # 5. Sanity band
         bands = self.sanity_bands.get(commodity_id)
         if bands:
             s_min, s_max = bands
             if norm_modal < s_min or norm_modal > s_max:
-                log.warning("rejected_sanity_band", reason="modal price outside sanity band", 
-                            modal=norm_modal, s_min=s_min, s_max=s_max)
-                return None
+                reason = (
+                    f"sanity_band:modal({norm_modal}) "
+                    f"outside [{s_min},{s_max}] for commodity {commodity_id}"
+                )
+                log.warning("rejected", reason=reason)
+                return None, reason
 
-        # If we passed everything, return the DB-ready dictionary
+        # FIX (IMPORTANT): store canonical unit, NOT the raw unit.
+        # raw unit is preserved in raw_payload for audit.
+        # FIX (IMPORTANT): set source_ref for provenance traceability.
+        source_ref = record.source_ref or (
+            f"{record.market_name}|{record.commodity_name}"
+            f"|{record.arrival_date}|{record.variety or 'General'}"
+        )
+
         return {
             "commodity_id": commodity_id,
             "arrival_date": str(record.arrival_date),
-            "min_price": norm_min,
-            "max_price": norm_max,
-            "modal_price": norm_modal,
-            "unit": record.unit, # Store original unit
-            "arrival_qty": record.arrival_qty,
-            "variety": record.variety or "General",
-            "grade": record.grade or "General",
-            "source": record.source,
-            "source_ref": record.source_ref,
-            "raw_payload": record.raw_payload
-        }
+            "min_price":    norm_min,
+            "max_price":    norm_max,
+            "modal_price":  norm_modal,
+            "unit":         "quintal",   # always canonical — raw unit is in raw_payload
+            "arrival_qty":  record.arrival_qty,
+            "variety":      record.variety or "General",
+            "grade":        record.grade or "General",
+            "source":       record.source,
+            "source_ref":   source_ref,
+            "raw_payload":  record.raw_payload,
+        }, None
