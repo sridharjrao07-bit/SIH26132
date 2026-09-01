@@ -52,11 +52,11 @@ async def run_ingestion_job():
     await runner.run(district=settings.target_district, state=settings.target_state)
 
 
-async def startup_catchup():
+async def _run_catchup_task():
     """
-    On boot: if the last successful ingestion run is older than the interval,
-    run ingestion immediately rather than waiting for the first scheduled tick.
-    10 lines of self-healing — critical for free-tier hosts that restart often.
+    Internal coroutine: checks whether ingestion is stale and fires a catch-up run.
+    Called exclusively via asyncio.create_task — never awaited directly at startup
+    so it does NOT block the API from becoming ready.
     """
     try:
         supabase = get_supabase_client()
@@ -65,16 +65,43 @@ async def startup_catchup():
         ).order("run_at", desc=True).limit(1).execute()
 
         if resp.data:
-            last_run = datetime.fromisoformat(resp.data[0]["run_at"])
-            cutoff = datetime.now(timezone.utc) - timedelta(hours=settings.ingestion_interval_hours)
+            last_run_str = resp.data[0]["run_at"]
+            # Supabase returns UTC ISO strings; normalize to aware datetime
+            last_run = datetime.fromisoformat(
+                last_run_str.replace("Z", "+00:00")
+            )
+            cutoff = datetime.now(timezone.utc) - timedelta(
+                hours=settings.ingestion_interval_hours
+            )
             if last_run > cutoff:
                 logger.info("startup_catchup_skipped", last_run=str(last_run))
                 return
 
-        logger.info("startup_catchup_running", reason="no recent successful ingestion found")
+        logger.info("startup_catchup_running",
+                    reason="no recent successful ingestion found")
         await run_ingestion_job()
+
     except Exception as e:
+        # Catch-up is best-effort: log and continue. API is already serving.
         logger.warning("startup_catchup_failed", error=str(e))
+
+
+def schedule_startup_catchup():
+    """
+    Schedule the catch-up check as a fire-and-forget background task.
+    Call this from main.py's lifespan handler AFTER the scheduler has started:
+
+        asyncio.create_task is used internally so the API starts immediately
+        without waiting for the first ingestion run to complete.
+
+    Race condition note: if the host restarts exactly when the interval fires,
+    the scheduled job and the catch-up task could both run.  The upsert ON
+    CONFLICT clause makes a double-fetch harmless for data correctness, but it
+    does burn API quota.  For Stage 5 (alerts), we will add a pg_try_advisory_lock
+    to prevent the alert-checker from firing twice.
+    """
+    import asyncio
+    asyncio.create_task(_run_catchup_task())
 
 
 def setup_scheduler() -> AsyncIOScheduler:

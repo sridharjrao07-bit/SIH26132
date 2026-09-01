@@ -93,17 +93,23 @@ security definer
 set search_path = public
 as $$
 begin
-    -- Only an admin may call this
-    if not public.has_role('admin') then
+    -- Allow two principals to call this:
+    --   1. An authenticated user who is already an admin (production path)
+    --   2. The 'postgres' superuser role (Supabase SQL editor / bootstrap path)
+    --
+    -- Bootstrap problem: has_role() checks auth.uid(), which is NULL in the SQL
+    -- editor because there is no JWT session.  current_user = 'postgres' is the
+    -- escape hatch that allows the very first admin to be seeded.
+    if not (public.has_role('admin') or current_user = 'postgres') then
         raise exception 'admin_set_role: 403 admin required';
     end if;
 
     -- Validate the role value before writing
     if new_role not in ('farmer', 'admin', 'buyer') then
-        raise exception 'admin_set_role: invalid role %', new_role;
+        raise exception 'admin_set_role: invalid role %, must be farmer|admin|buyer', new_role;
     end if;
 
-    -- Set the bypass flag so guard_profile_role lets this through
+    -- Set the session flag so guard_profile_role lets this UPDATE through
     perform set_config('app.skip_role_guard', 'true', true);
 
     update public.user_profiles
@@ -112,15 +118,33 @@ begin
     where  id = target_user;
 
     if not found then
-        raise exception 'admin_set_role: user % not found', target_user;
+        raise exception 'admin_set_role: user % not found in user_profiles', target_user;
     end if;
 end;
 $$;
 
 comment on function public.admin_set_role(uuid, text) is
-  'Single sanctioned path to change a user role. Requires caller to be admin.
-   Bypasses guard_profile_role via app.skip_role_guard session variable.
-   Call from admin dashboard or Supabase SQL editor only.';
+  'Single sanctioned path to change a user role.
+   Guards: caller must be admin OR the postgres superuser (SQL editor bootstrap).
+   Bypasses guard_profile_role via the app.skip_role_guard session variable.
+   NEVER callable via HTTP — see REVOKE below.';
+
+-- Belt-and-braces: prevent this function from being called via PostgREST HTTP.
+-- has_role() already blocks anon/authenticated in the function body,
+-- but an explicit REVOKE is cleaner and survives future RLS changes.
+revoke execute on function public.admin_set_role(uuid, text) from anon, authenticated;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- BOOTSTRAP INSTRUCTIONS (run once in the Supabase SQL editor)
+-- After a new user signs up, elevate them to admin with:
+--
+--   select public.admin_set_role(
+--       '<paste-the-users-uuid-from-auth.users>',
+--       'admin'
+--   );
+--
+-- To find the UUID:  select id, email from auth.users;
+-- ─────────────────────────────────────────────────────────────────────────────
 
 
 -- ─────────────────────────────────────────────────────────────────────────────
