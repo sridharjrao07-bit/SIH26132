@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     
     # Data Sources
     data_gov_in_api_key: str = Field(..., alias="DATA_GOV_IN_API_KEY")
+    enable_agmarknet: bool = Field(default=False, alias="ENABLE_AGMARKNET")  # optional fallback
     
     # SMS Gateway
     sms_gateway: str = Field(default="mock", alias="SMS_GATEWAY")
@@ -33,6 +34,13 @@ class Settings(BaseSettings):
     # Scope
     target_district: str = Field(default="Nashik", alias="TARGET_DISTRICT")
     target_state: str = Field(default="Maharashtra", alias="TARGET_STATE")
+
+    # CORS
+    cors_origin: str = Field(default="http://localhost:3000", alias="CORS_ORIGIN")
+
+    # Scheduler guard: set RUN_SCHEDULER=0 to disable background jobs
+    # (prevents double-scheduling under uvicorn --reload which spawns 2 workers)
+    run_scheduler: bool = Field(default=True, alias="RUN_SCHEDULER")
     
     model_config = SettingsConfigDict(
         env_file=".env",
