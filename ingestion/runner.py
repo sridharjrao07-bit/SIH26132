@@ -66,19 +66,20 @@ class IngestionRunner:
                     if k:
                         market_map[k] = row["id"]
 
-            # Fetch source_key spellings per adapter to use as fetch parameters
-            # (prevents passing "Soybean" when API wants "Soyabean")
-            # We group alias source_key by source for lookup
+            # Fetch keys per source: only pull source_keys for THIS adapter's source.
+            # This is critical — if we pulled all sources together, SMS aliases like
+            # 'PYAJ' and 'कांदा' would get sent as data.gov.in commodity filters
+            # and return 0 results, burning API quota.
             source_fetch_keys: Dict[str, List[str]] = {}
-            for row in resp.data:
-                pass  # market resp reused; get commodity fetch keys below
             resp_aliases = self.supabase.table("commodity_alias").select(
                 "source, source_key"
-            ).execute()
+            ).in_("source", [a.source_name for a in self.adapters]).execute()
             for row in resp_aliases.data:
-                source_fetch_keys.setdefault(row["source"], [])
-                if row["source_key"] not in source_fetch_keys[row["source"]]:
-                    source_fetch_keys[row["source"]].append(row["source_key"])
+                src = row["source"]
+                key = row["source_key"]
+                source_fetch_keys.setdefault(src, [])
+                if key not in source_fetch_keys[src]:
+                    source_fetch_keys[src].append(key)
 
         except Exception as e:
             log.error("metadata_fetch_failed", error=str(e))
