@@ -97,7 +97,10 @@ def list_lots(
     """Own lots plus lots aggregated under this user as an FPO."""
     own_q = supabase.table("lots").select("*").eq("user_id", user_id)
     fpo_q = supabase.table("lots").select("*").eq("fpo_id", user_id)
+    allowed = {"open", "offered", "matched", "sold", "withdrawn"}
     if status:
+        if status not in allowed:
+            raise HTTPException(422, "invalid status")
         own_q = own_q.eq("status", status)
         fpo_q = fpo_q.eq("status", status)
     own = own_q.order("created_at", desc=True).limit(100).execute().data or []

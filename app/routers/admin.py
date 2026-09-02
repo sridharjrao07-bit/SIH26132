@@ -30,8 +30,16 @@ async def trigger_forecast(supabase: Client = Depends(get_supabase_service_role)
         engine = ForecastEngine(supabase)
         summary = await asyncio.to_thread(engine.run)
         return {"status": "success", "summary": summary}
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("admin_forecast_failed")
+        raise HTTPException(503, "forecast job failed")
     finally:
-        supabase.rpc("release_job_lock", {"p_job_key": "forecast", "p_holder": "admin_trigger"}).execute()
+        try:
+            supabase.rpc("release_job_lock", {"p_job_key": "forecast", "p_holder": "admin_trigger"}).execute()
+        except Exception:
+            logger.warning("forecast_lock_release_failed")
 
 
 @router.post("/alert-check/run", dependencies=[Depends(require_role("admin"))])
@@ -48,8 +56,16 @@ async def trigger_alert_check(supabase: Client = Depends(get_supabase_service_ro
         checker = AlertChecker(supabase)
         summary = await asyncio.to_thread(checker.run)
         return {"status": "success", "summary": summary}
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("admin_alert_check_failed")
+        raise HTTPException(503, "alert check failed")
     finally:
-        supabase.rpc("release_job_lock", {"p_job_key": "alert_check", "p_holder": "admin_trigger"}).execute()
+        try:
+            supabase.rpc("release_job_lock", {"p_job_key": "alert_check", "p_holder": "admin_trigger"}).execute()
+        except Exception:
+            logger.warning("alert_lock_release_failed")
 
 
 @router.post("/buyers", dependencies=[Depends(require_role("admin"))])

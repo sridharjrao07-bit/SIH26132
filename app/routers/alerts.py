@@ -58,7 +58,7 @@ def list_alerts(
         .limit(limit)
         .execute()
     )
-    return res.data
+    return res.data or []
 
 @router.patch("/{alert_id}")
 def update_alert(

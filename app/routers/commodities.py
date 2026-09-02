@@ -14,4 +14,4 @@ def get_commodities(supabase: Client = Depends(get_supabase)):
     res = supabase.table("commodities").select(
         "id, name_en, name_mr, name_hi, category, standard_unit"
     ).order("name_en").execute()
-    return res.data
+    return res.data or []
