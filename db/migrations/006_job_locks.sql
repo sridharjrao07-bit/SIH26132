@@ -64,14 +64,19 @@ revoke execute on function public.claim_job_lock(text, text, integer) from publi
 grant execute on function public.claim_job_lock(text, text, integer) to service_role;
 
 create or replace function public.release_job_lock(p_job_key text, p_holder text)
-returns void
+returns boolean
 language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+    released integer;
 begin
     delete from public.job_locks
     where job_key = p_job_key and holder = p_holder;
+    
+    get diagnostics released = row_count;
+    return released > 0;
 end;
 $$;
 

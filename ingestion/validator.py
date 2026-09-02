@@ -1,3 +1,4 @@
+import math
 import structlog
 from typing import Optional, Tuple, Dict
 from .base import RawPriceRecord
@@ -88,20 +89,33 @@ class PriceValidator:
         if err:
             log.warning("rejected", reason=err)
             return None, err
+            
+        if norm_modal is not None and (not math.isfinite(norm_modal) or norm_modal <= 0):
+            reason = f"invalid_price:modal({norm_modal})"
+            log.warning("rejected", reason=reason)
+            return None, reason
 
         # 3. Normalize optional min/max; reject if unit is unknown there too
         norm_min = norm_max = None
-        if record.min_price is not None and record.min_price > 0:
+        if record.min_price is not None:
             norm_min, err = self.normalize_unit(record.min_price, record.unit)
             if err:
                 log.warning("rejected", reason=err)
                 return None, err
+            if norm_min is not None and (not math.isfinite(norm_min) or norm_min <= 0):
+                reason = f"invalid_price:min({norm_min})"
+                log.warning("rejected", reason=reason)
+                return None, reason
 
-        if record.max_price is not None and record.max_price > 0:
+        if record.max_price is not None:
             norm_max, err = self.normalize_unit(record.max_price, record.unit)
             if err:
                 log.warning("rejected", reason=err)
                 return None, err
+            if norm_max is not None and (not math.isfinite(norm_max) or norm_max <= 0):
+                reason = f"invalid_price:max({norm_max})"
+                log.warning("rejected", reason=reason)
+                return None, reason
 
         # 4. Ordering: min ≤ modal ≤ max
         if norm_min is not None and norm_modal < norm_min:

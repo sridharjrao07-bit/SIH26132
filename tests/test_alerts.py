@@ -303,3 +303,75 @@ def test_marathi_message_fits_in_70_chars(fake_supabase):
     
     for msg in sent_messages:
         assert len(msg) <= 70, f"Marathi SMS exceeds 70 chars: {len(msg)} chars"
+
+def test_failed_resend_restores_previous_timestamp(fake_supabase):
+    old_ts = (datetime.utcnow().replace(tzinfo=None) - timedelta(hours=30)).isoformat()
+    fake_supabase.seed("user_profiles", [make_profile()])
+    fake_supabase.seed("alerts", [make_alert("a1", last_notified_at=old_ts, notified_count=2)])
+    fake_supabase.seed("prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300}))
+    
+    from notifications.alert_checker import AlertChecker
+    checker = AlertChecker(fake_supabase)
+    
+    class FailingGateway:
+        def send_sms(self, phone, msg, template_id=None):
+            raise Exception("Gateway down")
+            
+    checker.gateway = FailingGateway()
+    assert checker.run()["fired"] == 0
+    
+    alert = fake_supabase._data["alerts"][0]
+    assert alert["last_notified_at"] == old_ts, "must restore old_ts, not NULL"
+    assert alert["notified_count"] == 2
+
+def test_failed_send_rolls_back_claim(fake_supabase):
+    fake_supabase.seed("markets", [{"id": MARKET_ID_LASALGAON, "name": "Lasalgaon", "state": "MH", "district": "Nashik"}])
+    fake_supabase.seed("commodities", [{"id": COMMODITY_ID_ONION, "name": "Onion", "category": "Veg"}])
+    fake_supabase.seed("user_profiles", [make_profile()])
+    fake_supabase.seed("alerts", [make_alert("a1", last_notified_at=None, notified_count=0)])
+    fake_supabase.seed("prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300}))
+    
+    from notifications.alert_checker import AlertChecker
+    checker = AlertChecker(fake_supabase)
+    
+    class FailingGateway:
+        def send_sms(self, phone, msg, template_id=None):
+            raise Exception("Gateway down")
+            
+    checker.gateway = FailingGateway()
+    assert checker.run()["fired"] == 0
+    
+    alert = fake_supabase._data["alerts"][0]
+    assert alert["last_notified_at"] is None, "must restore NULL timestamp"
+    assert alert["notified_count"] == 0, "must restore 0 count"
+
+def test_retry_after_failed_send(fake_supabase):
+    fake_supabase.seed("markets", [{"id": MARKET_ID_LASALGAON, "name": "Lasalgaon", "state": "MH", "district": "Nashik"}])
+    fake_supabase.seed("commodities", [{"id": COMMODITY_ID_ONION, "name": "Onion", "category": "Veg"}])
+    fake_supabase.seed("user_profiles", [make_profile()])
+    fake_supabase.seed("alerts", [make_alert("a1", last_notified_at=None, notified_count=0)])
+    fake_supabase.seed("prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300}))
+    
+    from notifications.alert_checker import AlertChecker
+    checker = AlertChecker(fake_supabase)
+    
+    class FailingGateway:
+        def send_sms(self, phone, msg, template_id=None):
+            raise Exception("Gateway down")
+            
+    checker.gateway = FailingGateway()
+    checker.run()
+    
+    alert = fake_supabase._data["alerts"][0]
+    assert alert["last_notified_at"] is None
+    
+    # Second run with a working gateway
+    from notifications.sms_gateway import MockSMSGateway
+    import os
+    checker.gateway = MockSMSGateway(log_file=os.devnull)
+    
+    assert checker.run()["fired"] == 1
+    
+    alert = fake_supabase._data["alerts"][0]
+    assert alert["last_notified_at"] is not None
+    assert alert["notified_count"] == 1

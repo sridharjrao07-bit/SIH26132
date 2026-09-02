@@ -18,6 +18,19 @@ def _hours_ago(h: float) -> str:
 def _days_ago_date(n: int) -> str:
     return (date.today() - timedelta(days=n)).isoformat()
 
+def normalize_phone(phone: Optional[str]) -> Optional[str]:
+    if not phone:
+        return None
+    cleaned = "".join(c for c in str(phone) if c.isdigit() or c == "+")
+    if not cleaned:
+        return None
+    if len(cleaned) == 10 and cleaned.isdigit():
+        return "+91" + cleaned
+    if cleaned.startswith("+") and len(cleaned) >= 11:
+        return cleaned
+    if cleaned.startswith("91") and len(cleaned) == 12:
+        return "+" + cleaned
+    return None
 
 class AlertChecker:
     HISTORY_DAYS = 15   # look-back window for crossing detection
@@ -97,7 +110,14 @@ class AlertChecker:
             if user_sms_count.get(uid, 0) >= self.MAX_SMS_PER_USER:
                 continue  # SMS cap: max 3 per user per run
 
-            new_count = (alert.get("notified_count") or 0) + 1
+            phone = normalize_phone(user.get("phone"))
+            if not phone:
+                logger.warning("alert_missing_phone", alert_id=alert["id"], user_id=uid)
+                continue
+
+            old_count = alert.get("notified_count") or 0
+            new_count = old_count + 1
+            rollback_ts = alert.get("last_notified_at")
 
             # Atomic claim: cooldown re-checked inside the UPDATE WHERE clause.
             # Only rows where last_notified_at is still old (or NULL) will be returned.
@@ -144,13 +164,32 @@ class AlertChecker:
                 )
 
             template_id = resolve_template(lang)
-            success = self.gateway.send_sms(user.get("phone") or "", msg, template_id)
+            
+            try:
+                success = self.gateway.send_sms(phone, msg, template_id)
+            except Exception as e:
+                logger.error("sms_gateway_error", alert_id=alert["id"], error=str(e))
+                success = False
+
+            if not success:
+                # Rollback guarded by the claim timestamp
+                if rollback_ts is None:
+                    # Supabase Python handles None as NULL via update
+                    self.supabase.table("alerts").update({
+                        "last_notified_at": None,
+                        "notified_count": old_count
+                    }).eq("id", alert["id"]).eq("last_notified_at", now_iso).execute()
+                else:
+                    self.supabase.table("alerts").update({
+                        "last_notified_at": rollback_ts,
+                        "notified_count": old_count
+                    }).eq("id", alert["id"]).eq("last_notified_at", now_iso).execute()
 
             # Write to notification_log
             self.supabase.table("notification_log").insert({
                 "alert_id": alert["id"],
                 "user_id": uid,
-                "recipient": user.get("phone") or "",
+                "recipient": phone,
                 "message": msg,
                 "language": lang,
                 "status": "sent" if success else "failed",
