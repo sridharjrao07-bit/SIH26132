@@ -1,0 +1,9 @@
+# Development / CI only — never install into the production image
+-r requirements.txt
+
+pytest==8.3.5
+pytest-asyncio==0.25.3
+respx==0.21.1
+ruff==0.12.12
+pip-audit==2.9.0
+pre-commit==4.2.0

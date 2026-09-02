@@ -8,18 +8,19 @@ import pytest
 import time
 from datetime import date, datetime, timezone
 from typing import Any, List, Optional
-from unittest.mock import MagicMock
 
 # Set required env vars so pydantic-settings doesn't crash on import during test collection
 os.environ.setdefault("SUPABASE_URL", "https://placeholder.supabase.co")
 os.environ.setdefault("SUPABASE_ANON_KEY", "placeholder")
 os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "placeholder")
-os.environ.setdefault("SUPABASE_JWT_SECRET", "placeholder")
+os.environ.setdefault("SUPABASE_JWT_SECRET", "ci-placeholder-jwt-secret-32b-min")
 os.environ.setdefault("SUPABASE_DB_URL", "postgresql://p@db.placeholder.supabase.co:5432/postgres")
 os.environ.setdefault("DATA_GOV_IN_API_KEY", "placeholder")
 os.environ.setdefault("RUN_SCHEDULER", "0")
+os.environ.setdefault("RATE_LIMIT_ENABLED", "0")
+os.environ.setdefault("APP_ENV", "development")
 
-from ingestion.base import RawPriceRecord, SourceFetchError
+from ingestion.base import RawPriceRecord
 from ingestion.validator import PriceValidator
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -66,7 +67,9 @@ class _FakeQuery:
     def lt(self, col, val): self._filters[f"{col}__lt"] = val; return self
     def or_(self, filter_str): self._or_filter = filter_str; return self
     def is_(self, col, val): self._filters[f"{col}__is"] = val; return self
-    def order(self, *a, **kw): return self
+    def order(self, col, desc=False, **kw):
+        self._filters["__order__"] = (col, bool(desc))
+        return self
     def limit(self, n): self._filters["__limit__"] = n; return self
     def range(self, start, end): self._filters["__range__"] = (start, end); return self
 
@@ -115,18 +118,60 @@ class FakeSupabase:
         return _FakeQuery(self, name)
 
     def rpc(self, fn_name: str, params: dict = None):
-        """Stub for RPC calls. Returns _ExecuteResult(data=True) by default."""
-        rpc_result = self._rpc_handlers.get(fn_name)
-        if rpc_result is not None:
-            if callable(rpc_result):
-                return _ExecuteResult(data=rpc_result(params or {}))
-            return _ExecuteResult(data=rpc_result)
-        # Default: claim succeeds, release is no-op
-        return _ExecuteResult(data=True)
+        """Stub matching supabase-py: rpc(...).execute() → _ExecuteResult."""
+        store = self
+        params = params or {}
 
-    def upsert_calls(self) -> list:
-        """Return all recorded upsert calls — used in test assertions for B2 regression."""
-        return [c for c in self.calls if c["op"] == "upsert"]
+        class _RpcQuery:
+            def execute(_self):
+                rpc_result = store._rpc_handlers.get(fn_name)
+                if rpc_result is not None:
+                    if callable(rpc_result):
+                        return _ExecuteResult(data=rpc_result(params))
+                    return _ExecuteResult(data=rpc_result)
+                if fn_name == "lookup_profile_by_phone":
+                    return _ExecuteResult(data=store._lookup_profile(params.get("p_phone")))
+                if fn_name == "open_lots_for_user":
+                    uid = params.get("p_user_id")
+                    rows = [
+                        dict(l)
+                        for l in store._data.get("lots", [])
+                        if l.get("user_id") == uid and l.get("status") in ("open", "offered")
+                    ]
+                    return _ExecuteResult(data=rows)
+                if fn_name in ("claim_job_lock", "release_job_lock"):
+                    return _ExecuteResult(data=True)
+                return _ExecuteResult(data=True)
+
+        return _RpcQuery()
+
+    @staticmethod
+    def _last10(phone) -> str:
+        digits = "".join(c for c in str(phone or "") if c.isdigit())
+        return digits[-10:] if len(digits) >= 10 else digits
+
+    def _lookup_profile(self, phone):
+        rows = self._data.get("user_profiles", [])
+        for u in rows:
+            if u.get("phone") == phone:
+                return [FakeSupabase._profile_rpc(u)]
+        target = self._last10(phone)
+        if target:
+            for u in rows:
+                if self._last10(u.get("phone")) == target:
+                    return [FakeSupabase._profile_rpc(u)]
+        return []
+
+    @staticmethod
+    def _profile_rpc(u: dict) -> dict:
+        return {
+            "id": u.get("id"),
+            "preferred_language": u.get("preferred_language"),
+            "lat": u.get("lat"),
+            "lng": u.get("lng"),
+            "district": u.get("district"),
+            "name": u.get("name"),
+        }
 
     def set_rpc(self, fn_name: str, result):
         """Pre-configure what an rpc() call returns."""
@@ -156,9 +201,9 @@ class FakeSupabase:
 
         if op == "delete":
             rows = self._data.get(table, [])
-            kept = [r for r in rows if not self._matches_filters(r, filters)]
-            self._data[table] = kept
-            return _ExecuteResult(data=[])
+            deleted = [r for r in rows if self._matches_filters(r, filters)]
+            self._data[table] = [r for r in rows if not self._matches_filters(r, filters)]
+            return _ExecuteResult(data=deleted)
 
         # SELECT: apply all filter types
         rows = list(self._data.get(table, []))
@@ -209,6 +254,12 @@ class FakeSupabase:
 
     def _apply_filters(self, rows: list, filters: dict) -> list:
         rows = [r for r in rows if self._matches_filters(r, filters)]
+        if "__order__" in filters:
+            col, desc = filters["__order__"]
+            rows = sorted(rows, key=lambda r: str(r.get(col) or ""), reverse=desc)
+        if "__range__" in filters:
+            start, end = filters["__range__"]
+            rows = rows[start:end + 1]
         if "__limit__" in filters:
             rows = rows[:filters["__limit__"]]
         return rows
@@ -249,6 +300,7 @@ COMMODITY_ID_TOMATO  = "dddd-0000-0000-0000"
 # via admin_set_role; the JWT sub claim is just a user identifier.
 FARMER_USER_ID = "farmer-uuid-0001-0000-000000000000"
 ADMIN_USER_ID  = "admin-uuid-0001-0000-000000000000"
+FPO_USER_ID    = "fpo-uuid-0001-0000-000000000000"
 
 
 def mint_jwt(user_id: str) -> str:
@@ -260,9 +312,9 @@ def mint_jwt(user_id: str) -> str:
     resolved from the user_profiles DB table by require_role(), NOT from the
     token — that's the whole point of the 003 security patch.
     """
-    from jose import jwt
-    secret = os.environ.get("SUPABASE_JWT_SECRET", "placeholder")
-    return jwt.encode(
+    import jwt as pyjwt
+    secret = os.environ.get("SUPABASE_JWT_SECRET", "ci-placeholder-jwt-secret-32b-min")
+    return pyjwt.encode(
         {
             "sub":  user_id,
             "aud":  "authenticated",
@@ -346,6 +398,15 @@ def fake_supabase():
             "lng":                None,
             "district":           "Nashik",
         },
+        {
+            "id":                 FPO_USER_ID,
+            "role":               "fpo",
+            "phone":              "+919876543212",
+            "preferred_language": "mr",
+            "lat":                20.1,
+            "lng":                74.2,
+            "district":           "Nashik",
+        },
     ])
     return db
 
@@ -368,11 +429,14 @@ def fake_supabase_with_logs(fake_supabase):
 def override_supabase(fake_supabase):
     from app.main import app
     from app.deps import get_supabase, get_supabase_service_role, get_supabase_as_user
+    from app.routers import sms as sms_mod
     app.dependency_overrides[get_supabase] = lambda: fake_supabase
     app.dependency_overrides[get_supabase_service_role] = lambda: fake_supabase
     app.dependency_overrides[get_supabase_as_user] = lambda: fake_supabase
+    sms_mod.reset_outbound_cap()
     yield
     app.dependency_overrides.clear()
+    sms_mod.reset_outbound_cap()
 
 @pytest.fixture
 def validator(fake_supabase):

@@ -1,0 +1,69 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  RUN_SCHEDULER: "0"
+  RATE_LIMIT_ENABLED: "0"
+  APP_ENV: development
+  SUPABASE_URL: https://placeholder.supabase.co
+  SUPABASE_ANON_KEY: placeholder
+  SUPABASE_SERVICE_ROLE_KEY: placeholder
+  SUPABASE_JWT_SECRET: ci-placeholder-jwt-secret-32b-min
+  SUPABASE_DB_URL: postgresql://p@db.placeholder.supabase.co:5432/postgres
+  DATA_GOV_IN_API_KEY: placeholder
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          allow-prereleases: true
+      - name: Install dev deps
+        run: pip install -r requirements-dev.txt
+      - name: Ruff
+        run: ruff check app ingestion forecasting notifications tests demo scripts
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          allow-prereleases: true
+      - name: Install dev deps
+        run: pip install -r requirements-dev.txt
+      - name: Pytest
+        run: pytest -q
+
+  audit:
+    name: audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          allow-prereleases: true
+      - name: Install audit tools
+        run: pip install -r requirements-dev.txt
+      - name: pip-audit (production lock)
+        run: pip-audit -r requirements.txt
+      - name: Secret patterns
+        run: |
+          if git grep -I -E 'sk_live_|ghp_[A-Za-z0-9]{20,}|supabase_service_role_eyJ' -- ':!.env.example' ':!docs/archive/**'; then
+            echo "Possible secret in the tree" >&2
+            exit 1
+          fi
+          echo "no obvious secrets"

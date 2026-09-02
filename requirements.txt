@@ -1,56 +1,31 @@
-# SIH26132 — Krishi Bazaar Backend
-# Python >=3.11,<3.13  (fastapi/uvicorn wheels are tested on 3.11 and 3.12 only)
-# Recommended: Python 3.11 or 3.12.
+# Production dependencies — Krishi Bazaar API
+# Python 3.14 (pre-built wheels; do not pin pydantic 2.7 / FastAPI 0.111)
+# Install: pip install -r requirements.txt
+# Dev/test extras: pip install -r requirements-dev.txt
 
-# ── FastAPI web framework ─────────────────────────────────────────────────────
-fastapi==0.111.0
-uvicorn[standard]==0.30.1
-python-multipart==0.0.9      # for form data (manual price entry)
-slowapi==0.1.9               # rate limiting middleware
-jinja2>=3.1                  # for TemplateResponse in dashboard (explicit, not transitive)
+# ── FastAPI ───────────────────────────────────────────────────────────────────
+fastapi==0.141.1
+starlette==1.3.1
+uvicorn[standard]==0.34.0
+python-multipart==0.0.32
+slowapi==0.1.9
+jinja2==3.1.6
 
-# ── Supabase ──────────────────────────────────────────────────────────────────
-supabase==2.4.3              # supabase-py client (ingestion/forecast/alert jobs)
-python-jose[cryptography]==3.3.0  # JWT verification for Supabase Auth tokens
-
-# ── Database ──────────────────────────────────────────────────────────────────
-# Using Supabase PostgREST (via supabase-py) exclusively; SQLAlchemy removed.
+# ── Supabase / JWT ────────────────────────────────────────────────────────────
+supabase==2.4.3
+PyJWT==2.13.0
 
 # ── Scheduler ─────────────────────────────────────────────────────────────────
 apscheduler==3.10.4
 
-# ── Data ingestion / processing ───────────────────────────────────────────────
-httpx==0.27.0                # async HTTP client for data.gov.in API + MSG91 gateway
-tenacity==8.3.0              # retry logic with exponential backoff
-
-# ── Optional — Agmarknet Selenium scraper ─────────────────────────────────────
-# NOT installed in CI / Render free tier. Requires Chrome + ChromeDriver.
-# Uncomment locally only when ENABLE_AGMARKNET=1:
-# selenium
-# beautifulsoup4
-# webdriver-manager
-
-# ── Forecasting ───────────────────────────────────────────────────────────────
-# Pure-Python MA/LR — no numpy/pandas/scikit-learn required.
-# (Commented stubs retained for future Stage-5 ML upgrade)
-# pandas==2.2.3
-# scikit-learn==1.5.0
-# numpy==1.26.4
+# ── Ingestion ─────────────────────────────────────────────────────────────────
+httpx==0.27.2
+tenacity==9.0.0
 
 # ── Validation ────────────────────────────────────────────────────────────────
-pydantic==2.7.1
-pydantic-settings==2.3.4
+pydantic==2.12.4
+pydantic-settings==2.7.0
 
-# ── SMS ───────────────────────────────────────────────────────────────────────
-# No MSG91 SDK — we call their Flow REST API directly via httpx (already above)
-
-# ── Utilities ─────────────────────────────────────────────────────────────────
-structlog==24.1.0            # structured JSON logging
-python-dotenv==1.0.1         # used by demo/mint_admin_token.py
-
-# ── Development / testing only ────────────────────────────────────────────────
-pytest==8.2.1
-pytest-asyncio==0.23.7
-respx==0.21.1                # httpx request mocking for MSG91 gateway tests
-# httpx is already pinned above — not repeated here
-# psycopg2-binary  # optional: live DB tests (tests/test_live_locks.py)
+# ── Observability ─────────────────────────────────────────────────────────────
+structlog==24.4.0
+python-dotenv==1.2.2

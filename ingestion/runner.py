@@ -1,10 +1,11 @@
+import asyncio
 import structlog
 import time
 from typing import List, Optional, Tuple, Dict
 from supabase import Client
 from datetime import datetime, timezone
 
-from .base import IngestionSourceAdapter, RawPriceRecord, SourceFetchError
+from .base import IngestionSourceAdapter, SourceFetchError
 from .validator import PriceValidator
 
 logger = structlog.get_logger()
@@ -19,6 +20,10 @@ class IngestionRunner:
     def __init__(self, supabase: Client, adapters: List[IngestionSourceAdapter]):
         self.supabase = supabase
         self.adapters = adapters
+
+    async def _db(self, fn):
+        """Run a blocking PostgREST call off the event loop."""
+        return await asyncio.to_thread(fn)
 
     async def run(self, district: str, state: str = "Maharashtra"):
         """
@@ -36,18 +41,20 @@ class IngestionRunner:
         # ── 1. Fetch reference metadata ──────────────────────────────────────
         try:
             # commodity_alias: normalize source_key for fuzzy matching
-            resp = self.supabase.table("commodity_alias").select(
-                "commodity_id, source, source_key"
-            ).execute()
+            resp = await asyncio.to_thread(
+                lambda: self.supabase.table("commodity_alias").select(
+                    "commodity_id, source, source_key"
+                ).execute()
+            )
             commodity_id_map: Dict[str, str] = {
                 f"{row['source']}|{_norm_key(row['source_key'])}": row["commodity_id"]
                 for row in resp.data
             }
 
             # FIX BLOCKER 3: correct column names are sanity_min / sanity_max
-            resp = self.supabase.table("commodities").select(
+            resp = await self._db(lambda: self.supabase.table("commodities").select(
                 "id, name_en, sanity_min, sanity_max"
-            ).execute()
+            ).execute())
             sanity_bands: Dict[str, Tuple[float, float]] = {
                 row["id"]: (row["sanity_min"], row["sanity_max"])
                 for row in resp.data
@@ -55,9 +62,9 @@ class IngestionRunner:
             }
 
             # FIX BLOCKER 2: build market map from source_code AND name, both normalized
-            resp = self.supabase.table("markets").select(
+            resp = await self._db(lambda: self.supabase.table("markets").select(
                 "id, name, source_code, district"
-            ).eq("district", district).execute()
+            ).eq("district", district).execute())
             market_map: Dict[str, str] = {}
             for row in resp.data:
                 for key in (row.get("source_code"), row.get("name")):
@@ -70,9 +77,10 @@ class IngestionRunner:
             # 'PYAJ' and 'कांदा' would get sent as data.gov.in commodity filters
             # and return 0 results, burning API quota.
             source_fetch_keys: Dict[str, List[str]] = {}
-            resp_aliases = self.supabase.table("commodity_alias").select(
+            adapter_names = [a.source_name for a in self.adapters]
+            resp_aliases = await self._db(lambda: self.supabase.table("commodity_alias").select(
                 "source, source_key"
-            ).in_("source", [a.source_name for a in self.adapters]).execute()
+            ).in_("source", adapter_names).execute())
             for row in resp_aliases.data:
                 src = row["source"]
                 key = row["source_key"]
@@ -150,14 +158,24 @@ class IngestionRunner:
                         valid_dict["market_id"] = market_id
                         all_valid_for_adapter.append(valid_dict)
 
-                # ── 3. Upsert ────────────────────────────────────────────────
+                # ── 3. Upsert in chunks so one bad row does not drop the batch
+                UPSERT_CHUNK = 200
                 if all_valid_for_adapter:
-                    # FIX BLOCKER 4: full 6-column unique constraint
-                    self.supabase.table("prices").upsert(
-                        all_valid_for_adapter,
-                        on_conflict="market_id, commodity_id, arrival_date, variety, grade, source"
-                    ).execute()
-                    written = len(all_valid_for_adapter)
+                    written = 0
+                    chunk_errors = 0
+                    conflict = "market_id, commodity_id, arrival_date, variety, grade, source"
+                    for i in range(0, len(all_valid_for_adapter), UPSERT_CHUNK):
+                        chunk = all_valid_for_adapter[i:i + UPSERT_CHUNK]
+                        try:
+                            await self._db(lambda c=chunk: self.supabase.table("prices").upsert(
+                                c, on_conflict=conflict
+                            ).execute())
+                            written += len(chunk)
+                        except Exception as e:
+                            chunk_errors += 1
+                            adapter_log.error("upsert_chunk_failed", offset=i, error=str(e))
+                    if chunk_errors:
+                        fetch_errors.append(f"upsert_chunks_failed={chunk_errors}")
 
                 duration_ms = int((time.monotonic() - adapter_start) * 1000)
                 if fetch_errors and seen == 0:

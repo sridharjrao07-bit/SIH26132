@@ -15,9 +15,6 @@ import hashlib
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.conftest import (
-    FakeSupabase, MARKET_ID_LASALGAON, COMMODITY_ID_ONION
-)
 
 # ─── InboundVerifier ────────────────────────────────────────────────────────
 
@@ -135,7 +132,7 @@ def make_admin_token() -> str:
     """Generate a valid-looking JWT for testing (just tests routing, not real auth)."""
     import jwt as pyjwt
     import os
-    secret = os.environ.get("SUPABASE_JWT_SECRET", "placeholder")
+    secret = os.environ.get("SUPABASE_JWT_SECRET", "ci-placeholder-jwt-secret-32b-min")
     token = pyjwt.encode(
         {"sub": "admin-user-id", "role": "authenticated", "aud": "authenticated"},
         secret, algorithm="HS256"
@@ -159,8 +156,7 @@ def test_production_mode_missing_secret_raises_runtime_error(monkeypatch):
     """
     S3 regression: InboundVerifier() must raise RuntimeError at instantiation when
     APP_ENV=production and INBOUND_HMAC_SECRET is not set.
-    Since sms.py instantiates InboundVerifier() at module level, this failure
-    surfaces at app startup — which is the intended behaviour.
+    sms.warmup_verifier() runs in FastAPI lifespan so this fails closed at startup.
     """
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.delenv("INBOUND_HMAC_SECRET", raising=False)

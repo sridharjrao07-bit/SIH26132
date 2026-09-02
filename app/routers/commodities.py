@@ -11,5 +11,7 @@ def get_commodities(supabase: Client = Depends(get_supabase)):
     """
     List all tracked commodities.
     """
-    res = supabase.table("commodities").select("*").order("name_en").execute()
-    return res.data
+    res = supabase.table("commodities").select(
+        "id, name_en, name_mr, name_hi, category, standard_unit"
+    ).order("name_en").execute()
+    return res.data or []

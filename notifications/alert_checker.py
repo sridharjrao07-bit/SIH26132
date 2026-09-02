@@ -1,22 +1,51 @@
 import structlog
 from datetime import datetime, timedelta, date, timezone
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 from supabase import Client
 
-from forecasting.engine import build_daily_series
+from forecasting.engine import build_daily_series, build_district_daily_series
 from .sms_gateway import get_sms_gateway, resolve_template
+from .sale_window import format_alert_sms
 
 logger = structlog.get_logger()
 
 
+def _now_dt() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 def _now() -> str:
-    return datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+    return _now_dt().isoformat()
+
+
+def _hours_ago_dt(h: float) -> datetime:
+    return _now_dt() - timedelta(hours=h)
+
 
 def _hours_ago(h: float) -> str:
-    return (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=h)).isoformat()
+    return _hours_ago_dt(h).isoformat()
+
 
 def _days_ago_date(n: int) -> str:
     return (date.today() - timedelta(days=n)).isoformat()
+
+
+def _parse_ts(value) -> Optional[datetime]:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        s = str(value).strip()
+        if s.endswith("Z"):
+            s = s[:-1] + "+00:00"
+        try:
+            dt = datetime.fromisoformat(s)
+        except ValueError:
+            return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
 
 def normalize_phone(phone: Optional[str]) -> Optional[str]:
     if phone is None or phone == "":
@@ -78,8 +107,9 @@ class AlertChecker:
         due_alerts = []
         for alert in alerts:
             # Pre-filter: cooldown check in Python (avoids DB round-trip for price if spam)
-            last_notified = alert.get("last_notified_at")
-            if last_notified and last_notified >= cooldown_cutoff:
+            last_notified = _parse_ts(alert.get("last_notified_at"))
+            cooldown_cutoff_dt = _parse_ts(cooldown_cutoff) or _hours_ago_dt(24)
+            if last_notified and last_notified >= cooldown_cutoff_dt:
                 continue
 
             user = users_data.get(alert["user_id"])
@@ -157,16 +187,7 @@ class AlertChecker:
             threshold = alert["threshold_price"]
             scope     = alert["_scope_note"]
 
-            if lang == "mr":
-                # Kept ≤65 chars for Devanagari 1-segment billing
-                msg = f"KrishiBazaar: {comm_name} ₹{price} ({scope}). Limit ₹{threshold} crossed."
-            elif lang == "hi":
-                msg = f"KrishiBazaar: {comm_name} ₹{price} ({scope}). Limit ₹{threshold} crossed."
-            else:
-                msg = (
-                    f"KrishiBazaar Alert: {comm_name} is ₹{price} ({scope}). "
-                    f"Your threshold was ₹{threshold}."
-                )
+            msg = format_alert_sms(lang, comm_name, price, threshold, scope)
 
             template_id = resolve_template(lang)
             
@@ -179,6 +200,16 @@ class AlertChecker:
                     price=str(price),
                     threshold=str(threshold),
                 )
+            except TypeError:
+                # Test doubles that don't accept **vars
+                try:
+                    sms_status, success = self.gateway.send_sms(phone, msg, template_id)
+                    if not isinstance(sms_status, str):
+                        success = bool(sms_status)
+                        sms_status = "mock" if success else "failed"
+                except Exception as e:
+                    logger.error("sms_gateway_error", alert_id=alert["id"], error=str(e))
+                    sms_status, success = "failed", False
             except Exception as e:
                 logger.error("sms_gateway_error", alert_id=alert["id"], error=str(e))
                 sms_status, success = "failed", False
@@ -200,12 +231,13 @@ class AlertChecker:
             # Write to notification_log — status comes from the gateway
             # ("mock" for MockGateway, "sent" for MSG91 2xx, "failed" for errors)
             self.supabase.table("notification_log").insert({
-                "alert_id":  alert["id"],
-                "user_id":   uid,
-                "recipient": phone,
-                "message":   msg,
-                "language":  lang,
-                "status":    sms_status,
+                "alert_id":     alert["id"],
+                "user_id":      uid,
+                "recipient":    phone,
+                "message":      msg,
+                "language":     lang,
+                "status":       sms_status,
+                "provider_ref": getattr(self.gateway, "last_provider_ref", None),
             }).execute()
 
             if success:
@@ -252,7 +284,7 @@ class AlertChecker:
             query = query.eq("market_id", market_id)
         else:
             # District fallback
-            scope_note = "district_avg"
+            scope_note = "district_mean"
             district   = user.get("district", "Nashik")
             market_rows = (
                 self.supabase.table("markets")
@@ -273,21 +305,21 @@ class AlertChecker:
         if not history:
             return False, scope_note, 0.0
 
-        series = build_daily_series(history)
+        if scope_note == "district_mean":
+            series = build_district_daily_series(history)
+        else:
+            series = build_daily_series(history)
         if len(series) < 2:
             return False, scope_note, 0.0
 
         prev_price   = series[-2][1]
         latest_price = series[-1][1]
 
+        # Edge-only: fire when the threshold is crossed, not while it stays breached.
         is_crossing = False
         if condition == "gte":
-            is_crossing = prev_price < threshold <= latest_price or (
-                prev_price >= threshold and latest_price >= threshold  # sustained breach
-            )
+            is_crossing = prev_price < threshold <= latest_price
         elif condition == "lte":
-            is_crossing = prev_price > threshold >= latest_price or (
-                prev_price <= threshold and latest_price <= threshold  # sustained breach
-            )
+            is_crossing = prev_price > threshold >= latest_price
 
         return is_crossing, scope_note, latest_price

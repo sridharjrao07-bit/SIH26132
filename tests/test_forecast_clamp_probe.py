@@ -9,3 +9,5 @@ def test_clamped_center_keeps_bounds_sane():
         assert p >= 100.0
         assert lo <= p <= hi, f"bounds inverted: lo={lo} p={p} hi={hi}"
         assert hi >= 0.0
+        assert lo >= 100.0
+        assert hi <= 8000.0

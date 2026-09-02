@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query
 from typing import List, Optional
 from datetime import date, timedelta
 from supabase import Client
@@ -8,6 +8,7 @@ from app.schemas import PriceResponse
 router = APIRouter(prefix="/api/v1/prices", tags=["Prices"])
 
 def _flatten(row: dict) -> dict:
+    row = dict(row or {})
     market_data = row.pop("markets", {}) or {}
     commodity_data = row.pop("commodities", {}) or {}
     row["market_name"] = market_data.get("name")
@@ -15,6 +16,9 @@ def _flatten(row: dict) -> dict:
     row["commodity_name_en"] = commodity_data.get("name_en")
     row["commodity_name_mr"] = commodity_data.get("name_mr")
     row["commodity_name_hi"] = commodity_data.get("name_hi")
+    row.setdefault("unit", "quintal")
+    row.setdefault("variety", "General")
+    row.setdefault("grade", "General")
     return row
 
 @router.get("/latest", response_model=List[PriceResponse])
@@ -25,35 +29,29 @@ def get_latest_prices(
     supabase: Client = Depends(get_supabase)
 ):
     """
-    Get the latest price records. 
+    Get the latest price records.
     By default, fetches records from the last 7 days to ensure we capture the most recent ones.
     """
-    # Create a date boundary to avoid scanning the entire table
     seven_days_ago = (date.today() - timedelta(days=7)).isoformat()
-    
+
     query = supabase.table("prices").select(
         "*, markets(name, district), commodities(name_en, name_mr, name_hi)"
     ).gte("arrival_date", seven_days_ago)
-    
+
     if market_id:
         query = query.eq("market_id", market_id)
     if commodity_id:
         query = query.eq("commodity_id", commodity_id)
-        
-    # We order by arrival_date desc to get latest first
+
     res = query.order("arrival_date", desc=True).limit(limit).execute()
-    
-    # Flatten the joined data for the Pydantic schema
-    formatted_data = [_flatten(row) for row in res.data]
-        
-    return formatted_data
+    return [_flatten(row) for row in (res.data or [])]
 
 
 @router.get("/historical", response_model=List[PriceResponse])
 def get_historical_prices(
     market_id: str = Query(..., description="Market ID"),
     commodity_id: str = Query(..., description="Commodity ID"),
-    days: int = Query(30, description="Number of days of history"),
+    days: int = Query(30, ge=1, le=365, description="Number of days of history (1–365)"),
     limit: int = Query(1000, ge=1, le=1000, description="Max records to return"),
     supabase: Client = Depends(get_supabase)
 ):
@@ -61,7 +59,7 @@ def get_historical_prices(
     Get historical prices for a specific market and commodity over a period of time.
     """
     start_date = (date.today() - timedelta(days=days)).isoformat()
-    
+
     res = (supabase.table("prices").select(
         "*, markets(name, district), commodities(name_en, name_mr, name_hi)"
     )
@@ -71,7 +69,5 @@ def get_historical_prices(
     .order("arrival_date", desc=True)
     .limit(limit)
     .execute())
-    
-    formatted_data = [_flatten(row) for row in res.data]
-        
-    return formatted_data
+
+    return [_flatten(row) for row in (res.data or [])]
