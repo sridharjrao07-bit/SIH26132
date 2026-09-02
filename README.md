@@ -28,12 +28,12 @@ docker run --env-file .env -p 8000:8000 krishi-bazaar
 1. `PATCH /api/v1/me/` — phone (E.164), language `mr|hi|en`, lat/lng, district  
 2. `POST /api/v1/lots/` — qty, grade, asking price, optional `fpo_id`  
 3. `GET /api/v1/lots/{id}/matches` — ranked verified buyers (district, price, volume, distance)  
-4. `POST /api/v1/offers/` → `PATCH` accept → `POST /api/v1/payments/` → `PATCH .../paid`  
-5. `POST /api/v1/grievances/` if quality / payment / logistics fails  
-6. `GET /api/v1/sale-window/?commodity_id=&market_id=` — sell / hold / wait (hold only if district storage is listed)  
+4. `POST /api/v1/offers/` (48h TTL) → `PATCH` accept → `POST /api/v1/payments/` → `PATCH .../paid|failed|disputed`  
+5. `POST /api/v1/grievances/` if quality / payment / logistics fails — payment outcomes rescore buyer reliability  
+6. `GET /api/v1/sale-window/?commodity_id=&market_id=&lang=mr` — sell / hold / wait (hold only if district storage is listed)  
 7. `GET /api/v1/logistics/?district=Nashik` — storage and transport  
 8. FPO: `POST /api/v1/lots/aggregate` pools member lots  
-9. Admin: `POST /api/v1/admin/buyers`, `PATCH .../verify`, `GET/PATCH /api/v1/admin/grievances`  
+9. Admin: `POST /api/v1/admin/buyers`, `PATCH .../verify`, `GET/PATCH /api/v1/admin/grievances`, `POST .../offers/expire`, `POST .../buyers/rescore`  
 
 SMS: registered farmer texts `PYAJ` / `कांदा` → latest modal **plus** sell/hold/wait in their language. Unknown numbers are ignored (no help-SMS amplifier).
 

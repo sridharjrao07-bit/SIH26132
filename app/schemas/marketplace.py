@@ -121,8 +121,11 @@ class SaleWindowResponse(BaseModel):
     market_id: Optional[str] = None
     recommendation: Literal["sell", "hold", "wait"]
     reason: str
+    reason_code: Optional[str] = None
+    lang: Optional[str] = "en"
     latest_price: Optional[float] = None
     forecast_day1: Optional[float] = None
     forecast_trend: Optional[str] = None
     arrivals_qty: Optional[float] = None
     nearby: Optional[list] = None
+    storage: Optional[list] = None

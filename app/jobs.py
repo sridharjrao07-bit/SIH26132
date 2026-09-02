@@ -64,6 +64,23 @@ async def run_stale_forecasts_job():
         _release(supabase, "mark_stale")
 
 
+async def run_expire_offers_job():
+    """Hourly: pending digital offers older than 48h become expired."""
+    from app.marketplace import expire_stale_offers
+
+    supabase = get_supabase_client()
+    lock_res = _claim(supabase, "expire_offers")
+    if not lock_res.data:
+        logger.info("expire_offers_job_locked")
+        return {"status": "locked"}
+    try:
+        summary = await asyncio.to_thread(expire_stale_offers, supabase)
+        logger.info("expire_offers_job_done", **{k: v for k, v in summary.items() if k != "offer_ids"})
+        return summary
+    finally:
+        _release(supabase, "expire_offers")
+
+
 async def run_ingestion_job():
     """Orchestrates one full ingestion run across all configured adapters."""
     logger.info("scheduler_trigger_ingestion")
@@ -187,6 +204,14 @@ def setup_scheduler() -> Optional[AsyncIOScheduler]:
         ),
         id="stale_forecasts",
         name="Mark Stale Forecasts",
+        replace_existing=True,
+    )
+
+    scheduler.add_job(
+        run_expire_offers_job,
+        IntervalTrigger(hours=1, start_date=now + timedelta(minutes=20)),
+        id="expire_offers",
+        name="Expire Stale Offers",
         replace_existing=True,
     )
 

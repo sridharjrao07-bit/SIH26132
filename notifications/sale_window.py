@@ -89,22 +89,26 @@ def compute_sale_window(supabase, commodity_id: str, market_id: Optional[str] = 
                 break
 
     recommendation = "wait"
+    reason_code = "wait"
     reason = "Price is near the forecast; no strong signal to rush or hold."
     if day1 is not None:
         if day1 >= latest_price * 1.05 and trend != "down":
             recommendation = "hold"
+            reason_code = "hold"
             reason = (
                 f"Forecast ₹{day1:.0f} is above today's ₹{latest_price:.0f}; "
                 "a short hold may improve realisation if storage is available."
             )
         elif day1 <= latest_price * 0.97 or trend == "down":
             recommendation = "sell"
+            reason_code = "sell_forecast"
             reason = (
                 f"Forecast ₹{day1:.0f} is at or below today's ₹{latest_price:.0f}; "
                 "selling now reduces the chance of a further fall."
             )
     if arrivals_f is not None and arrivals_f > 1000 and recommendation != "hold":
         recommendation = "sell"
+        reason_code = "sell_arrivals"
         reason = (
             f"Arrivals are high ({arrivals_f:.0f} qtl) which typically pressures mandi prices. "
             + reason
@@ -124,6 +128,7 @@ def compute_sale_window(supabase, commodity_id: str, market_id: Optional[str] = 
     )
     if recommendation == "hold" and not storage:
         recommendation = "sell"
+        reason_code = "sell_no_storage"
         reason = (
             "Forecast is higher but no listed storage in this district; "
             "sell now rather than hold at the farm gate."
@@ -132,11 +137,12 @@ def compute_sale_window(supabase, commodity_id: str, market_id: Optional[str] = 
         names = ", ".join(s.get("name") or "godown" for s in storage[:2])
         reason = reason + f" Storage available: {names}."
 
-    return {
+    result = {
         "commodity_id": commodity_id,
         "market_id": market_id,
         "recommendation": recommendation,
         "reason": reason,
+        "reason_code": reason_code,
         "latest_price": latest_price,
         "forecast_day1": day1,
         "forecast_trend": trend,
@@ -145,7 +151,67 @@ def compute_sale_window(supabase, commodity_id: str, market_id: Optional[str] = 
         "market_name": (latest.get("markets") or {}).get("name"),
         "storage": storage,
         "district": district,
+        "lang": "en",
     }
+    return result
+
+
+def apply_sale_language(window: dict, lang: str) -> dict:
+    """Localise the farmer-facing reason. Recommendation codes stay English."""
+    if not window:
+        return window
+    lang = (lang or "en").lower()
+    if lang not in ("en", "mr", "hi"):
+        lang = "en"
+    out = dict(window)
+    out["lang"] = lang
+    if lang == "en":
+        return out
+    rec = out.get("recommendation") or "wait"
+    code = out.get("reason_code") or rec
+    price = out.get("latest_price")
+    day1 = out.get("forecast_day1")
+    arrivals = out.get("arrivals_qty")
+    p = int(round(float(price))) if price is not None else 0
+    d1 = int(round(float(day1))) if day1 is not None else None
+    aq = int(round(float(arrivals))) if arrivals is not None else None
+    storage = out.get("storage") or []
+    godown = (storage[0].get("name") if storage else None) or "गोदाम"
+    if lang == "mr":
+        reasons = {
+            "wait": "भाव अंदाजाजवळ; घाई नको.",
+            "hold": (
+                f"अंदाज ₹{d1} आज ₹{p} पेक्षा जास्त. गोदाम: {godown}. थोडे थांबा."
+                if d1 is not None else f"गोदाम: {godown}. थोडे थांबा."
+            ),
+            "sell_forecast": (
+                f"अंदाज ₹{d1} आज ₹{p} पेक्षा कमी; आज विका."
+                if d1 is not None else "आज विका."
+            ),
+            "sell_arrivals": (
+                f"आवक जास्त ({aq} क्विंटल); आज विका." if aq is not None else "आज विका."
+            ),
+            "sell_no_storage": "अंदाज जास्त पण गोदाम नाही; आज विका.",
+        }
+        out["reason"] = reasons.get(code) or reasons.get(rec) or reasons["wait"]
+        return out
+    reasons = {
+        "wait": "भाव अनुमान के पास है; जल्दबाजी न करें.",
+        "hold": (
+            f"अनुमान ₹{d1} आज ₹{p} से ऊपर. गोदाम: {godown}. थोड़ा रुकें."
+            if d1 is not None else f"गोदाम: {godown}. थोड़ा रुकें."
+        ),
+        "sell_forecast": (
+            f"अनुमान ₹{d1} आज ₹{p} से कम; आज बेचें."
+            if d1 is not None else "आज बेचें."
+        ),
+        "sell_arrivals": (
+            f"आवक ज्यादा ({aq} क्विंटल); आज बेचें." if aq is not None else "आज बेचें."
+        ),
+        "sell_no_storage": "अनुमान ऊँचा है पर गोदाम नहीं; आज बेचें.",
+    }
+    out["reason"] = reasons.get(code) or reasons.get(rec) or reasons["wait"]
+    return out
 
 
 def format_sale_sms(lang: str, name: str, price, market: Optional[str], recommendation: str) -> str:
