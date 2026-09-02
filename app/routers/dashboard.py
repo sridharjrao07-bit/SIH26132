@@ -41,7 +41,10 @@ async def get_forecast_stats(supabase: Client = Depends(get_supabase_service_rol
         price_res = supabase.table("prices").select("modal_price").eq("market_id", market_id).eq("commodity_id", commodity_id).gte("arrival_date", target_date).order("arrival_date", desc=False).limit(1).execute()
         
         actual_price = price_res.data[0]["modal_price"] if price_res.data else None
+        
         within_bounds = None
+        if actual_price is not None and f["lower_bound"] is not None and f["upper_bound"] is not None:
+            within_bounds = (f["lower_bound"] <= actual_price <= f["upper_bound"])
         
         stats.append({
             "id": f["id"],

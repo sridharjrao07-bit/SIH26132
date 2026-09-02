@@ -42,6 +42,7 @@ fastapi
 uvicorn[standard]
 python-multipart==0.0.9      # for form data (manual price entry)
 slowapi==0.1.9               # rate limiting middleware
+jinja2>=3.1                  # for TemplateResponse in dashboard
 
 # ── Supabase ──────────────────────────────────────────────────────────────────
 supabase==2.4.3              # supabase-py client (ingestion/forecast/alert jobs)

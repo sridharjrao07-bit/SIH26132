@@ -50,7 +50,10 @@ async def _process_inbound(payload: dict, supabase: Client):
         lang = user_res.data[0]["preferred_language"] if user_res.data else "mr"
         
         gateway = get_sms_gateway()
-        gateway.send_sms(sender, HELP_TEXT + SMS_KEYWORDS_HELP, resolve_template(lang))
+        try:
+            gateway.send_sms(sender, HELP_TEXT + SMS_KEYWORDS_HELP, resolve_template(lang))
+        except Exception as e:
+            logger.warning("help_sms_failed", error=str(e))
         return {"status": "help_sent"}
         
     commodity_id = alias_res.data[0]["commodity_id"]
@@ -84,7 +87,10 @@ async def _process_inbound(payload: dict, supabase: Client):
     reply = f"KrishiBazaar: Latest price for {name} is ₹{price}/qtl at {market_name}."
     
     gateway = get_sms_gateway()
-    gateway.send_sms(sender, reply, resolve_template(lang))
+    try:
+        gateway.send_sms(sender, reply, resolve_template(lang))
+    except Exception as e:
+        logger.warning("reply_sms_failed", error=str(e))
     
     logger.info("inbound_sms_processed", sender=sender, commodity=name, price=price)
     return {"status": "replied"}
