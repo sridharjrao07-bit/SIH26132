@@ -4,7 +4,7 @@ from typing import Optional
 from supabase import Client
 from app.deps import get_supabase_as_user
 from app.auth import get_current_user
-from app.schemas.marketplace import LotCreate, LotAggregate
+from app.schemas.marketplace import LotCreate, LotAggregate, LotGradeUpdate
 from app.marketplace import lot_ledger
 
 router = APIRouter(prefix="/api/v1/lots", tags=["Lots"])
@@ -131,6 +131,31 @@ def get_lot(
     supabase: Client = Depends(get_supabase_as_user),
 ):
     res = supabase.table("lots").select("*").eq("id", lot_id).execute()
+    if not res.data:
+        raise HTTPException(404, "lot not found")
+    return res.data[0]
+
+
+@router.patch("/{lot_id}/grade")
+def grade_lot(
+    lot_id: str,
+    body: LotGradeUpdate,
+    user_id: str = Depends(get_current_user),
+    supabase: Client = Depends(get_supabase_as_user),
+):
+    """Record FAQ / General / Special after a visual or mandi assay."""
+    rows = supabase.table("lots").select("*").eq("id", lot_id).execute().data or []
+    if not rows:
+        raise HTTPException(404, "lot not found")
+    lot = rows[0]
+    if lot.get("user_id") != user_id and lot.get("fpo_id") != user_id:
+        raise HTTPException(404, "lot not found")
+    if lot.get("status") in ("sold", "withdrawn"):
+        raise HTTPException(409, "cannot regrade a sold or withdrawn lot")
+    payload = {"grade": body.grade}
+    if body.quality_notes is not None:
+        payload["quality_notes"] = body.quality_notes
+    res = supabase.table("lots").update(payload).eq("id", lot_id).execute()
     if not res.data:
         raise HTTPException(404, "lot not found")
     return res.data[0]
