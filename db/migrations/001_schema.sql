@@ -244,7 +244,7 @@ begin
         new.id,
         new.raw_user_meta_data ->> 'name',
         new.raw_user_meta_data ->> 'phone',
-        coalesce(new.raw_user_meta_data ->> 'role', 'farmer'),
+        'farmer',  -- never trust client-supplied role (see 003_security_patch.sql)
         coalesce(new.raw_user_meta_data ->> 'preferred_language', 'mr')
     )
     on conflict (id) do nothing;

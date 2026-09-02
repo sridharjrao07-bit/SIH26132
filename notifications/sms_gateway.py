@@ -78,6 +78,7 @@ class MSG91Gateway(SMSGateway):
     def __init__(self, auth_key: str, sender_id: str = "KRBAZR"):
         self.auth_key  = auth_key
         self.sender_id = sender_id
+        self.last_provider_ref = None
 
     def send_sms(
         self,
@@ -112,7 +113,15 @@ class MSG91Gateway(SMSGateway):
                 headers={"authkey": self.auth_key, "Content-Type": "application/json"},
                 timeout=10.0,
             )
-            if resp.status_code == 200:
+            if resp.is_success:
+                ref = None
+                try:
+                    body = resp.json()
+                    if isinstance(body, dict):
+                        ref = body.get("request_id") or body.get("message")
+                except Exception:
+                    ref = None
+                self.last_provider_ref = ref
                 logger.info("msg91_sms_sent", recipient=recipient, template_id=template_id)
                 return ("sent", True)
             else:

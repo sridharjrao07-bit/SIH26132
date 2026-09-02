@@ -53,7 +53,7 @@ def get_latest_prices(
 def get_historical_prices(
     market_id: str = Query(..., description="Market ID"),
     commodity_id: str = Query(..., description="Commodity ID"),
-    days: int = Query(30, description="Number of days of history"),
+    days: int = Query(30, ge=1, le=365, description="Number of days of history (1–365)"),
     limit: int = Query(1000, ge=1, le=1000, description="Max records to return"),
     supabase: Client = Depends(get_supabase)
 ):

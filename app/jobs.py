@@ -11,49 +11,6 @@ from ingestion.runner import IngestionRunner
 from ingestion.data_gov_in import DataGovInAdapter
 from forecasting.runner import run_forecast_job
 
-# We need a dedicated wrapper for alerts just like forecasting
-async def run_alert_job():
-    from app.config import get_settings
-    from supabase import create_client
-    import asyncio
-    from notifications.alert_checker import AlertChecker
-    
-    settings = get_settings()
-    supabase = create_client(settings.supabase_url, settings.supabase_service_role_key)
-    
-    lock_res = supabase.rpc("claim_job_lock", {"p_job_key": "alert_check", "p_holder": "scheduler"}).execute()
-    if not lock_res.data:
-        logger.info("alert_job_locked")
-        return {"status": "locked"}
-        
-    try:
-        checker = AlertChecker(supabase)
-        summary = await asyncio.to_thread(checker.run)
-        logger.info("alert_job_done", **summary)
-        return summary
-    finally:
-        supabase.rpc("release_job_lock", {"p_job_key": "alert_check", "p_holder": "scheduler"}).execute()
-
-async def run_stale_forecasts_job():
-    from app.config import get_settings
-    from supabase import create_client
-    import asyncio
-    
-    settings = get_settings()
-    supabase = create_client(settings.supabase_url, settings.supabase_service_role_key)
-    
-    lock_res = supabase.rpc("claim_job_lock", {"p_job_key": "mark_stale", "p_holder": "scheduler"}).execute()
-    if not lock_res.data:
-        return
-        
-    try:
-        # Mark stale forecasts
-        res = await asyncio.to_thread(supabase.rpc("mark_stale_forecasts").execute)
-        logger.info("mark_stale_forecasts_done", count=res.data)
-    finally:
-        supabase.rpc("release_job_lock", {"p_job_key": "mark_stale", "p_holder": "scheduler"}).execute()
-
-
 logger = structlog.get_logger()
 settings = get_settings()
 
@@ -66,35 +23,81 @@ def get_supabase_client():
     return create_client(settings.supabase_url, settings.supabase_service_role_key)
 
 
+def _claim(supabase, job_key: str, holder: str = "scheduler"):
+    return supabase.rpc("claim_job_lock", {"p_job_key": job_key, "p_holder": holder}).execute()
+
+
+def _release(supabase, job_key: str, holder: str = "scheduler"):
+    supabase.rpc("release_job_lock", {"p_job_key": job_key, "p_holder": holder}).execute()
+
+
+async def run_alert_job():
+    from notifications.alert_checker import AlertChecker
+
+    supabase = get_supabase_client()
+    lock_res = _claim(supabase, "alert_check")
+    if not lock_res.data:
+        logger.info("alert_job_locked")
+        return {"status": "locked"}
+
+    try:
+        checker = AlertChecker(supabase)
+        summary = await asyncio.to_thread(checker.run)
+        logger.info("alert_job_done", **summary)
+        return summary
+    finally:
+        _release(supabase, "alert_check")
+
+
+async def run_stale_forecasts_job():
+    supabase = get_supabase_client()
+    lock_res = _claim(supabase, "mark_stale")
+    if not lock_res.data:
+        return
+
+    try:
+        res = await asyncio.to_thread(
+            lambda: supabase.rpc("mark_stale_forecasts").execute()
+        )
+        logger.info("mark_stale_forecasts_done", count=res.data)
+    finally:
+        _release(supabase, "mark_stale")
+
+
 async def run_ingestion_job():
     """Orchestrates one full ingestion run across all configured adapters."""
     logger.info("scheduler_trigger_ingestion")
     supabase = get_supabase_client()
 
-    adapters = []
+    lock_res = _claim(supabase, "ingestion")
+    if not lock_res.data:
+        logger.info("ingestion_job_locked")
+        return {"status": "locked"}
 
-    # Primary: data.gov.in
-    if settings.data_gov_in_api_key and "your-data-gov-in-key" not in settings.data_gov_in_api_key:
-        adapters.append(DataGovInAdapter(api_key=settings.data_gov_in_api_key))
-    else:
-        logger.warning("data_gov_in_api_key_missing", action="skipping data.gov.in adapter")
+    try:
+        adapters = []
 
-    # Optional fallback: Agmarknet (Selenium) — requires Chrome + chromedriver
-    # Disabled by default; set ENABLE_AGMARKNET=1 in .env to activate.
-    if settings.enable_agmarknet:
-        try:
-            from ingestion.agmarknet import AgmarknetAdapter
-            adapters.append(AgmarknetAdapter())
-            logger.info("agmarknet_adapter_enabled")
-        except ImportError as e:
-            logger.warning("agmarknet_import_failed", error=str(e))
+        if settings.data_gov_in_api_key and "your-data-gov-in-key" not in settings.data_gov_in_api_key:
+            adapters.append(DataGovInAdapter(api_key=settings.data_gov_in_api_key))
+        else:
+            logger.warning("data_gov_in_api_key_missing", action="skipping data.gov.in adapter")
 
-    if not adapters:
-        logger.error("no_ingestion_adapters_configured")
-        return
+        if settings.enable_agmarknet:
+            try:
+                from ingestion.agmarknet import AgmarknetAdapter
+                adapters.append(AgmarknetAdapter())
+                logger.info("agmarknet_adapter_enabled")
+            except ImportError as e:
+                logger.warning("agmarknet_import_failed", error=str(e))
 
-    runner = IngestionRunner(supabase=supabase, adapters=adapters)
-    await runner.run(district=settings.target_district, state=settings.target_state)
+        if not adapters:
+            logger.error("no_ingestion_adapters_configured")
+            return
+
+        runner = IngestionRunner(supabase=supabase, adapters=adapters)
+        await runner.run(district=settings.target_district, state=settings.target_state)
+    finally:
+        _release(supabase, "ingestion")
 
 
 async def _run_catchup_task():
@@ -111,7 +114,6 @@ async def _run_catchup_task():
 
         if resp.data:
             last_run_str = resp.data[0]["run_at"]
-            # Supabase returns UTC ISO strings; normalize to aware datetime
             last_run = datetime.fromisoformat(
                 last_run_str.replace("Z", "+00:00")
             )
@@ -128,51 +130,20 @@ async def _run_catchup_task():
         await run_forecast_job()
 
     except Exception as e:
-        # Catch-up is best-effort: log and continue. API is already serving.
         logger.warning("startup_catchup_failed", error=str(e))
 
 
 def schedule_startup_catchup():
-    """
-    Schedule the catch-up check as a fire-and-forget background task.
-    Call this from main.py's lifespan handler AFTER the scheduler has started:
-
-        asyncio.create_task is used internally so the API starts immediately
-        without waiting for the first ingestion run to complete.
-
-    Race condition note: if the host restarts exactly when the interval fires,
-    the scheduled job and the catch-up task could both run.  The upsert ON
-    CONFLICT clause makes a double-fetch harmless for data correctness, but it
-    does burn API quota.  For Stage 5 (alerts), we will add a pg_try_advisory_lock
-    to prevent the alert-checker from firing twice.
-    """
     import asyncio
     asyncio.create_task(_run_catchup_task())
 
 
-def setup_scheduler() -> AsyncIOScheduler:
-    """
-    Sets up and returns the APScheduler instance.
-
-    SCHEDULER GUARD: uvicorn --reload spawns a reloader process + a worker;
-    both call this function → 2 schedulers → double ingestion + double SMS.
-    We check RUN_SCHEDULER (mapped from settings) to prevent this.
-    In production, start with:  uvicorn app.main:app --workers 1
-    In dev, set RUN_SCHEDULER=0 in .env when using --reload.
-    """
+def setup_scheduler() -> Optional[AsyncIOScheduler]:
     if not settings.run_scheduler:
         logger.warning("scheduler_disabled", reason="RUN_SCHEDULER=0 in env")
         return None
 
     scheduler = AsyncIOScheduler()
-
-    # Jobs run at configurable intervals, staggered so the cascade completes
-    # before the next stage reads:
-    #   T+0  : Ingestion  (runs every ingestion_interval_hours)
-    #   T+5m : Forecast   (runs after ingestion settles)
-    #   T+10m: Alerts     (runs after fresh prices are in)
-    #   T+15m: Stale mark (housekeeping, same cadence as forecast)
-    # Job-lock TTL (15 min) handles overlap if a run exceeds its interval.
     now = datetime.now(timezone.utc)
 
     scheduler.add_job(

@@ -1,0 +1,103 @@
+from pydantic import BaseModel, Field
+from typing import Optional, List, Literal
+from datetime import date, datetime
+
+
+class BuyerResponse(BaseModel):
+    id: str
+    name: str
+    type: str
+    verified: bool
+    phone: Optional[str] = None
+    district: Optional[str] = None
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    commodity_id: Optional[str] = None
+    demand_qty_qtl: Optional[float] = None
+    max_price: Optional[float] = None
+    quality_requirements: Optional[str] = None
+    payment_reliability: Optional[str] = None
+
+
+class LotCreate(BaseModel):
+    commodity_id: str
+    market_id: Optional[str] = None
+    quantity_qtl: float = Field(gt=0)
+    grade: str = "General"
+    quality_notes: Optional[str] = None
+    harvest_date: Optional[date] = None
+    asking_price: Optional[float] = Field(default=None, gt=0)
+    fpo_id: Optional[str] = None
+
+
+class LotResponse(BaseModel):
+    id: str
+    user_id: str
+    commodity_id: str
+    market_id: Optional[str] = None
+    quantity_qtl: float
+    grade: str
+    quality_notes: Optional[str] = None
+    harvest_date: Optional[date] = None
+    asking_price: Optional[float] = None
+    status: str
+    fpo_id: Optional[str] = None
+
+
+class OfferCreate(BaseModel):
+    lot_id: str
+    buyer_id: str
+    price_per_qtl: float = Field(gt=0)
+    quantity_qtl: float = Field(gt=0)
+
+
+class OfferUpdate(BaseModel):
+    status: Literal["pending", "accepted", "rejected", "expired"]
+
+
+class PaymentCreate(BaseModel):
+    offer_id: str
+    amount: float = Field(gt=0)
+    reference: Optional[str] = None
+
+
+class GrievanceCreate(BaseModel):
+    category: Literal["payment", "quality", "logistics", "buyer", "other"]
+    description: str = Field(min_length=5, max_length=2000)
+    offer_id: Optional[str] = None
+    lot_id: Optional[str] = None
+
+
+class ProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    preferred_language: Optional[Literal["en", "mr", "hi"]] = None
+    district: Optional[str] = None
+    lat: Optional[float] = Field(default=None, ge=-90, le=90)
+    lng: Optional[float] = Field(default=None, ge=-180, le=180)
+
+
+class MatchItem(BaseModel):
+    buyer_id: str
+    buyer_name: str
+    buyer_type: str
+    verified: bool
+    district: Optional[str] = None
+    score: float
+    reasons: List[str]
+    max_price: Optional[float] = None
+    demand_qty_qtl: Optional[float] = None
+    payment_reliability: Optional[str] = None
+    distance_km: Optional[float] = None
+
+
+class SaleWindowResponse(BaseModel):
+    commodity_id: str
+    market_id: Optional[str] = None
+    recommendation: Literal["sell", "hold", "wait"]
+    reason: str
+    latest_price: Optional[float] = None
+    forecast_day1: Optional[float] = None
+    forecast_trend: Optional[str] = None
+    arrivals_qty: Optional[float] = None
+    nearby: Optional[list] = None

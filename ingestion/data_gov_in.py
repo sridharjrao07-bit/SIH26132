@@ -48,8 +48,11 @@ class DataGovInAdapter(IngestionSourceAdapter):
     """
 
     BASE_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070"
-    # Fallback district spellings seen in the dataset
-    DISTRICT_SPELLINGS = ["Nashik", "Nasik"]
+    # Fallback district spellings keyed by the requested district
+    DISTRICT_SPELLINGS = {
+        "Nashik": ["Nasik"],
+        "Nasik": ["Nashik"],
+    }
 
     def __init__(self, api_key: str):
         self.api_key = api_key
@@ -176,6 +179,19 @@ class DataGovInAdapter(IngestionSourceAdapter):
                 market     = (item.get("market")  or "").strip()
                 source_ref = f"{market}|{commodity}|{date_str}|{variety}"
 
+                arrival_qty = None
+                for qty_key in ("arrivals", "arrival", "arrival_quantity", "qty"):
+                    raw_qty = item.get(qty_key)
+                    if raw_qty in (None, ""):
+                        continue
+                    try:
+                        q = float(str(raw_qty).strip())
+                    except (TypeError, ValueError):
+                        continue
+                    if q >= 0:
+                        arrival_qty = q
+                        break
+
                 record = RawPriceRecord(
                     market_name=market,
                     commodity_name=(item.get("commodity") or "").strip(),
@@ -184,6 +200,7 @@ class DataGovInAdapter(IngestionSourceAdapter):
                     max_price=_safe_price(item.get("max_price")),
                     modal_price=modal_price,
                     unit="quintal",   # data.gov.in reports in Rs/Quintal
+                    arrival_qty=arrival_qty,
                     variety=variety,
                     grade=(item.get("grade") or "General").strip() or "General",
                     source=self.source_name,

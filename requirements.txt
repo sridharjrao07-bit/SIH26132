@@ -11,7 +11,7 @@ jinja2>=3.1                  # for TemplateResponse in dashboard (explicit, not 
 
 # ── Supabase ──────────────────────────────────────────────────────────────────
 supabase==2.4.3              # supabase-py client (ingestion/forecast/alert jobs)
-python-jose[cryptography]==3.3.0  # JWT verification for Supabase Auth tokens
+PyJWT==2.8.0                 # JWT verification for Supabase Auth tokens (HS256)
 
 # ── Database ──────────────────────────────────────────────────────────────────
 # Using Supabase PostgREST (via supabase-py) exclusively; SQLAlchemy removed.

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional, Literal
 from pydantic import BaseModel, Field
 from datetime import datetime
@@ -41,15 +41,24 @@ def create_alert(
     # RLS will enforce that the inserted user_id matches auth.uid()
     # (or reject it if someone tries to forge a user_id)
     res = supabase.table("alerts").insert(data).execute()
-    return res.data[0] if res.data else None
+    if not res.data:
+        raise HTTPException(400, "could not create alert")
+    return res.data[0]
 
 @router.get("/")
 def list_alerts(
+    limit: int = Query(50, ge=1, le=200),
     user_id: str = Depends(get_current_user),  # 401 for unauthenticated callers
     supabase: Client = Depends(get_supabase_as_user)
 ):
     # RLS automatically filters to only the user's alerts
-    res = supabase.table("alerts").select("*, markets(name), commodities(name_en, name_mr)").order("created_at", desc=True).execute()
+    res = (
+        supabase.table("alerts")
+        .select("*, markets(name), commodities(name_en, name_mr)")
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
     return res.data
 
 @router.patch("/{alert_id}")

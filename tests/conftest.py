@@ -18,6 +18,8 @@ os.environ.setdefault("SUPABASE_JWT_SECRET", "placeholder")
 os.environ.setdefault("SUPABASE_DB_URL", "postgresql://p@db.placeholder.supabase.co:5432/postgres")
 os.environ.setdefault("DATA_GOV_IN_API_KEY", "placeholder")
 os.environ.setdefault("RUN_SCHEDULER", "0")
+os.environ.setdefault("RATE_LIMIT_ENABLED", "0")
+os.environ.setdefault("APP_ENV", "development")
 
 from ingestion.base import RawPriceRecord, SourceFetchError
 from ingestion.validator import PriceValidator
@@ -66,7 +68,9 @@ class _FakeQuery:
     def lt(self, col, val): self._filters[f"{col}__lt"] = val; return self
     def or_(self, filter_str): self._or_filter = filter_str; return self
     def is_(self, col, val): self._filters[f"{col}__is"] = val; return self
-    def order(self, *a, **kw): return self
+    def order(self, col, desc=False, **kw):
+        self._filters["__order__"] = (col, bool(desc))
+        return self
     def limit(self, n): self._filters["__limit__"] = n; return self
     def range(self, start, end): self._filters["__range__"] = (start, end); return self
 
@@ -115,14 +119,19 @@ class FakeSupabase:
         return _FakeQuery(self, name)
 
     def rpc(self, fn_name: str, params: dict = None):
-        """Stub for RPC calls. Returns _ExecuteResult(data=True) by default."""
-        rpc_result = self._rpc_handlers.get(fn_name)
-        if rpc_result is not None:
-            if callable(rpc_result):
-                return _ExecuteResult(data=rpc_result(params or {}))
-            return _ExecuteResult(data=rpc_result)
-        # Default: claim succeeds, release is no-op
-        return _ExecuteResult(data=True)
+        """Stub matching supabase-py: rpc(...).execute() → _ExecuteResult."""
+        store = self
+
+        class _RpcQuery:
+            def execute(_self):
+                rpc_result = store._rpc_handlers.get(fn_name)
+                if rpc_result is not None:
+                    if callable(rpc_result):
+                        return _ExecuteResult(data=rpc_result(params or {}))
+                    return _ExecuteResult(data=rpc_result)
+                return _ExecuteResult(data=True)
+
+        return _RpcQuery()
 
     def upsert_calls(self) -> list:
         """Return all recorded upsert calls — used in test assertions for B2 regression."""
@@ -156,9 +165,9 @@ class FakeSupabase:
 
         if op == "delete":
             rows = self._data.get(table, [])
-            kept = [r for r in rows if not self._matches_filters(r, filters)]
-            self._data[table] = kept
-            return _ExecuteResult(data=[])
+            deleted = [r for r in rows if self._matches_filters(r, filters)]
+            self._data[table] = [r for r in rows if not self._matches_filters(r, filters)]
+            return _ExecuteResult(data=deleted)
 
         # SELECT: apply all filter types
         rows = list(self._data.get(table, []))
@@ -209,6 +218,9 @@ class FakeSupabase:
 
     def _apply_filters(self, rows: list, filters: dict) -> list:
         rows = [r for r in rows if self._matches_filters(r, filters)]
+        if "__order__" in filters:
+            col, desc = filters["__order__"]
+            rows = sorted(rows, key=lambda r: str(r.get(col) or ""), reverse=desc)
         if "__limit__" in filters:
             rows = rows[:filters["__limit__"]]
         return rows
@@ -260,9 +272,9 @@ def mint_jwt(user_id: str) -> str:
     resolved from the user_profiles DB table by require_role(), NOT from the
     token — that's the whole point of the 003 security patch.
     """
-    from jose import jwt
+    import jwt as pyjwt
     secret = os.environ.get("SUPABASE_JWT_SECRET", "placeholder")
-    return jwt.encode(
+    return pyjwt.encode(
         {
             "sub":  user_id,
             "aud":  "authenticated",

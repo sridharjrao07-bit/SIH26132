@@ -37,7 +37,7 @@ def _api_response(records, total=None):
 
 def _price_record(market="Lasalgaon", commodity="Onion", date_str="01/09/2024",
                   modal="2000", min_p="1500", max_p="2500",
-                  variety="General", grade="FAQ"):
+                  variety="General", grade="FAQ", arrivals="125.5"):
     return {
         "market": market,
         "commodity": commodity,
@@ -47,6 +47,7 @@ def _price_record(market="Lasalgaon", commodity="Onion", date_str="01/09/2024",
         "max_price": max_p,
         "variety": variety,
         "grade": grade,
+        "arrivals": arrivals,
     }
 
 
@@ -171,6 +172,7 @@ async def test_zero_or_empty_prices_are_null():
     assert records[0].min_price is None
     assert records[0].max_price is None
     assert records[0].modal_price == 2000.0  # modal still parsed
+    assert records[0].arrival_qty == 125.5
 
 
 async def test_zero_modal_skipped():

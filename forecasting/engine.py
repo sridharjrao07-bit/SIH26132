@@ -101,6 +101,24 @@ def build_daily_series(rows: List[dict]) -> List[Tuple[date, float]]:
     return series
 
 
+def build_district_daily_series(rows: List[dict]) -> List[Tuple[date, float]]:
+    """
+    True district daily average: collapse each market-day with source precedence,
+    then average the winning modal across markets for that date.
+    """
+    by_market: Dict[str, List[dict]] = {}
+    for row in rows:
+        mid = str(row.get("market_id") or "_")
+        by_market.setdefault(mid, []).append(row)
+
+    by_date: Dict[date, List[float]] = {}
+    for market_rows in by_market.values():
+        for d, price in build_daily_series(market_rows):
+            by_date.setdefault(d, []).append(price)
+
+    return sorted((d, sum(vals) / len(vals)) for d, vals in by_date.items())
+
+
 # ── Models ─────────────────────────────────────────────────────────────────────
 
 class MovingAverageModel:
@@ -219,26 +237,33 @@ def _make_forecast_rows(
     commodity_id: str,
     series:       List[Tuple[date, float]],
     sanity:       Optional[Tuple[float, float]],
+    as_of:        Optional[date] = None,
 ) -> List[dict]:
     """
     Build forecast dicts for one (market, commodity) pair.
 
+    Horizon is anchored to max(last observation, as_of=today) so stale mandi
+    data never writes past-dated rows that the public API then hides.
+
     predicted_price is clamped to [sanity_min, sanity_max] when a band is given.
-    lower_bound is always floored at 0 (prices cannot be negative).
+    lower_bound / upper_bound are also clamped into the band (and floored at 0).
     """
     n         = len(series)
     last_date = series[-1][0] if series else None
+    as_of     = as_of or date.today()
 
     # n = 0: skip entirely — no data at all
     if n == 0 or last_date is None:
         return []
+
+    horizon_start = max(last_date, as_of)
 
     # n = 1–9: insufficient data — 1 honest row, no prediction fabricated
     if n < MIN_OBSERVATIONS:
         return [{
             "market_id":       market_id,
             "commodity_id":    commodity_id,
-            "forecast_date":   (last_date + timedelta(days=1)).isoformat(),
+            "forecast_date":   (horizon_start + timedelta(days=1)).isoformat(),
             "predicted_price": None,
             "lower_bound":     None,
             "upper_bound":     None,
@@ -267,12 +292,16 @@ def _make_forecast_rows(
 
     rows = []
     for i, (predicted, lower, upper) in enumerate(preds):
-        fdate = (last_date + timedelta(days=i + 1)).isoformat()
+        fdate = (horizon_start + timedelta(days=i + 1)).isoformat()
         if sanity is not None:
-            margin = upper - predicted                      # keep the model's width
+            margin = upper - predicted
             predicted = _clamp(predicted, sanity[0], sanity[1])
-            lower = max(0.0, predicted - margin)
-            upper = predicted + margin
+            lower = _clamp(max(0.0, predicted - margin), sanity[0], sanity[1])
+            upper = _clamp(predicted + margin, sanity[0], sanity[1])
+            if lower > predicted:
+                lower = predicted
+            if upper < predicted:
+                upper = predicted
         lower = round(max(0.0, lower), 2)
         upper = round(upper, 2)
         rows.append({
