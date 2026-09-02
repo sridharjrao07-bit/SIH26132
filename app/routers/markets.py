@@ -35,7 +35,7 @@ def get_nearby_markets(
     supabase: Client = Depends(get_supabase)
 ):
     """
-    Find markets near a coordinate using PostGIS/earthdistance via Supabase RPC.
+    Find markets near a coordinate using the earthdistance extension via Supabase RPC.
     Returns up to 5 nearest active markets within the given radius.
     """
     try:

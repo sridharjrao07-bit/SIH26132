@@ -48,8 +48,14 @@
     </div>
 
     <script>
+        function td(text) {
+            const cell = document.createElement("td");
+            cell.textContent = text == null ? "" : String(text);
+            return cell;
+        }
+
         document.addEventListener("DOMContentLoaded", () => {
-            const token = localStorage.getItem("admin_jwt");
+            const token = sessionStorage.getItem("admin_jwt");
             if (token) {
                 document.getElementById("jwt-token").value = token;
                 fetchData(token);
@@ -59,13 +65,13 @@
         function saveToken() {
             const token = document.getElementById("jwt-token").value.trim();
             if (token) {
-                localStorage.setItem("admin_jwt", token);
+                sessionStorage.setItem("admin_jwt", token);
                 fetchData(token);
             }
         }
 
         function clearToken() {
-            localStorage.removeItem("admin_jwt");
+            sessionStorage.removeItem("admin_jwt");
             document.getElementById("jwt-token").value = "";
             document.querySelector(".logs").style.display = "none";
             document.querySelector(".stats").style.display = "none";
@@ -76,7 +82,7 @@
             document.getElementById("auth-error").style.display = "none";
             try {
                 const headers = { "Authorization": `Bearer ${token}` };
-                
+
                 const [logsRes, statsRes] = await Promise.all([
                     fetch("/dashboard/api/ingestion-logs", { headers }),
                     fetch("/dashboard/api/forecast-stats", { headers })
@@ -96,31 +102,43 @@
 
                 renderLogs(logs);
                 renderStats(stats);
-                
+
                 document.querySelector(".logs").style.display = "block";
                 document.querySelector(".stats").style.display = "block";
             } catch (err) {
                 console.error(err);
-                document.getElementById("auth-error").innerText = "Error fetching data.";
+                document.getElementById("auth-error").textContent = "Error fetching data.";
                 document.getElementById("auth-error").style.display = "block";
             }
         }
 
         function renderLogs(logs) {
             const tbody = document.querySelector("#logs-table tbody");
-            tbody.innerHTML = logs.map(l => `<tr><td>${l.id}</td><td>${l.source}</td><td>${l.status}</td><td>${l.run_at}</td></tr>`).join("");
+            tbody.replaceChildren();
+            (logs || []).forEach(l => {
+                const tr = document.createElement("tr");
+                tr.appendChild(td(l.id));
+                tr.appendChild(td(l.source));
+                tr.appendChild(td(l.status));
+                tr.appendChild(td(l.run_at));
+                tbody.appendChild(tr);
+            });
         }
 
         function renderStats(stats) {
             const tbody = document.querySelector("#stats-table tbody");
-            tbody.innerHTML = stats.map(s => `<tr>
-                <td>${s.date}</td>
-                <td>${s.market}</td>
-                <td>${s.commodity}</td>
-                <td>${s.predicted} (±)</td>
-                <td>${s.actual ?? 'N/A'}</td>
-                <td>${s.hit === true ? 'Yes' : s.hit === false ? 'No' : 'N/A'}</td>
-            </tr>`).join("");
+            tbody.replaceChildren();
+            (stats || []).forEach(s => {
+                const tr = document.createElement("tr");
+                tr.appendChild(td(s.date));
+                tr.appendChild(td(s.market));
+                tr.appendChild(td(s.commodity));
+                tr.appendChild(td(s.predicted == null ? "" : String(s.predicted) + " (±)"));
+                tr.appendChild(td(s.actual == null ? "N/A" : s.actual));
+                const hit = s.hit === true ? "Yes" : s.hit === false ? "No" : "N/A";
+                tr.appendChild(td(hit));
+                tbody.appendChild(tr);
+            });
         }
     </script>
 </body>

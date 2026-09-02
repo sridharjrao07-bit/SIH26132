@@ -2,14 +2,15 @@
 notifications/prices.py — Shared price resolution helper.
 
 Provides a single authoritative function for resolving the latest market price
-for a given commodity + user, reusing the same nearest-market logic as
-alert_checker._check_crossing. This prevents the SMS router and alert checker
-from having separate implementations that drift over time.
+for a given commodity + user, reusing the same nearest-market logic and
+source-precedence series builder as alert_checker._check_crossing.
 """
 from datetime import date, timedelta
 from typing import Optional, Tuple
 
 import structlog
+
+from forecasting.engine import build_daily_series, build_district_daily_series
 
 logger = structlog.get_logger()
 
@@ -29,24 +30,14 @@ def latest_price_for_user(
 
     Resolution order:
       1. If the user has lat/lng, call nearest_market RPC (radius 50 km).
-      2. If no location or no nearby market found, fall back to district-wide latest
-         (picks the row from any active market in the user's district).
+      2. If no location or no nearby market found, fall back to district-wide
+         average of source-precedence winners per market.
       3. Returns (None, None) if no data found in either path.
-
-    Args:
-        supabase:      Supabase client (service-role or user-scoped)
-        commodity_id:  UUID of the commodity to query
-        user:          user_profiles row dict — must include lat, lng, district keys
-        history_days:  Look-back window in days (default 15)
-
-    Returns:
-        (modal_price, market_name) or (None, None)
     """
     cutoff = (date.today() - timedelta(days=history_days)).isoformat()
     market_id   = None
     market_name = None
 
-    # ── Step 1: Nearest-market resolution ────────────────────────────────────
     try:
         lat = user.get("lat")
         lng = user.get("lng")
@@ -65,21 +56,18 @@ def latest_price_for_user(
     except Exception as e:
         logger.warning("nearest_market_rpc_failed", error=str(e))
 
-    # ── Step 2: Fetch the latest price for the resolved market (or district) ─
     query = (
         supabase.table("prices")
-        .select("modal_price, markets(name)")
+        .select("arrival_date, modal_price, source, variety, market_id, markets(name)")
         .eq("commodity_id", commodity_id)
         .gte("arrival_date", cutoff)
-        .order("arrival_date", desc=True)
-        .limit(1)
+        .order("arrival_date", desc=False)
     )
 
+    district = user.get("district", "Nashik")
     if market_id:
         query = query.eq("market_id", market_id)
     else:
-        # District-wide fallback
-        district = user.get("district", "Nashik")
         market_rows = (
             supabase.table("markets")
             .select("id")
@@ -99,12 +87,22 @@ def latest_price_for_user(
         market_ids = [m["id"] for m in market_rows]
         query = query.in_("market_id", market_ids)
 
-    price_res = query.execute()
-    if not price_res.data:
+    history = (query.execute()).data or []
+    if not history:
         return (None, None)
 
-    row = price_res.data[0]
-    resolved_market_name = market_name or (
-        (row.get("markets") or {}).get("name")
-    )
-    return (row["modal_price"], resolved_market_name)
+    if market_id:
+        series = build_daily_series(history)
+        name = market_name or ((history[-1].get("markets") or {}).get("name"))
+    else:
+        series = build_district_daily_series(history)
+        unique_markets = {
+            (row.get("markets") or {}).get("name")
+            for row in history
+            if (row.get("markets") or {}).get("name")
+        }
+        name = next(iter(unique_markets)) if len(unique_markets) == 1 else f"{district} (avg)"
+
+    if not series:
+        return (None, None)
+    return (series[-1][1], name)
