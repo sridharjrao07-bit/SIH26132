@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import structlog
 
@@ -56,6 +57,21 @@ def create_app() -> FastAPI:
     @app.get("/health", tags=["System"])
     def health_check():
         return {"status": "ok", "environment": settings.app_env}
+
+    # Global exception handler — log full detail server-side, return generic 500 to clients
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(request: Request, exc: Exception):
+        logger.error(
+            "unhandled_exception",
+            path=str(request.url),
+            method=request.method,
+            error=str(exc),
+            exc_info=True,
+        )
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error"},
+        )
 
     # Mount API routers
     app.include_router(markets_router)

@@ -21,7 +21,7 @@ async def get_dashboard(request: Request):
 @router.get("/dashboard/api/ingestion-logs", dependencies=[Depends(require_role("admin"))])
 async def get_ingestion_logs(supabase: Client = Depends(get_supabase_service_role)):
     """Admin-only API to fetch recent ingestion logs"""
-    res = supabase.table("ingestion_log").select("*").order("start_time", desc=True).limit(10).execute()
+    res = supabase.table("ingestion_log").select("*").order("run_at", desc=True).limit(10).execute()
     return res.data
 
 @router.get("/dashboard/api/forecast-stats", dependencies=[Depends(require_role("admin"))])
@@ -54,7 +54,7 @@ async def get_forecast_stats(supabase: Client = Depends(get_supabase_service_rol
             "predicted": f["predicted_price"],
             "lower": f["lower_bound"],
             "upper": f["upper_bound"],
-            "confidence": f["confidence_tier"],
+            "confidence": f.get("confidence"),
             "actual": actual_price,
             "hit": within_bounds
         })

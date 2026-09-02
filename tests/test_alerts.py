@@ -260,26 +260,29 @@ def test_mock_gateway_logs_file(tmp_path):
 
 
 def test_msg91_fails_loudly_on_missing_template(monkeypatch):
-    """MSG91Gateway returns False and logs error when template_id is None"""
-    import os
-    monkeypatch.setenv("USE_MSG91", "1")
-    monkeypatch.setenv("MSG91_AUTH_KEY", "test-key")
+    """MSG91Gateway returns (failed, False) and logs error when template_id is None"""
     from notifications.sms_gateway import MSG91Gateway
-    gw = MSG91Gateway()
-    result = gw.send_sms("+91123456", "Test", template_id=None)
+    gw = MSG91Gateway(auth_key="test-key")  # auth_key is now a required arg
+    status, result = gw.send_sms("+91123456", "Test", template_id=None)
     assert result is False
+    assert status == "failed"
 
 
 def test_resolve_template_returns_correct_lang(monkeypatch):
-    monkeypatch.setenv("MSG91_DLT_TE_ID_MR", "tmpl_mr")
-    monkeypatch.setenv("MSG91_DLT_TE_ID_HI", "tmpl_hi")
-    monkeypatch.setenv("MSG91_DLT_TE_ID_EN", "tmpl_en")
-    from importlib import reload
-    import notifications.sms_gateway as gw_mod
-    reload(gw_mod)
-    assert gw_mod.resolve_template("mr") == "tmpl_mr"
-    assert gw_mod.resolve_template("hi") == "tmpl_hi"
-    assert gw_mod.resolve_template("en") == "tmpl_en"
+    from app.config import Settings
+    test_settings = Settings(
+        supabase_url="http://fake",
+        supabase_anon_key="anon",
+        supabase_service_role_key="svc",
+        supabase_jwt_secret="secret",
+        msg91_dlt_te_id_mr="tmpl_mr",
+        msg91_dlt_te_id_hi="tmpl_hi",
+        msg91_dlt_te_id_en="tmpl_en",
+    )
+    from notifications.sms_gateway import resolve_template
+    assert resolve_template("mr", settings=test_settings) == "tmpl_mr"
+    assert resolve_template("hi", settings=test_settings) == "tmpl_hi"
+    assert resolve_template("en", settings=test_settings) == "tmpl_en"
 
 
 def test_marathi_message_fits_in_70_chars(fake_supabase):

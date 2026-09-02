@@ -171,10 +171,17 @@ class AlertChecker:
             template_id = resolve_template(lang)
             
             try:
-                success = self.gateway.send_sms(phone, msg, template_id)
+                sms_status, success = self.gateway.send_sms(
+                    phone,
+                    msg,
+                    template_id,
+                    commodity=comm_name,
+                    price=str(price),
+                    threshold=str(threshold),
+                )
             except Exception as e:
                 logger.error("sms_gateway_error", alert_id=alert["id"], error=str(e))
-                success = False
+                sms_status, success = "failed", False
 
             if not success:
                 # Rollback guarded by the claim timestamp
@@ -190,14 +197,15 @@ class AlertChecker:
                         "notified_count": old_count
                     }).eq("id", alert["id"]).eq("last_notified_at", now_iso).execute()
 
-            # Write to notification_log
+            # Write to notification_log — status comes from the gateway
+            # ("mock" for MockGateway, "sent" for MSG91 2xx, "failed" for errors)
             self.supabase.table("notification_log").insert({
-                "alert_id": alert["id"],
-                "user_id": uid,
+                "alert_id":  alert["id"],
+                "user_id":   uid,
                 "recipient": phone,
-                "message": msg,
-                "language": lang,
-                "status": "sent" if success else "failed",
+                "message":   msg,
+                "language":  lang,
+                "status":    sms_status,
             }).execute()
 
             if success:

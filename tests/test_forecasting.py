@@ -175,3 +175,89 @@ def test_reversed_sanity_band_invariant():
     for r in rows:
         assert 0 <= r['lower_bound'] <= r['predicted_price'] <= r['upper_bound']
 
+
+# ─── B2 Regression: generated_at must be present and fresh in all row paths ──
+
+def test_make_forecast_rows_ok_has_generated_at():
+    """B2: forecast rows (status=ok) must contain a non-None generated_at timestamp."""
+    from datetime import date
+    series = [(date(2024, 9, i+1), 2000.0) for i in range(25)]
+    rows = _make_forecast_rows('m1', 'c1', series, None)
+    assert len(rows) > 0
+    for row in rows:
+        assert "generated_at" in row, "generated_at key must be present"
+        assert row["generated_at"] is not None, "generated_at must not be None"
+        assert row["status"] == "ok"
+
+
+def test_make_forecast_rows_insufficient_data_has_generated_at():
+    """B2: insufficient_data rows must also contain a generated_at timestamp."""
+    from datetime import date
+    # Only 5 observations — below MIN_OBSERVATIONS (10)
+    series = [(date(2024, 9, i+1), 2000.0) for i in range(5)]
+    rows = _make_forecast_rows('m1', 'c1', series, None)
+    assert len(rows) == 1
+    assert rows[0]["status"] == "insufficient_data"
+    assert "generated_at" in rows[0], "generated_at key must be present on insufficient_data row"
+    assert rows[0]["generated_at"] is not None
+
+
+def test_consecutive_runs_produce_different_generated_at():
+    """
+    B2 regression test: two separate calls to _make_forecast_rows must produce
+    different generated_at values. This would catch a bug where the timestamp was
+    hard-coded or computed once at module load (key presence alone wouldn't catch that).
+    """
+    import time
+    from datetime import date
+    series = [(date(2024, 9, i+1), 2000.0) for i in range(25)]
+
+    rows1 = _make_forecast_rows('m1', 'c1', series, None)
+    time.sleep(0.01)  # ensure wall-clock time has advanced
+    rows2 = _make_forecast_rows('m1', 'c1', series, None)
+
+    ts1 = rows1[0]["generated_at"]
+    ts2 = rows2[0]["generated_at"]
+    assert ts1 != ts2, (
+        f"Two consecutive calls produced the same generated_at ({ts1}). "
+        "This suggests the timestamp is hard-coded rather than computed at call time."
+    )
+
+
+def test_forecast_engine_upsert_payload_contains_generated_at(fake_supabase):
+    """B2: ForecastEngine.run must include generated_at in every upserted row."""
+    from datetime import date
+    today = date.today().isoformat()
+
+    from datetime import date, timedelta
+    today = date.today()
+
+    # Seed 25 price rows within the engine's 60-day lookback window (must be recent)
+    fake_supabase._data["prices"] = [
+        {
+            "market_id":    "m1",
+            "commodity_id": "c1",
+            "arrival_date": (today - timedelta(days=25 - i)).isoformat(),
+            "modal_price":  2000.0,
+            "source":       "data_gov_in",
+            "variety":      "General",
+        }
+        for i in range(25)
+    ]
+    fake_supabase._data["commodities"] = [
+        {"id": "c1", "sanity_min": 100.0, "sanity_max": 8000.0}
+    ]
+
+    from forecasting.engine import ForecastEngine
+    engine = ForecastEngine(fake_supabase)
+    engine.run()
+
+    upsert_calls = fake_supabase.upsert_calls()
+    assert len(upsert_calls) > 0, "Engine must have upserted at least one batch of rows"
+
+    for call in upsert_calls:
+        payload = call["payload"]
+        rows = payload if isinstance(payload, list) else [payload]
+        for row in rows:
+            assert "generated_at" in row, f"upserted row missing generated_at: {row}"
+            assert row["generated_at"] is not None
