@@ -359,6 +359,15 @@ def fake_supabase():
             "lng":                None,
             "district":           "Nashik",
         },
+        {
+            "id":                 FPO_USER_ID,
+            "role":               "fpo",
+            "phone":              "+919876543212",
+            "preferred_language": "mr",
+            "lat":                20.1,
+            "lng":                74.2,
+            "district":           "Nashik",
+        },
     ])
     return db
 

@@ -30,8 +30,10 @@ docker run --env-file .env -p 8000:8000 krishi-bazaar
 3. `GET /api/v1/lots/{id}/matches` — ranked verified buyers (district, price, volume, distance)  
 4. `POST /api/v1/offers/` → `PATCH` accept → `POST /api/v1/payments/` → `PATCH .../paid`  
 5. `POST /api/v1/grievances/` if quality / payment / logistics fails  
-6. `GET /api/v1/sale-window/?commodity_id=&market_id=` — sell / hold / wait  
+6. `GET /api/v1/sale-window/?commodity_id=&market_id=` — sell / hold / wait (hold only if district storage is listed)  
 7. `GET /api/v1/logistics/?district=Nashik` — storage and transport  
+8. FPO: `POST /api/v1/lots/aggregate` pools member lots  
+9. Admin: `POST /api/v1/admin/buyers`, `PATCH .../verify`, `GET/PATCH /api/v1/admin/grievances`  
 
 SMS: registered farmer texts `PYAJ` / `कांदा` → latest modal **plus** sell/hold/wait in their language. Unknown numbers are ignored (no help-SMS amplifier).
 

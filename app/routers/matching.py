@@ -81,6 +81,11 @@ def match_buyers(
             reasons.append("reliable_payer")
         elif rel == "low":
             score -= 5
+        grade = (lot.get("grade") or "").lower()
+        req = (b.get("quality_requirements") or "").lower()
+        if grade and req and grade in req:
+            score += 10
+            reasons.append("grade_match")
         dist = _haversine_km(profile.get("lat"), profile.get("lng"), b.get("lat"), b.get("lng"))
         if dist is not None:
             if dist <= 25:

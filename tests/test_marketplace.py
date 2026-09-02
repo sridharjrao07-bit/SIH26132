@@ -249,6 +249,131 @@ def test_fpo_lists_member_lots(override_supabase, fake_supabase):
     assert "lot-fpo-1" in ids
 
 
+def test_sale_window_hold_without_storage_becomes_sell(override_supabase, fake_supabase):
+    today = date.today().isoformat()
+    fake_supabase.seed("prices", [{
+        "market_id": MARKET_ID_LASALGAON,
+        "commodity_id": COMMODITY_ID_ONION,
+        "arrival_date": today,
+        "modal_price": 2000.0,
+        "arrival_qty": 50,
+        "markets": {"name": "Lasalgaon APCM", "district": "Nashik"},
+    }])
+    fake_supabase.seed("forecasts", [{
+        "market_id": MARKET_ID_LASALGAON,
+        "commodity_id": COMMODITY_ID_ONION,
+        "forecast_date": today,
+        "predicted_price": 2200.0,
+        "status": "ok",
+    }])
+    fake_supabase.seed("logistics_options", [])
+    resp = client.get(
+        f"/api/v1/sale-window/?commodity_id={COMMODITY_ID_ONION}&market_id={MARKET_ID_LASALGAON}"
+    )
+    assert resp.status_code == 200
+    assert resp.json()["recommendation"] == "sell"
+    assert "storage" in resp.json()["reason"].lower()
+
+
+def test_sale_window_hold_when_storage_listed(override_supabase, fake_supabase):
+    today = date.today().isoformat()
+    fake_supabase.seed("prices", [{
+        "market_id": MARKET_ID_LASALGAON,
+        "commodity_id": COMMODITY_ID_ONION,
+        "arrival_date": today,
+        "modal_price": 2000.0,
+        "arrival_qty": 50,
+        "markets": {"name": "Lasalgaon APCM", "district": "Nashik"},
+    }])
+    fake_supabase.seed("forecasts", [{
+        "market_id": MARKET_ID_LASALGAON,
+        "commodity_id": COMMODITY_ID_ONION,
+        "forecast_date": today,
+        "predicted_price": 2200.0,
+        "status": "ok",
+    }])
+    fake_supabase.seed("logistics_options", [{
+        "id": "st-1", "district": "Nashik", "kind": "storage",
+        "name": "MSWC Lasalgaon Godown", "is_active": True, "capacity_qtl": 5000,
+    }])
+    resp = client.get(
+        f"/api/v1/sale-window/?commodity_id={COMMODITY_ID_ONION}&market_id={MARKET_ID_LASALGAON}"
+    )
+    assert resp.status_code == 200
+    assert resp.json()["recommendation"] == "hold"
+    assert resp.json()["storage"]
+
+
+def test_lot_rejects_unknown_grade(override_supabase, fake_supabase):
+    resp = client.post("/api/v1/lots/", json={
+        "commodity_id": COMMODITY_ID_ONION,
+        "quantity_qtl": 10,
+        "grade": "Reject",
+    }, headers=farmer_headers())
+    assert resp.status_code == 422
+
+
+def test_farmer_cannot_verify_buyer(override_supabase, fake_supabase):
+    resp = client.patch("/api/v1/admin/buyers/buyer-1/verify", headers=farmer_headers())
+    assert resp.status_code == 403
+
+
+def test_admin_verify_buyer_and_resolve_grievance(override_supabase, fake_supabase):
+    from tests.conftest import ADMIN_USER_ID
+    fake_supabase.seed("buyers", [{
+        "id": "buyer-new", "name": "New Desk", "type": "trader",
+        "verified": False, "district": "Nashik",
+    }])
+    fake_supabase.seed("grievances", [{
+        "id": "g-1", "user_id": FARMER_USER_ID, "category": "payment",
+        "description": "Payment delayed", "status": "open",
+        "created_at": date.today().isoformat(),
+    }])
+    headers = {"Authorization": f"Bearer {mint_jwt(ADMIN_USER_ID)}"}
+    v = client.patch("/api/v1/admin/buyers/buyer-new/verify", headers=headers)
+    assert v.status_code == 200, v.text
+    assert v.json()["verified"] is True
+    listed = client.get("/api/v1/admin/grievances", headers=headers)
+    assert listed.status_code == 200
+    resolved = client.patch(
+        "/api/v1/admin/grievances/g-1",
+        json={"status": "resolved"},
+        headers=headers,
+    )
+    assert resolved.status_code == 200
+    assert resolved.json()["status"] == "resolved"
+
+
+def test_fpo_aggregate_lots(override_supabase, fake_supabase):
+    from tests.conftest import FPO_USER_ID
+    fake_supabase.seed("lots", [
+        {
+            "id": "m1", "user_id": FARMER_USER_ID, "fpo_id": FPO_USER_ID,
+            "commodity_id": COMMODITY_ID_ONION, "quantity_qtl": 10,
+            "grade": "FAQ", "status": "open", "asking_price": 2000,
+        },
+        {
+            "id": "m2", "user_id": FARMER_USER_ID, "fpo_id": FPO_USER_ID,
+            "commodity_id": COMMODITY_ID_ONION, "quantity_qtl": 15,
+            "grade": "FAQ", "status": "open", "asking_price": 2100,
+        },
+    ])
+    resp = client.post(
+        "/api/v1/lots/aggregate",
+        json={"lot_ids": ["m1", "m2"], "asking_price": 2050},
+        headers={"Authorization": f"Bearer {mint_jwt(FPO_USER_ID)}"},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["quantity_qtl"] == 25
+    assert resp.json()["fpo_id"] == FPO_USER_ID
+    farmer_blocked = client.post(
+        "/api/v1/lots/aggregate",
+        json={"lot_ids": ["m1", "m2"]},
+        headers=farmer_headers(),
+    )
+    assert farmer_blocked.status_code == 403
+
+
 def test_format_sale_and_alert_sms_fit_ucs2():
     from notifications.sale_window import format_sale_sms, format_alert_sms
     mr_sale = format_sale_sms("mr", "कांदा", 2100, "Lasalgaon", "sell")

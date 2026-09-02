@@ -1,10 +1,10 @@
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
-from typing import List, Optional
+from typing import Optional
 from supabase import Client
 from app.deps import get_supabase_as_user
 from app.auth import get_current_user
-from app.schemas.marketplace import LotCreate
+from app.schemas.marketplace import LotCreate, LotAggregate
 
 router = APIRouter(prefix="/api/v1/lots", tags=["Lots"])
 
@@ -31,6 +31,59 @@ def create_lot(
     res = supabase.table("lots").insert(row).execute()
     if not res.data:
         raise HTTPException(400, "could not create lot")
+    return res.data[0]
+
+
+@router.post("/aggregate")
+def aggregate_lots(
+    body: LotAggregate,
+    user_id: str = Depends(get_current_user),
+    supabase: Client = Depends(get_supabase_as_user),
+):
+    """FPO rolls member lots into one pooled lot for matching."""
+    profile = (
+        supabase.table("user_profiles").select("role").eq("id", user_id).execute().data or []
+    )
+    if not profile or profile[0].get("role") != "fpo":
+        raise HTTPException(403, "requires fpo role")
+
+    members = []
+    for lid in body.lot_ids:
+        rows = supabase.table("lots").select("*").eq("id", lid).execute().data or []
+        if not rows:
+            raise HTTPException(404, f"lot not found: {lid}")
+        lot = rows[0]
+        if lot.get("status") != "open":
+            raise HTTPException(409, f"lot {lid} is not open")
+        members.append(lot)
+
+    commodity_ids = {m["commodity_id"] for m in members}
+    if len(commodity_ids) != 1:
+        raise HTTPException(400, "all lots must share the same commodity")
+
+    qty = sum(float(m["quantity_qtl"]) for m in members)
+    asking = body.asking_price
+    if asking is None:
+        priced = [float(m["asking_price"]) for m in members if m.get("asking_price") is not None]
+        asking = (sum(priced) / len(priced)) if priced else None
+
+    pooled = {
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "fpo_id": user_id,
+        "commodity_id": members[0]["commodity_id"],
+        "market_id": body.market_id or members[0].get("market_id"),
+        "quantity_qtl": qty,
+        "grade": members[0].get("grade") or "General",
+        "quality_notes": f"FPO aggregate of {len(members)} lots",
+        "asking_price": asking,
+        "status": "open",
+    }
+    res = supabase.table("lots").insert(pooled).execute()
+    if not res.data:
+        raise HTTPException(400, "could not create pooled lot")
+    for m in members:
+        supabase.table("lots").update({"status": "matched", "fpo_id": user_id}).eq("id", m["id"]).execute()
     return res.data[0]
 
 
