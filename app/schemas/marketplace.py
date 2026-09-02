@@ -116,6 +116,18 @@ class MatchItem(BaseModel):
     distance_km: Optional[float] = None
 
 
+class LogisticsBookCreate(BaseModel):
+    lot_id: str
+    logistics_id: str
+    quantity_qtl: Optional[float] = Field(default=None, gt=0)
+    scheduled_date: Optional[date] = None
+    notes: Optional[str] = Field(default=None, max_length=500)
+
+
+class LogisticsBookUpdate(BaseModel):
+    status: Literal["requested", "confirmed", "cancelled", "completed"]
+
+
 class SaleWindowResponse(BaseModel):
     commodity_id: str
     market_id: Optional[str] = None

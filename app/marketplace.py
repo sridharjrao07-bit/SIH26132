@@ -219,11 +219,75 @@ def lot_ledger(supabase, lot: dict) -> dict:
                 "description": g.get("description"),
             },
         })
+    bookings = (
+        supabase.table("logistics_bookings")
+        .select("*")
+        .eq("lot_id", lot_id)
+        .execute()
+        .data
+        or []
+    )
+    for b in bookings:
+        events.append({
+            "at": b.get("updated_at") or b.get("created_at") or "",
+            "type": f"booking_{b.get('status') or 'requested'}",
+            "detail": {
+                "booking_id": b.get("id"),
+                "logistics_id": b.get("logistics_id"),
+                "kind": b.get("kind"),
+                "quantity_qtl": b.get("quantity_qtl"),
+            },
+        })
     events.sort(key=lambda e: str(e.get("at") or ""))
     return {
         "lot": lot,
         "offers": offers,
         "payments": payments,
         "grievances": grievances,
+        "bookings": bookings,
         "events": events,
     }
+
+
+ACTIVE_BOOKING_STATUSES = ("requested", "confirmed")
+
+
+def booked_quantity(supabase, logistics_id: str, exclude_id: Optional[str] = None) -> float:
+    rows = (
+        supabase.table("logistics_bookings")
+        .select("id,quantity_qtl,status")
+        .eq("logistics_id", logistics_id)
+        .execute()
+        .data
+        or []
+    )
+    total = 0.0
+    for r in rows:
+        if exclude_id and r.get("id") == exclude_id:
+            continue
+        if r.get("status") not in ACTIVE_BOOKING_STATUSES:
+            continue
+        try:
+            total += float(r.get("quantity_qtl") or 0)
+        except (TypeError, ValueError):
+            continue
+    return total
+
+
+def logistics_next_step(action: str, window: Optional[dict], bookings: list, transport: list) -> Optional[str]:
+    """Farmer-facing next action: book storage to HOLD, or a truck to SELL NOW."""
+    active = [b for b in (bookings or []) if b.get("status") in ACTIVE_BOOKING_STATUSES]
+    has_storage = any(b.get("kind") == "storage" for b in active)
+    has_transport = any(b.get("kind") == "transport" for b in active)
+    if action == "HOLD" and not has_storage:
+        storage = (window or {}).get("storage") or []
+        name = (storage[0].get("name") if storage else None) or "a nearby godown"
+        return f"Book storage at {name} to hold through the glut."
+    if action == "SELL_NOW" and not has_transport:
+        name = (transport[0].get("name") if transport else None) or "a local truck / tempo"
+        return f"Book transport ({name}) and offer to the best local buyer."
+    if has_storage and action == "HOLD":
+        return "Storage is booked. Hold the lot until the sale window turns to Sell Now."
+    if has_transport and action == "SELL_NOW":
+        return "Transport is booked. Confirm the digital offer with the matched buyer."
+    return None
