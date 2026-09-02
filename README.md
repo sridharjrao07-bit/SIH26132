@@ -10,7 +10,7 @@ The API aggregates Nashik mandi prices, 7-day statistical forecasts, and **sale-
 python3.11 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env   # fill Supabase + DATA_GOV_IN_API_KEY
-# Apply db/migrations/001 … 009 in order on the Supabase project
+# Apply db/migrations/001 … 010 in order — see docs/SQL_APPLY.md
 RUN_SCHEDULER=0 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -21,7 +21,7 @@ docker build -t krishi-bazaar .
 docker run --env-file .env -p 8000:8000 krishi-bazaar
 ```
 
-`pytest -q` is offline (FakeSupabase). Production needs migrations through `009_logistics_bookings.sql`.
+`pytest -q` is offline (FakeSupabase). Production needs migrations through `010_lot_grade_check.sql` (`docs/SQL_APPLY.md`).
 
 ## Farmer / FPO flow
 

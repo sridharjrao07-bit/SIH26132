@@ -30,6 +30,11 @@ class LotCreate(BaseModel):
     fpo_id: Optional[str] = None
 
 
+class LotGradeUpdate(BaseModel):
+    grade: Literal["FAQ", "General", "Special"]
+    quality_notes: Optional[str] = Field(default=None, max_length=2000)
+
+
 class LotAggregate(BaseModel):
     lot_ids: List[str] = Field(min_length=2, max_length=50)
     asking_price: Optional[float] = Field(default=None, gt=0)

@@ -315,6 +315,25 @@ def test_lot_rejects_unknown_grade(override_supabase, fake_supabase):
     assert resp.status_code == 422
 
 
+def test_lot_grade_patch_records_assay(override_supabase, fake_supabase):
+    fake_supabase.seed("lots", [{
+        "id": "lot-g", "user_id": FARMER_USER_ID, "commodity_id": COMMODITY_ID_ONION,
+        "quantity_qtl": 20, "grade": "General", "status": "open",
+    }])
+    resp = client.patch("/api/v1/lots/lot-g/grade", json={
+        "grade": "FAQ",
+        "quality_notes": "Dry, 50kg bags, visual FAQ",
+    }, headers=farmer_headers())
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["grade"] == "FAQ"
+    sold = client.patch("/api/v1/lots/lot-g/grade", json={"grade": "Special"}, headers=farmer_headers())
+    # still open — allowed
+    assert sold.status_code == 200
+    fake_supabase._data["lots"][0]["status"] = "sold"
+    blocked = client.patch("/api/v1/lots/lot-g/grade", json={"grade": "FAQ"}, headers=farmer_headers())
+    assert blocked.status_code == 409
+
+
 def test_farmer_cannot_verify_buyer(override_supabase, fake_supabase):
     resp = client.patch("/api/v1/admin/buyers/buyer-1/verify", headers=farmer_headers())
     assert resp.status_code == 403
