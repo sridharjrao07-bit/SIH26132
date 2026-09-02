@@ -17,6 +17,16 @@ from typing import Optional, Tuple
 logger = structlog.get_logger()
 
 
+def redact_msisdn(phone: Optional[str]) -> str:
+    """Keep last 4 digits only — mock logs and structlog must not dump farmer PII."""
+    if not phone:
+        return "***"
+    digits = "".join(c for c in str(phone) if c.isdigit())
+    if len(digits) < 4:
+        return "***"
+    return f"+**{digits[-4:]}"
+
+
 class SMSGateway(ABC):
     @abstractmethod
     def send_sms(
@@ -55,10 +65,10 @@ class MockSMSGateway(SMSGateway):
         template_id: Optional[str] = None,
         **vars: str,
     ) -> Tuple[str, bool]:
-        # Write out the SMS to a file for demo purposes
+        masked = redact_msisdn(recipient)
         with open(self.log_file, "a", encoding="utf-8") as f:
-            f.write(f"TO: {recipient} | TEMPLATE: {template_id} | VARS: {vars}\nMSG: {message}\n{'-'*40}\n")
-        logger.info("mock_sms_sent", recipient=recipient, template_id=template_id)
+            f.write(f"TO: {masked} | TEMPLATE: {template_id} | VARS: {vars}\nMSG: {message}\n{'-'*40}\n")
+        logger.info("mock_sms_sent", recipient=masked, template_id=template_id)
         return ("mock", True)
 
 
@@ -88,7 +98,7 @@ class MSG91Gateway(SMSGateway):
         **vars: str,
     ) -> Tuple[str, bool]:
         if not template_id:
-            logger.error("msg91_missing_template", recipient=recipient)
+            logger.error("msg91_missing_template", recipient=redact_msisdn(recipient))
             return ("failed", False)  # Never send without a registered DLT template
 
         if not self.auth_key:
@@ -122,18 +132,18 @@ class MSG91Gateway(SMSGateway):
                 except Exception:
                     ref = None
                 self.last_provider_ref = ref
-                logger.info("msg91_sms_sent", recipient=recipient, template_id=template_id)
+                logger.info("msg91_sms_sent", recipient=redact_msisdn(recipient), template_id=template_id)
                 return ("sent", True)
             else:
                 logger.error(
                     "msg91_api_error",
                     status=resp.status_code,
                     body=resp.text[:200],
-                    recipient=recipient,
+                    recipient=redact_msisdn(recipient),
                 )
                 return ("failed", False)
         except httpx.RequestError as e:
-            logger.error("msg91_request_error", error=str(e), recipient=recipient)
+            logger.error("msg91_request_error", error=str(e), recipient=redact_msisdn(recipient))
             return ("failed", False)
 
 

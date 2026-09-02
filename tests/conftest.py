@@ -261,6 +261,7 @@ COMMODITY_ID_TOMATO  = "dddd-0000-0000-0000"
 # via admin_set_role; the JWT sub claim is just a user identifier.
 FARMER_USER_ID = "farmer-uuid-0001-0000-000000000000"
 ADMIN_USER_ID  = "admin-uuid-0001-0000-000000000000"
+FPO_USER_ID    = "fpo-uuid-0001-0000-000000000000"
 
 
 def mint_jwt(user_id: str) -> str:

@@ -299,6 +299,8 @@ def test_sms_simulate_known_keyword_replies(override_supabase, fake_supabase, tm
     )
     assert resp.status_code == 200
     assert resp.json()["status"] in ("replied", "no_data")
+    if resp.json()["status"] == "replied":
+        assert "recommendation" in resp.json()
 
 
 def test_sms_simulate_first_token_keyword_replies(override_supabase, fake_supabase, tmp_path, monkeypatch):

@@ -5,6 +5,7 @@ from notifications.inbound_verifier import InboundVerifier
 from notifications.alert_checker import normalize_phone
 from notifications.sms_gateway import get_sms_gateway, resolve_template
 from notifications.prices import latest_price_for_user
+from notifications.sale_window import compute_sale_window, format_sale_sms
 from app.deps import get_supabase_service_role
 from app.rate_limit import limiter, webhook_limit
 from supabase import Client
@@ -16,13 +17,13 @@ verifier = InboundVerifier()
 
 HELP_TEXT = {
     "en": "KrishiBazaar keywords: ONION TOMATO SOYBEAN MAIZE PYAJ कांदा टोमॅटो सोयाबीन मका प्याज",
-    "mr": "KrishiBazaar: ONION TOMATO SOYBEAN MAIZE PYAJ कांदा टोमॅटो सोयाबीन मका प्याज",
-    "hi": "KrishiBazaar: ONION TOMATO SOYBEAN MAIZE PYAJ कांदा टोमॅटो सोयाबीन मका प्याज",
+    "mr": "KB शब्द: ONION TOMATO SOYBEAN MAIZE PYAJ कांदा टोमॅटो सोयाबीन मका प्याज",
+    "hi": "KB शब्द: ONION TOMATO SOYBEAN MAIZE PYAJ कांदा टोमॅटो सोयाबीन मका प्याज",
 }
 NO_DATA_TEXT = {
     "en": "KrishiBazaar: no recent mandi price for that crop. Try again tomorrow.",
-    "mr": "KrishiBazaar: या पिकाची अलीकडील भाव माहिती नाही.",
-    "hi": "KrishiBazaar: इस फसल का हालिया भाव उपलब्ध नहीं है.",
+    "mr": "KB: या पिकाची अलीकडील भाव माहिती नाही.",
+    "hi": "KB: इस फसल का हालिया भाव उपलब्ध नहीं है.",
 }
 
 
@@ -114,13 +115,29 @@ async def _process_inbound(payload: dict, supabase: Client):
                 logger.warning("nodata_sms_failed", error=str(e))
         return {"status": "no_data"}
 
-    name  = commodity.get(f"name_{lang}") or commodity.get("name_en", "")
-    reply = f"KrishiBazaar: Latest price for {name} is ₹{price}/qtl at {market_name}."
+    name = commodity.get(f"name_{lang}") or commodity.get("name_en", "")
+    advice = compute_sale_window(supabase, commodity_id) or {}
+    rec = advice.get("recommendation") or "wait"
+    reply = format_sale_sms(lang, name, price, market_name, rec)
 
     try:
-        gateway.send_sms(sender, reply, resolve_template(lang), commodity=name, price=str(price))
+        gateway.send_sms(
+            sender,
+            reply,
+            resolve_template(lang),
+            commodity=name,
+            price=str(price),
+            action=rec,
+        )
     except Exception as e:
         logger.warning("reply_sms_failed", error=str(e))
 
-    logger.info("inbound_sms_processed", sender=sender, commodity=name, price=price, market=market_name)
-    return {"status": "replied"}
+    logger.info(
+        "inbound_sms_processed",
+        sender=sender,
+        commodity=name,
+        price=price,
+        market=market_name,
+        recommendation=rec,
+    )
+    return {"status": "replied", "recommendation": rec, "message": reply}

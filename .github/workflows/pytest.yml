@@ -1,0 +1,31 @@
+name: pytest
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: pip install -r requirements.txt
+      - name: Test
+        env:
+          RUN_SCHEDULER: "0"
+          RATE_LIMIT_ENABLED: "0"
+          APP_ENV: development
+          SUPABASE_URL: https://placeholder.supabase.co
+          SUPABASE_ANON_KEY: placeholder
+          SUPABASE_SERVICE_ROLE_KEY: placeholder
+          SUPABASE_JWT_SECRET: placeholder
+          SUPABASE_DB_URL: postgresql://p@db.placeholder.supabase.co:5432/postgres
+          DATA_GOV_IN_API_KEY: placeholder
+        run: pytest -q
