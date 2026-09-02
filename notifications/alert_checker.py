@@ -28,7 +28,7 @@ def normalize_phone(phone: Optional[str]) -> Optional[str]:
 
     digits = "".join(c for c in s if c.isdigit())
     
-    if len(digits) == 10:
+    if len(digits) == 10 and not digits.startswith("0"):
         return "+91" + digits
     if len(digits) == 11 and digits.startswith("0"):
         return "+91" + digits[1:]
