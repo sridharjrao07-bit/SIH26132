@@ -25,7 +25,7 @@ def get_markets(
         query = query.eq("is_active", True)
         
     res = query.order("name").execute()
-    return res.data
+    return res.data or []
 
 @router.get("/nearby")
 def get_nearby_markets(

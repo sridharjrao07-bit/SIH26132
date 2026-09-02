@@ -64,7 +64,7 @@ async def dashboard_logout(response: Response):
 async def get_ingestion_logs(supabase: Client = Depends(get_supabase_service_role)):
     """Admin-only API to fetch recent ingestion logs"""
     res = supabase.table("ingestion_log").select("*").order("run_at", desc=True).limit(10).execute()
-    return res.data
+    return res.data or []
 
 
 @router.get("/dashboard/api/forecast-stats", dependencies=[Depends(require_role("admin"))])

@@ -11,6 +11,7 @@ router = APIRouter(prefix="/api/v1/forecasts", tags=["Forecasts"])
 
 def _flatten_forecast(row: dict) -> dict:
     """Flatten joined markets and commodities fields for the Pydantic schema."""
+    row = dict(row or {})
     market_data = row.pop("markets", {}) or {}
     commodity_data = row.pop("commodities", {}) or {}
     row["market_name"] = market_data.get("name")
@@ -48,7 +49,7 @@ def get_forecasts(
         .execute()
     )
 
-    return [_flatten_forecast(row) for row in res.data]
+    return [_flatten_forecast(dict(row)) for row in (res.data or [])]
 
 
 @router.get("/summary", response_model=List[ForecastResponse])

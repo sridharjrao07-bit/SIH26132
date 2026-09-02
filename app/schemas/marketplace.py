@@ -22,11 +22,11 @@ class BuyerResponse(BaseModel):
 class LotCreate(BaseModel):
     commodity_id: str
     market_id: Optional[str] = None
-    quantity_qtl: float = Field(gt=0)
+    quantity_qtl: float = Field(gt=0, le=1_000_000)
     grade: Literal["FAQ", "General", "Special"] = "General"
     quality_notes: Optional[str] = None
     harvest_date: Optional[date] = None
-    asking_price: Optional[float] = Field(default=None, gt=0)
+    asking_price: Optional[float] = Field(default=None, gt=0, le=10_000_000)
     fpo_id: Optional[str] = None
 
 
@@ -77,8 +77,8 @@ class LotResponse(BaseModel):
 class OfferCreate(BaseModel):
     lot_id: str
     buyer_id: str
-    price_per_qtl: float = Field(gt=0)
-    quantity_qtl: float = Field(gt=0)
+    price_per_qtl: float = Field(gt=0, le=10_000_000)
+    quantity_qtl: float = Field(gt=0, le=1_000_000)
 
 
 class OfferUpdate(BaseModel):
@@ -87,7 +87,7 @@ class OfferUpdate(BaseModel):
 
 class PaymentCreate(BaseModel):
     offer_id: str
-    amount: float = Field(gt=0)
+    amount: float = Field(gt=0, le=10_000_000)
     reference: Optional[str] = None
 
 

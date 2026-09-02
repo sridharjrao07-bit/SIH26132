@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import Dict, Any, List
 import threading
 import time
@@ -90,7 +90,12 @@ async def handle_sms_webhook(request: Request, supabase: Client = Depends(get_su
     Profile/lots are SECURITY DEFINER RPCs — no user_profiles table scan.
     """
     await get_verifier().verify(request)
-    payload = await request.json()
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(400, "invalid json")
+    if not isinstance(payload, dict):
+        raise HTTPException(400, "invalid json")
     return await _process_inbound(payload, supabase)
 
 

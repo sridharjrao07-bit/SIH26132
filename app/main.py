@@ -1,4 +1,7 @@
-from fastapi import FastAPI, Request
+from json import JSONDecodeError
+
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
@@ -6,6 +9,10 @@ import structlog
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.middleware import SlowAPIMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from postgrest.exceptions import APIError
+
+from app.errors import json_for_api_error
 
 from app.config import get_settings
 from app.rate_limit import limiter
@@ -103,8 +110,24 @@ def create_app() -> FastAPI:
     def health_check():
         return {"status": "ok"}
 
+    @app.exception_handler(APIError)
+    async def postgrest_exception_handler(request: Request, exc: APIError):
+        logger.warning(
+            "postgrest_error",
+            path=str(request.url.path),
+            method=request.method,
+            code=getattr(exc, "code", None),
+        )
+        return json_for_api_error(exc)
+
+    @app.exception_handler(JSONDecodeError)
+    async def json_decode_handler(request: Request, exc: JSONDecodeError):
+        return JSONResponse(status_code=400, content={"detail": "invalid json"})
+
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception):
+        if isinstance(exc, (HTTPException, StarletteHTTPException, RequestValidationError, APIError)):
+            raise exc
         logger.error(
             "unhandled_exception",
             path=str(request.url.path),

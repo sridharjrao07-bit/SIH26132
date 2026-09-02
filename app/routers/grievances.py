@@ -16,6 +16,20 @@ def create_grievance(
     supabase: Client = Depends(get_supabase_as_user),
     service: Client = Depends(get_supabase_service_role),
 ):
+    if body.lot_id:
+        lots = (
+            supabase.table("lots").select("id,user_id,fpo_id").eq("id", body.lot_id).execute().data
+            or []
+        )
+        if not lots or (lots[0].get("user_id") != user_id and lots[0].get("fpo_id") != user_id):
+            raise HTTPException(404, "lot not found")
+    if body.offer_id:
+        offers = (
+            supabase.table("offers").select("id,user_id").eq("id", body.offer_id).execute().data
+            or []
+        )
+        if not offers or offers[0].get("user_id") != user_id:
+            raise HTTPException(404, "offer not found")
     row = {
         "id": str(uuid.uuid4()),
         "user_id": user_id,
