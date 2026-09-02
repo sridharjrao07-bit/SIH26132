@@ -150,14 +150,24 @@ class IngestionRunner:
                         valid_dict["market_id"] = market_id
                         all_valid_for_adapter.append(valid_dict)
 
-                # ── 3. Upsert ────────────────────────────────────────────────
+                # ── 3. Upsert in chunks so one bad row does not drop the batch
+                UPSERT_CHUNK = 200
                 if all_valid_for_adapter:
-                    # FIX BLOCKER 4: full 6-column unique constraint
-                    self.supabase.table("prices").upsert(
-                        all_valid_for_adapter,
-                        on_conflict="market_id, commodity_id, arrival_date, variety, grade, source"
-                    ).execute()
-                    written = len(all_valid_for_adapter)
+                    written = 0
+                    chunk_errors = 0
+                    conflict = "market_id, commodity_id, arrival_date, variety, grade, source"
+                    for i in range(0, len(all_valid_for_adapter), UPSERT_CHUNK):
+                        chunk = all_valid_for_adapter[i:i + UPSERT_CHUNK]
+                        try:
+                            self.supabase.table("prices").upsert(
+                                chunk, on_conflict=conflict
+                            ).execute()
+                            written += len(chunk)
+                        except Exception as e:
+                            chunk_errors += 1
+                            adapter_log.error("upsert_chunk_failed", offset=i, error=str(e))
+                    if chunk_errors:
+                        fetch_errors.append(f"upsert_chunks_failed={chunk_errors}")
 
                 duration_ms = int((time.monotonic() - adapter_start) * 1000)
                 if fetch_errors and seen == 0:

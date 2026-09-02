@@ -5,6 +5,7 @@ from supabase import Client
 
 from forecasting.engine import build_daily_series, build_district_daily_series
 from .sms_gateway import get_sms_gateway, resolve_template
+from .sale_window import format_alert_sms
 
 logger = structlog.get_logger()
 
@@ -186,16 +187,7 @@ class AlertChecker:
             threshold = alert["threshold_price"]
             scope     = alert["_scope_note"]
 
-            if lang == "mr":
-                # Kept ≤65 chars for Devanagari 1-segment billing
-                msg = f"KrishiBazaar: {comm_name} ₹{price} ({scope}). Limit ₹{threshold} crossed."
-            elif lang == "hi":
-                msg = f"KrishiBazaar: {comm_name} ₹{price} ({scope}). Limit ₹{threshold} crossed."
-            else:
-                msg = (
-                    f"KrishiBazaar Alert: {comm_name} is ₹{price} ({scope}). "
-                    f"Your threshold was ₹{threshold}."
-                )
+            msg = format_alert_sms(lang, comm_name, price, threshold, scope)
 
             template_id = resolve_template(lang)
             

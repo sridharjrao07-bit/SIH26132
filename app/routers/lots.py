@@ -40,11 +40,18 @@ def list_lots(
     user_id: str = Depends(get_current_user),
     supabase: Client = Depends(get_supabase_as_user),
 ):
-    query = supabase.table("lots").select("*").eq("user_id", user_id)
+    """Own lots plus lots aggregated under this user as an FPO."""
+    own_q = supabase.table("lots").select("*").eq("user_id", user_id)
+    fpo_q = supabase.table("lots").select("*").eq("fpo_id", user_id)
     if status:
-        query = query.eq("status", status)
-    res = query.order("created_at", desc=True).limit(100).execute()
-    return res.data or []
+        own_q = own_q.eq("status", status)
+        fpo_q = fpo_q.eq("status", status)
+    own = own_q.order("created_at", desc=True).limit(100).execute().data or []
+    as_fpo = fpo_q.order("created_at", desc=True).limit(100).execute().data or []
+    by_id = {}
+    for row in own + as_fpo:
+        by_id[row.get("id")] = row
+    return list(by_id.values())[:100]
 
 
 @router.get("/{lot_id}")

@@ -181,3 +181,84 @@ def test_logistics_list(override_supabase, fake_supabase):
 def test_docs_available_in_development():
     resp = client.get("/docs")
     assert resp.status_code == 200
+
+
+def test_sms_reply_includes_sale_window(override_supabase, fake_supabase, tmp_path, monkeypatch):
+    from notifications.sms_gateway import MockSMSGateway
+    from tests.conftest import mint_jwt, ADMIN_USER_ID
+
+    monkeypatch.setattr(
+        "app.routers.sms.get_sms_gateway",
+        lambda: MockSMSGateway(log_file=str(tmp_path / "sms.log")),
+    )
+    for row in fake_supabase._data["commodity_alias"]:
+        if row.get("source") == "sms":
+            row["commodities"] = {"name_en": "Onion", "name_mr": "कांदा", "name_hi": "प्याज"}
+    today = date.today().isoformat()
+    fake_supabase.seed("prices", [{
+        "market_id": MARKET_ID_LASALGAON,
+        "commodity_id": COMMODITY_ID_ONION,
+        "arrival_date": today,
+        "modal_price": 2100.0,
+        "arrival_qty": 1500,
+        "source": "data_gov_in",
+        "variety": "General",
+        "markets": {"name": "Lasalgaon APCM"},
+    }])
+    fake_supabase.seed("forecasts", [{
+        "market_id": MARKET_ID_LASALGAON,
+        "commodity_id": COMMODITY_ID_ONION,
+        "forecast_date": today,
+        "predicted_price": 1800.0,
+        "status": "ok",
+    }])
+    fake_supabase.set_rpc(
+        "nearest_market",
+        [{"id": MARKET_ID_LASALGAON, "name": "Lasalgaon APCM", "distance_km": 3.2}],
+    )
+    resp = client.post(
+        "/api/v1/sms/simulate",
+        json={"sender": "9876543210", "message": "PYAJ"},
+        headers={"Authorization": f"Bearer {mint_jwt(ADMIN_USER_ID)}"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["status"] == "replied"
+    assert body["recommendation"] == "sell"
+    assert "विका" in body["message"] or "SELL" in body["message"] or "बेचें" in body["message"]
+
+
+def test_fpo_lists_member_lots(override_supabase, fake_supabase):
+    from tests.conftest import FPO_USER_ID, mint_jwt
+    fake_supabase.seed("lots", [{
+        "id": "lot-fpo-1",
+        "user_id": FARMER_USER_ID,
+        "fpo_id": FPO_USER_ID,
+        "commodity_id": COMMODITY_ID_ONION,
+        "quantity_qtl": 40,
+        "grade": "FAQ",
+        "status": "open",
+        "created_at": date.today().isoformat(),
+    }])
+    resp = client.get(
+        "/api/v1/lots/",
+        headers={"Authorization": f"Bearer {mint_jwt(FPO_USER_ID)}"},
+    )
+    assert resp.status_code == 200
+    ids = [r["id"] for r in resp.json()]
+    assert "lot-fpo-1" in ids
+
+
+def test_format_sale_and_alert_sms_fit_ucs2():
+    from notifications.sale_window import format_sale_sms, format_alert_sms
+    mr_sale = format_sale_sms("mr", "कांदा", 2100, "Lasalgaon", "sell")
+    hi_sale = format_sale_sms("hi", "प्याज", 2100, "Lasalgaon", "hold")
+    mr_alert = format_alert_sms("mr", "कांदा", 2300, 2200, "direct")
+    hi_alert = format_alert_sms("hi", "प्याज", 2300, 2200, "direct")
+    assert "विका" in mr_sale
+    assert "रुकें" in hi_sale
+    assert len(mr_sale) <= 70
+    assert len(hi_sale) <= 70
+    assert len(mr_alert) <= 70
+    assert len(hi_alert) <= 70
+    assert "ओलांडली" in mr_alert

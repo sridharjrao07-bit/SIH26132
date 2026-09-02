@@ -252,11 +252,12 @@ def test_mock_gateway_logs_file(tmp_path):
     from notifications.sms_gateway import MockSMSGateway
     log_file = str(tmp_path / "sms.log")
     gw = MockSMSGateway(log_file=log_file)
-    gw.send_sms("+91123456", "Test Message", "tmpl_123")
+    gw.send_sms("+911234567890", "Test Message", "tmpl_123")
     with open(log_file, encoding="utf-8") as f:
         content = f.read()
     assert "Test Message" in content
-    assert "+91123456" in content
+    assert "7890" in content
+    assert "+911234567890" not in content
 
 
 def test_msg91_fails_loudly_on_missing_template(monkeypatch):
