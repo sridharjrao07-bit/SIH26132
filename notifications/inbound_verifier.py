@@ -3,27 +3,56 @@ import hmac
 import hashlib
 import secrets
 import time
+import threading
 from fastapi import Request, HTTPException
 import structlog
 
 logger = structlog.get_logger()
 
+# Replay cache: signature -> expiry epoch. Single-worker in-memory is enough
+# alongside the job-lock assumption (uvicorn --workers 1).
+_REPLAY_LOCK = threading.Lock()
+_SEEN_SIGNATURES: dict = {}
+_REPLAY_TTL_SEC = 330  # slightly longer than the ±5 min drift window
+
+
+def _purge_expired(now: float) -> None:
+    expired = [k for k, exp in _SEEN_SIGNATURES.items() if exp <= now]
+    for k in expired:
+        _SEEN_SIGNATURES.pop(k, None)
+
 
 def _load_secret() -> bytes:
     """
-    Load the INBOUND_HMAC_SECRET from the environment.
+    Load the inbound HMAC secret.
+
+    Preference:
+      1. os.environ (process env / test monkeypatch)
+      2. pydantic Settings (values loaded from `.env` even if not exported)
 
     Production (APP_ENV=production):
       - Secret MUST be set and MUST NOT equal the old hard-coded "demo-secret".
       - Raises RuntimeError at startup if this condition is not met.
 
     Development / staging:
-      - If the secret is missing, a random ephemeral key is generated and
-        logged as a WARNING on every instantiation so operators notice.
-      - "demo-secret" is explicitly rejected even in dev (it's in git history).
+      - Missing secret → ephemeral random key + warning.
+      - "demo-secret" is rejected in every environment.
     """
-    secret_str = os.environ.get("INBOUND_HMAC_SECRET", "")
-    app_env    = os.environ.get("APP_ENV", "development").lower()
+    settings = None
+    try:
+        from app.config import get_settings
+        settings = get_settings()
+    except Exception:
+        settings = None
+
+    secret_str = os.environ.get("INBOUND_HMAC_SECRET")
+    if secret_str is None or secret_str == "":
+        secret_str = (settings.inbound_hmac_secret if settings else "") or ""
+
+    app_env = os.environ.get("APP_ENV")
+    if not app_env:
+        app_env = settings.app_env if settings else "development"
+    app_env = (app_env or "development").lower()
 
     if app_env == "production":
         if not secret_str or secret_str == "demo-secret":
@@ -33,11 +62,9 @@ def _load_secret() -> bytes:
             )
         return secret_str.encode("utf-8")
 
-    # Non-production path
     if secret_str and secret_str != "demo-secret":
         return secret_str.encode("utf-8")
 
-    # Missing or the banned default — generate ephemeral key and warn loudly.
     ephemeral = secrets.token_hex(32)
     logger.warning(
         "inbound_hmac_ephemeral_key",
@@ -50,19 +77,19 @@ def _load_secret() -> bytes:
 
 class InboundVerifier:
     """
-    Swappable webhook signature verifier.
-    Uses HMAC-SHA256 of the raw body against a configured secret.
-    Includes a ±5 minute timestamp drift guard to prevent replay attacks.
-
-    Secret loading rules:
-      - production: INBOUND_HMAC_SECRET env var required; missing → RuntimeError at startup.
-      - development: missing → ephemeral random key (warning logged every instantiation).
-      - "demo-secret" is never accepted in any environment.
+    HMAC-SHA256 of raw body + timestamp, ±5 minute drift, replay nonce.
     """
+
     def __init__(self):
-        self.secret          = _load_secret()
-        self.header_name     = os.environ.get("INBOUND_SIG_HEADER", "X-Signature")
-        self.ts_header_name  = os.environ.get("INBOUND_TS_HEADER", "X-Timestamp")
+        self.secret = _load_secret()
+        try:
+            from app.config import get_settings
+            s = get_settings()
+            self.header_name = os.environ.get("INBOUND_SIG_HEADER") or s.inbound_sig_header
+            self.ts_header_name = os.environ.get("INBOUND_TS_HEADER") or s.inbound_ts_header
+        except Exception:
+            self.header_name = os.environ.get("INBOUND_SIG_HEADER", "X-Signature")
+            self.ts_header_name = os.environ.get("INBOUND_TS_HEADER", "X-Timestamp")
 
     async def verify(self, request: Request):
         signature = request.headers.get(self.header_name)
@@ -72,7 +99,6 @@ class InboundVerifier:
             logger.warning("webhook_missing_headers")
             raise HTTPException(403, "Missing signature or timestamp")
 
-        # Drift guard: ±5 minutes
         try:
             ts_float = float(timestamp)
             if abs(time.time() - ts_float) > 300:
@@ -83,12 +109,19 @@ class InboundVerifier:
 
         body = await request.body()
 
-        # We sign the body + timestamp to bind them together
         payload_to_sign = body + timestamp.encode("utf-8")
         expected_hmac = hmac.new(self.secret, payload_to_sign, hashlib.sha256).hexdigest()
 
         if not hmac.compare_digest(expected_hmac, signature):
             logger.warning("webhook_invalid_signature")
             raise HTTPException(403, "Invalid signature")
+
+        now = time.time()
+        with _REPLAY_LOCK:
+            _purge_expired(now)
+            if signature in _SEEN_SIGNATURES:
+                logger.warning("webhook_replay_rejected")
+                raise HTTPException(403, "Replay detected")
+            _SEEN_SIGNATURES[signature] = now + _REPLAY_TTL_SEC
 
         return True

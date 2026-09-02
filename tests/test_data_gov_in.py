@@ -14,10 +14,9 @@ Contract under test:
   - unexpected response shape (no 'records' key) → raises SourceFetchError
   - source_name returns 'data_gov_in' (no dot)
 """
-import json
 import pytest
 from datetime import date
-from unittest.mock import AsyncMock, MagicMock, patch, call
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from ingestion.data_gov_in import DataGovInAdapter
 from ingestion.base import SourceFetchError
@@ -37,7 +36,7 @@ def _api_response(records, total=None):
 
 def _price_record(market="Lasalgaon", commodity="Onion", date_str="01/09/2024",
                   modal="2000", min_p="1500", max_p="2500",
-                  variety="General", grade="FAQ"):
+                  variety="General", grade="FAQ", arrivals="125.5"):
     return {
         "market": market,
         "commodity": commodity,
@@ -47,6 +46,7 @@ def _price_record(market="Lasalgaon", commodity="Onion", date_str="01/09/2024",
         "max_price": max_p,
         "variety": variety,
         "grade": grade,
+        "arrivals": arrivals,
     }
 
 
@@ -171,6 +171,7 @@ async def test_zero_or_empty_prices_are_null():
     assert records[0].min_price is None
     assert records[0].max_price is None
     assert records[0].modal_price == 2000.0  # modal still parsed
+    assert records[0].arrival_qty == 125.5
 
 
 async def test_zero_modal_skipped():
@@ -246,6 +247,30 @@ async def test_http_error_raises():
             await ADAPTER.fetch_prices(district="Nashik", commodity="Onion")
 
     assert "403" in str(exc_info.value)
+
+
+async def test_pune_does_not_try_nashik_spellings():
+    """F-039: TARGET_DISTRICT=Pune must not burn quota on Nashik/Nasik."""
+    spellings_tried = []
+
+    async def mock_get(url, params=None, **kwargs):
+        spellings_tried.append(params.get("filters[district]", ""))
+        resp = MagicMock()
+        resp.raise_for_status = MagicMock()
+        resp.json.return_value = _api_response([_price_record(market="Pune")])
+        return resp
+
+    mock_client = AsyncMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+    mock_client.get = mock_get
+
+    with patch("ingestion.data_gov_in.httpx.AsyncClient", return_value=mock_client):
+        await ADAPTER.fetch_prices(district="Pune", commodity="Onion")
+
+    assert spellings_tried == ["Pune"]
+    assert "Nashik" not in spellings_tried
+    assert "Nasik" not in spellings_tried
 
 
 async def test_unexpected_shape_raises():

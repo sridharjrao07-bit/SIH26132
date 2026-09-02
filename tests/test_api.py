@@ -9,13 +9,11 @@ previously-untested routes that contained runtime crashes in the evaluation:
   - Forecasts: get_forecasts, get_forecasts_summary (M7)
   - Auth gates: admin endpoints reject farmer tokens and no-token requests
 """
-import pytest
 from fastapi.testclient import TestClient
 from datetime import date, datetime, timezone
 
 from app.main import app
 from tests.conftest import (
-    FakeSupabase,
     MARKET_ID_LASALGAON,
     MARKET_ID_PIMPALGAON,
     COMMODITY_ID_ONION,
@@ -294,7 +292,6 @@ def test_alerts_create_valid(override_supabase, fake_supabase):
 
 def test_nearby_markets_rpc_error_returns_503(override_supabase, fake_supabase):
     """M4 regression: RPC missing → must be 503 with generic message, not 500 + raw exception"""
-    from tests.conftest import _ExecuteResult
 
     def failing_rpc(fn_name, params=None):
         raise RuntimeError("Could not find function public.nearby_markets in schema cache")

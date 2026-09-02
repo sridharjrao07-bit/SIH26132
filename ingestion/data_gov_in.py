@@ -48,8 +48,11 @@ class DataGovInAdapter(IngestionSourceAdapter):
     """
 
     BASE_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070"
-    # Fallback district spellings seen in the dataset
-    DISTRICT_SPELLINGS = ["Nashik", "Nasik"]
+    # Fallback district spellings keyed by the requested district
+    DISTRICT_SPELLINGS = {
+        "Nashik": ["Nasik"],
+        "Nasik": ["Nashik"],
+    }
 
     def __init__(self, api_key: str):
         self.api_key = api_key
@@ -58,7 +61,7 @@ class DataGovInAdapter(IngestionSourceAdapter):
            retry=retry_if_exception(_is_transient), reraise=True,
            before_sleep=before_sleep_log(RETRY_LOGGER, logging.INFO))
     async def _get_json(self, client: httpx.AsyncClient, params: dict):
-        resp = await client.get(self.BASE_URL, params=params, timeout=15.0)
+        resp = await client.get(self.BASE_URL, params=params)
         resp.raise_for_status()
         return resp.json()
 
@@ -77,11 +80,13 @@ class DataGovInAdapter(IngestionSourceAdapter):
         log = logger.bind(source=self.source_name, district=district, commodity=commodity)
 
         # ── 1. Try district spellings until we get records ────────────────────
-        spellings = [district] + [s for s in self.DISTRICT_SPELLINGS if s != district]
+        spellings = [district] + [
+            s for s in self.DISTRICT_SPELLINGS.get(district, []) if s != district
+        ]
         first_data = None
         used_spelling = district
 
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=15.0) as client:
             for spelling in spellings:
                 params = {
                     "api-key":            self.api_key,
@@ -107,22 +112,19 @@ class DataGovInAdapter(IngestionSourceAdapter):
                     used_spelling = spelling
                     break  # got results with this spelling
 
-        if first_data is None:
-            raise SourceFetchError("data.gov.in: no response obtained")
+            if first_data is None:
+                raise SourceFetchError("data.gov.in: no response obtained")
 
-        if "records" not in first_data:
-            raise SourceFetchError(
-                f"data.gov.in: unexpected response shape — keys={list(first_data.keys())}"
-            )
+            if "records" not in first_data:
+                raise SourceFetchError(
+                    f"data.gov.in: unexpected response shape — keys={list(first_data.keys())}"
+                )
 
-        # ── 2. Pagination ─────────────────────────────────────────────────────
-        # API returns {"total": N, "count": N, "records": [...]}.
-        # Collect subsequent pages until offset >= total.
-        all_raw: list = list(first_data.get("records", []))
-        total = int(first_data.get("total", len(all_raw)))
-        offset = len(all_raw)
+            # ── 2. Pagination (same client) ──────────────────────────────────
+            all_raw: list = list(first_data.get("records", []))
+            total = int(first_data.get("total", len(all_raw)))
+            offset = len(all_raw)
 
-        async with httpx.AsyncClient(timeout=10.0) as page_client:
             while offset < total:
                 page_params = {
                     "api-key":            self.api_key,
@@ -134,7 +136,7 @@ class DataGovInAdapter(IngestionSourceAdapter):
                     "offset":             offset,
                 }
                 try:
-                    page_data = await self._get_json(page_client, page_params)
+                    page_data = await self._get_json(client, page_params)
                     page_records = page_data.get("records", [])
                     if not page_records:
                         break  # API said there's more but sent nothing — stop
@@ -176,6 +178,19 @@ class DataGovInAdapter(IngestionSourceAdapter):
                 market     = (item.get("market")  or "").strip()
                 source_ref = f"{market}|{commodity}|{date_str}|{variety}"
 
+                arrival_qty = None
+                for qty_key in ("arrivals", "arrival", "arrival_quantity", "qty"):
+                    raw_qty = item.get(qty_key)
+                    if raw_qty in (None, ""):
+                        continue
+                    try:
+                        q = float(str(raw_qty).strip())
+                    except (TypeError, ValueError):
+                        continue
+                    if q >= 0:
+                        arrival_qty = q
+                        break
+
                 record = RawPriceRecord(
                     market_name=market,
                     commodity_name=(item.get("commodity") or "").strip(),
@@ -184,6 +199,7 @@ class DataGovInAdapter(IngestionSourceAdapter):
                     max_price=_safe_price(item.get("max_price")),
                     modal_price=modal_price,
                     unit="quintal",   # data.gov.in reports in Rs/Quintal
+                    arrival_qty=arrival_qty,
                     variety=variety,
                     grade=(item.get("grade") or "General").strip() or "General",
                     source=self.source_name,

@@ -10,12 +10,12 @@ class PriceResponse(BaseModel):
     min_price: Optional[float] = None
     max_price: Optional[float] = None
     modal_price: float
-    unit: str
+    unit: str = "quintal"
     arrival_qty: Optional[float] = None
-    variety: str
-    grade: str
+    variety: str = "General"
+    grade: str = "General"
     source: str
-    created_at: datetime
+    created_at: Optional[datetime] = None
     
     # Extended fields (joined from markets/commodities)
     market_name: Optional[str] = None

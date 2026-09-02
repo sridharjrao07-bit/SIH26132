@@ -11,12 +11,10 @@ Covers:
   - Gateway: mock logs correctly, msg91 fails loudly on missing template
 """
 import os
-import pytest
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 
 from tests.conftest import (
-    FakeSupabase, MARKET_ID_LASALGAON, MARKET_ID_PIMPALGAON,
-    COMMODITY_ID_ONION, COMMODITY_ID_TOMATO
+    MARKET_ID_LASALGAON, COMMODITY_ID_ONION
 )
 
 USER_A = "user-a-0000-0000-0000"
@@ -170,7 +168,7 @@ def test_expired_alert_deactivated(fake_supabase):
     assert result["fired"] == 0
     # Check that alert was deactivated in DB
     alert = fake_supabase._data["alerts"][0]
-    assert alert["active"] == False
+    assert not alert["active"]
 
 
 # ─── Location Resolution ──────────────────────────────────────────────────────
@@ -252,11 +250,12 @@ def test_mock_gateway_logs_file(tmp_path):
     from notifications.sms_gateway import MockSMSGateway
     log_file = str(tmp_path / "sms.log")
     gw = MockSMSGateway(log_file=log_file)
-    gw.send_sms("+91123456", "Test Message", "tmpl_123")
+    gw.send_sms("+911234567890", "Test Message", "tmpl_123")
     with open(log_file, encoding="utf-8") as f:
         content = f.read()
     assert "Test Message" in content
-    assert "+91123456" in content
+    assert "7890" in content
+    assert "+911234567890" not in content
 
 
 def test_msg91_fails_loudly_on_missing_template(monkeypatch):
@@ -269,17 +268,15 @@ def test_msg91_fails_loudly_on_missing_template(monkeypatch):
 
 
 def test_resolve_template_returns_correct_lang(monkeypatch):
-    from app.config import Settings
-    test_settings = Settings(
-        supabase_url="http://fake",
-        supabase_anon_key="anon",
-        supabase_service_role_key="svc",
-        supabase_jwt_secret="secret",
+    # Settings() ignores field-name kwargs (no populate_by_name) — inject a
+    # simple namespace so this test actually covers resolve_template().
+    from types import SimpleNamespace
+    from notifications.sms_gateway import resolve_template
+    test_settings = SimpleNamespace(
         msg91_dlt_te_id_mr="tmpl_mr",
         msg91_dlt_te_id_hi="tmpl_hi",
         msg91_dlt_te_id_en="tmpl_en",
     )
-    from notifications.sms_gateway import resolve_template
     assert resolve_template("mr", settings=test_settings) == "tmpl_mr"
     assert resolve_template("hi", settings=test_settings) == "tmpl_hi"
     assert resolve_template("en", settings=test_settings) == "tmpl_en"
@@ -292,9 +289,9 @@ def test_marathi_message_fits_in_70_chars(fake_supabase):
     
     sent_messages = []
     class CapturingGateway(MockSMSGateway):
-        def send_sms(self, recipient, message, template_id=None):
+        def send_sms(self, recipient, message, template_id=None, **kwargs):
             sent_messages.append(message)
-            return True
+            return ("mock", True)
     
     fake_supabase.seed("user_profiles", [make_profile(lang="mr")])
     fake_supabase.seed("alerts", [make_alert()])
@@ -317,12 +314,12 @@ def test_failed_resend_restores_previous_timestamp(fake_supabase):
     checker = AlertChecker(fake_supabase)
     
     class FailingGateway:
-        def send_sms(self, phone, msg, template_id=None):
+        def send_sms(self, phone, msg, template_id=None, **kwargs):
             raise Exception("Gateway down")
-            
+
     checker.gateway = FailingGateway()
     assert checker.run()["fired"] == 0
-    
+
     alert = fake_supabase._data["alerts"][0]
     assert alert["last_notified_at"] == old_ts, "must restore old_ts, not NULL"
     assert alert["notified_count"] == 2
@@ -338,12 +335,12 @@ def test_failed_send_rolls_back_claim(fake_supabase):
     checker = AlertChecker(fake_supabase)
     
     class FailingGateway:
-        def send_sms(self, phone, msg, template_id=None):
+        def send_sms(self, phone, msg, template_id=None, **kwargs):
             raise Exception("Gateway down")
-            
+
     checker.gateway = FailingGateway()
     assert checker.run()["fired"] == 0
-    
+
     alert = fake_supabase._data["alerts"][0]
     assert alert["last_notified_at"] is None, "must restore NULL timestamp"
     assert alert["notified_count"] == 0, "must restore 0 count"
@@ -359,9 +356,9 @@ def test_retry_after_failed_send(fake_supabase):
     checker = AlertChecker(fake_supabase)
     
     class FailingGateway:
-        def send_sms(self, phone, msg, template_id=None):
+        def send_sms(self, phone, msg, template_id=None, **kwargs):
             raise Exception("Gateway down")
-            
+
     checker.gateway = FailingGateway()
     checker.run()
     
