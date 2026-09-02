@@ -4,7 +4,6 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
-from apscheduler.triggers.cron import CronTrigger
 from supabase import create_client
 
 from .config import get_settings
@@ -167,35 +166,55 @@ def setup_scheduler() -> AsyncIOScheduler:
 
     scheduler = AsyncIOScheduler()
 
-    # Hourly cascade: Ingest -> Forecast -> Alerts -> Mark Stale
+    # Jobs run at configurable intervals, staggered so the cascade completes
+    # before the next stage reads:
+    #   T+0  : Ingestion  (runs every ingestion_interval_hours)
+    #   T+5m : Forecast   (runs after ingestion settles)
+    #   T+10m: Alerts     (runs after fresh prices are in)
+    #   T+15m: Stale mark (housekeeping, same cadence as forecast)
+    # Job-lock TTL (15 min) handles overlap if a run exceeds its interval.
+    now = datetime.now(timezone.utc)
+
     scheduler.add_job(
         run_ingestion_job,
-        CronTrigger(minute=0),
-        id="hourly_ingestion",
+        IntervalTrigger(
+            hours=settings.ingestion_interval_hours,
+            start_date=now,
+        ),
+        id="ingestion",
         name="Source Data Ingestion",
         replace_existing=True,
     )
-    
+
     scheduler.add_job(
         run_forecast_job,
-        CronTrigger(minute=5),
-        id="hourly_forecast",
+        IntervalTrigger(
+            hours=settings.forecast_interval_hours,
+            start_date=now + timedelta(minutes=5),
+        ),
+        id="forecast",
         name="Forecast Generation",
         replace_existing=True,
     )
-    
+
     scheduler.add_job(
         run_alert_job,
-        CronTrigger(minute=10),
-        id="hourly_alerts",
+        IntervalTrigger(
+            minutes=settings.alert_check_interval_minutes,
+            start_date=now + timedelta(minutes=10),
+        ),
+        id="alerts",
         name="Alert SMS Dispatch",
         replace_existing=True,
     )
-    
+
     scheduler.add_job(
         run_stale_forecasts_job,
-        CronTrigger(minute=15),
-        id="hourly_stale_forecasts",
+        IntervalTrigger(
+            hours=settings.forecast_interval_hours,
+            start_date=now + timedelta(minutes=15),
+        ),
+        id="stale_forecasts",
         name="Mark Stale Forecasts",
         replace_existing=True,
     )

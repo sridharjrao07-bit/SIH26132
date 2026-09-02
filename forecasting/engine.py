@@ -27,7 +27,7 @@ PostgREST 1,000-row cap avoided by:
 """
 import structlog
 import time
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from statistics import pstdev
 from typing import Dict, List, Optional, Tuple
 
@@ -246,6 +246,7 @@ def _make_forecast_rows(
             "method":          "none",
             "observations":    n,
             "status":          "insufficient_data",
+            "generated_at":    datetime.now(timezone.utc).isoformat(),
         }]
 
     prices = [p for _, p in series]
@@ -285,6 +286,7 @@ def _make_forecast_rows(
             "method":          method,
             "observations":    n,
             "status":          "ok",
+            "generated_at":    datetime.now(timezone.utc).isoformat(),
         })
     return rows
 

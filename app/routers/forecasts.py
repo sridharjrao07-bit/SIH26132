@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from typing import List, Optional
-from datetime import date, timedelta, datetime
+from datetime import date, timedelta, datetime, timezone
 from supabase import Client
 
 from app.deps import get_supabase
@@ -30,9 +30,10 @@ def get_forecasts(
 ):
     """
     Get the price forecasts for a specific market and commodity pair.
-    Returns the next `days` of forward predictions.
+    Returns the next `days` of forward predictions with status='ok'.
+    Stale and insufficient_data rows are excluded (use /summary for degraded state).
     """
-    today = date.today().isoformat()
+    today    = date.today().isoformat()
     end_date = (date.today() + timedelta(days=days - 1)).isoformat()
 
     res = (
@@ -40,6 +41,7 @@ def get_forecasts(
         .select("*, markets(name, district), commodities(name_en, name_mr, name_hi)")
         .eq("market_id", market_id)
         .eq("commodity_id", commodity_id)
+        .eq("status", "ok")          # M7: exclude stale/insufficient_data from farmer view
         .gte("forecast_date", today)
         .lte("forecast_date", end_date)
         .order("forecast_date", desc=False)
@@ -55,21 +57,28 @@ def get_forecasts_summary(
 ):
     """
     Get the latest summary of forecasts for all active market/commodity pairs.
-    Deduplicates in Python to show only the most recent generation run per pair.
+    Includes 'ok' and 'insufficient_data' rows so the UI can show a degraded-data
+    state ("not enough data yet") rather than an empty list.
+    Excludes 'stale' rows.
+    Deduplicates in Python to show only the most recent generation run per pair,
+    and picks the day-1 prediction (not day-7) as the representative row.
     """
-    # Fetch recent forecasts (2000 is enough to cover all pairs × 7 days for latest run)
-    cutoff = (datetime.utcnow() - timedelta(days=2)).isoformat()
+    # Fetch recent non-stale forecasts (2000 rows covers all pairs × 7 days for a fresh run)
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
     res = (
         supabase.table("forecasts")
         .select("*, markets(name, district), commodities(name_en, name_mr, name_hi)")
+        .in_("status", ["ok", "insufficient_data"])  # M7+B2: exclude stale; keep degraded state
         .gte("generated_at", cutoff)
-        .order("generated_at", desc=True)
+        .order("generated_at", desc=True)   # newest run first
+        .order("forecast_date", desc=False) # within a run, day-1 first
         .limit(2000)
         .execute()
     )
 
-    # Deduplicate in Python (Supabase/PostgREST lacks GROUP BY)
-    seen_pairs = set()
+    # Deduplicate in Python (PostgREST lacks GROUP BY).
+    # First row seen per pair is the newest run's day-1 prediction.
+    seen_pairs: set = set()
     summary = []
 
     for row in res.data:

@@ -108,7 +108,7 @@
 
         function renderLogs(logs) {
             const tbody = document.querySelector("#logs-table tbody");
-            tbody.innerHTML = logs.map(l => `<tr><td>${l.id}</td><td>${l.source}</td><td>${l.status}</td><td>${l.start_time}</td></tr>`).join("");
+            tbody.innerHTML = logs.map(l => `<tr><td>${l.id}</td><td>${l.source}</td><td>${l.status}</td><td>${l.run_at}</td></tr>`).join("");
         }
 
         function renderStats(stats) {

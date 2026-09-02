@@ -5,7 +5,8 @@ from __future__ import annotations
 
 import os
 import pytest
-from datetime import date
+import time
+from datetime import date, datetime, timezone
 from typing import Any, List, Optional
 from unittest.mock import MagicMock
 
@@ -123,6 +124,10 @@ class FakeSupabase:
         # Default: claim succeeds, release is no-op
         return _ExecuteResult(data=True)
 
+    def upsert_calls(self) -> list:
+        """Return all recorded upsert calls — used in test assertions for B2 regression."""
+        return [c for c in self.calls if c["op"] == "upsert"]
+
     def set_rpc(self, fn_name: str, result):
         """Pre-configure what an rpc() call returns."""
         self._rpc_handlers[fn_name] = result
@@ -239,6 +244,36 @@ MARKET_ID_PIMPALGAON = "bbbb-0000-0000-0000"
 COMMODITY_ID_ONION   = "cccc-0000-0000-0000"
 COMMODITY_ID_TOMATO  = "dddd-0000-0000-0000"
 
+# Seeded user IDs — role comes from the DB (user_profiles), NOT from the JWT.
+# This mirrors what 003_security_patch.sql enforces: roles are only elevated
+# via admin_set_role; the JWT sub claim is just a user identifier.
+FARMER_USER_ID = "farmer-uuid-0001-0000-000000000000"
+ADMIN_USER_ID  = "admin-uuid-0001-0000-000000000000"
+
+
+def mint_jwt(user_id: str) -> str:
+    """
+    Mint a minimal HS256 JWT for testing.
+
+    The token carries only sub + aud (and role=authenticated which Supabase
+    always includes). The actual application role ('farmer' or 'admin') is
+    resolved from the user_profiles DB table by require_role(), NOT from the
+    token — that's the whole point of the 003 security patch.
+    """
+    from jose import jwt
+    secret = os.environ.get("SUPABASE_JWT_SECRET", "placeholder")
+    return jwt.encode(
+        {
+            "sub":  user_id,
+            "aud":  "authenticated",
+            "role": "authenticated",
+            "iat":  int(time.time()),
+            "exp":  int(time.time()) + 3600,
+        },
+        secret,
+        algorithm="HS256",
+    )
+
 
 @pytest.fixture
 def fake_supabase():
@@ -291,7 +326,43 @@ def fake_supabase():
         {"source": "sms", "source_key": "PYAJ",   "commodity_id": COMMODITY_ID_ONION},
         {"source": "sms", "source_key": "कांदा", "commodity_id": COMMODITY_ID_ONION},
     ])
+    # Seed user profiles (farmer + admin) for auth tests
+    db.seed("user_profiles", [
+        {
+            "id":                 FARMER_USER_ID,
+            "role":               "farmer",
+            "phone":              "+919876543210",
+            "preferred_language": "mr",
+            "lat":                20.1,
+            "lng":                74.2,
+            "district":           "Nashik",
+        },
+        {
+            "id":                 ADMIN_USER_ID,
+            "role":               "admin",
+            "phone":              "+919876543211",
+            "preferred_language": "en",
+            "lat":                None,
+            "lng":                None,
+            "district":           "Nashik",
+        },
+    ])
     return db
+
+
+@pytest.fixture
+def fake_supabase_with_logs(fake_supabase):
+    """Extends fake_supabase with a seeded ingestion_log row for A1 regression tests."""
+    fake_supabase.seed("ingestion_log", [
+        {
+            "id":       "log-0001",
+            "source":   "data_gov_in",
+            "status":   "success",
+            "run_at":   datetime.now(timezone.utc).isoformat(),
+            "seen":     10, "written": 8, "rejected": 2, "duration_ms": 1200,
+        },
+    ])
+    return fake_supabase
 
 @pytest.fixture(autouse=True)
 def override_supabase(fake_supabase):
