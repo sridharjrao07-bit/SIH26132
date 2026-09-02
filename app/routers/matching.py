@@ -16,6 +16,8 @@ def _load_lot_and_profile(as_user: Client, lot_id: str, user_id: str):
     if not lot_rows:
         raise HTTPException(404, "lot not found")
     lot = lot_rows[0]
+    if lot.get("user_id") != user_id and lot.get("fpo_id") != user_id:
+        raise HTTPException(404, "lot not found")
     profile = (
         as_user.table("user_profiles")
         .select("district, lat, lng, preferred_language")
