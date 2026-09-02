@@ -82,3 +82,4 @@ structlog==24.1.0            # structured JSON logging
 pytest==8.2.1
 pytest-asyncio==0.23.7
 # httpx is already pinned above — not repeated here
+# psycopg2-binary  # optional: live-DB tests

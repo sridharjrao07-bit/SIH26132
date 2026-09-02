@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Request
 from typing import Dict, Any
 from app.auth import require_role
 from notifications.inbound_verifier import InboundVerifier
+from notifications.alert_checker import normalize_phone
 from notifications.sms_gateway import get_sms_gateway, resolve_template
 from app.deps import get_supabase_service_role
 from supabase import Client
@@ -11,6 +12,9 @@ from datetime import datetime, timedelta
 logger = structlog.get_logger()
 router = APIRouter(prefix="/sms", tags=["sms"])
 verifier = InboundVerifier()
+
+HELP_TEXT = "Available keywords: "
+SMS_KEYWORDS_HELP = "ONION, TOMATO, SOYBEAN, MAIZE, PYAJ, कांदा, टोमॅटो, सोयाबीन, मका, प्याज"
 
 @router.post("/webhook")
 async def handle_sms_webhook(request: Request, supabase: Client = Depends(get_supabase_service_role)):
@@ -31,8 +35,8 @@ async def simulate_inbound(payload: Dict[str, Any], supabase: Client = Depends(g
     return await _process_inbound(payload, supabase)
 
 async def _process_inbound(payload: dict, supabase: Client):
-    sender = payload.get("sender")
-    message = payload.get("message", "").strip().lower()
+    sender = normalize_phone(payload.get("sender"))
+    message = (payload.get("message") or "").strip().upper()
     
     if not sender or not message:
         return {"status": "ignored"}
@@ -42,7 +46,12 @@ async def _process_inbound(payload: dict, supabase: Client):
     
     if not alias_res.data:
         logger.info("inbound_unknown_keyword", sender=sender, message=message)
-        return {"status": "ignored", "reason": "unknown_keyword"}
+        user_res = supabase.table("user_profiles").select("preferred_language").eq("phone", sender).execute()
+        lang = user_res.data[0]["preferred_language"] if user_res.data else "mr"
+        
+        gateway = get_sms_gateway()
+        gateway.send_sms(sender, HELP_TEXT + SMS_KEYWORDS_HELP, resolve_template(lang))
+        return {"status": "help_sent"}
         
     commodity_id = alias_res.data[0]["commodity_id"]
     commodity = alias_res.data[0]["commodities"]

@@ -19,17 +19,22 @@ def _days_ago_date(n: int) -> str:
     return (date.today() - timedelta(days=n)).isoformat()
 
 def normalize_phone(phone: Optional[str]) -> Optional[str]:
-    if not phone:
+    if phone is None or phone == "":
         return None
-    cleaned = "".join(c for c in str(phone) if c.isdigit() or c == "+")
-    if not cleaned:
+    try:
+        s = str(phone)
+    except Exception:
         return None
-    if len(cleaned) == 10 and cleaned.isdigit():
-        return "+91" + cleaned
-    if cleaned.startswith("+") and len(cleaned) >= 11:
-        return cleaned
-    if cleaned.startswith("91") and len(cleaned) == 12:
-        return "+" + cleaned
+
+    digits = "".join(c for c in s if c.isdigit())
+    
+    if len(digits) == 10:
+        return "+91" + digits
+    if len(digits) == 11 and digits.startswith("0"):
+        return "+91" + digits[1:]
+    if len(digits) == 12 and digits.startswith("91"):
+        return "+" + digits
+        
     return None
 
 class AlertChecker:

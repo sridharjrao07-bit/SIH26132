@@ -5,6 +5,7 @@ from .forecasts import router as forecasts_router
 from .alerts import router as alerts_router
 from .sms import router as sms_router
 from .admin import router as admin_router
+from .dashboard import router as dashboard_router
 
 __all__ = [
     "markets_router",
@@ -14,4 +15,5 @@ __all__ = [
     "alerts_router",
     "sms_router",
     "admin_router",
+    "dashboard_router",
 ]

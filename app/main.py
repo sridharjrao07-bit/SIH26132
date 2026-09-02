@@ -12,6 +12,7 @@ from app.routers import (
     alerts_router,
     sms_router,
     admin_router,
+    dashboard_router,
 )
 
 logger = structlog.get_logger()
@@ -64,6 +65,7 @@ def create_app() -> FastAPI:
     app.include_router(alerts_router, prefix="/api/v1")
     app.include_router(sms_router, prefix="/api/v1")
     app.include_router(admin_router, prefix="/api/v1")
+    app.include_router(dashboard_router)
 
     return app
 

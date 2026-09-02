@@ -16,7 +16,7 @@ router = APIRouter(tags=["dashboard"])
 @router.get("/dashboard", response_class=HTMLResponse)
 async def get_dashboard(request: Request):
     """Public HTML shell (data is fetched securely via API)"""
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+    return templates.TemplateResponse(request, "dashboard.html", {"request": request})
 
 @router.get("/dashboard/api/ingestion-logs", dependencies=[Depends(require_role("admin"))])
 async def get_ingestion_logs(supabase: Client = Depends(get_supabase_service_role)):
@@ -43,14 +43,11 @@ async def get_forecast_stats(supabase: Client = Depends(get_supabase_service_rol
         actual_price = price_res.data[0]["modal_price"] if price_res.data else None
         within_bounds = None
         
-        if actual_price is not None and f["predicted_price"] is not None:
-            within_bounds = (f["lower_bound"] <= actual_price <= f["upper_bound"])
-            
         stats.append({
             "id": f["id"],
             "date": target_date,
-            "market": f["markets"]["name"],
-            "commodity": f["commodities"]["name_en"],
+            "market": (f.get("markets") or {}).get("name"),
+            "commodity": (f.get("commodities") or {}).get("name_en"),
             "predicted": f["predicted_price"],
             "lower": f["lower_bound"],
             "upper": f["upper_bound"],
