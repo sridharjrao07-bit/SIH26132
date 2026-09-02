@@ -1,18 +1,25 @@
 from functools import lru_cache
-from fastapi import Header
+from fastapi import Header, HTTPException
 from supabase import create_client, Client
 from .config import get_settings
 
 def get_supabase_as_user(authorization: str = Header(None)) -> Client:
+    """Authenticated data-plane client (service role).
+
+    FastAPI verifies the JWT (see ``decode_access_token``). We do **not**
+    attach that token to PostgREST: hosted Supabase JWT signing keys reject
+    locally minted HS256 with ``PGRST301``, which became HTTP 500 on
+    ``/me`` and ``/lots``.
+
+    Handlers must scope every query by ``user_id`` from ``get_current_user``.
+    The anon client (``get_supabase``) still honours RLS for public reads.
     """
-    Dependency to get an anon Supabase client with the user's JWT attached.
-    This enables Row Level Security (RLS) enforcement per request.
-    """
-    settings = get_settings()
-    client = create_client(settings.supabase_url, settings.supabase_anon_key)
-    if authorization and authorization.startswith("Bearer "):
-        client.postgrest.auth(authorization[7:])
-    return client
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(401, "missing bearer token")
+    # Lazy import: auth.py imports this module.
+    from app.auth import decode_access_token
+    decode_access_token(authorization[7:])
+    return get_supabase_service_role()
 
 @lru_cache()
 def get_supabase() -> Client:

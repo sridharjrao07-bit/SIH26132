@@ -229,6 +229,34 @@ def test_delete_alert_ok(override_supabase, fake_supabase):
     assert resp.json()["status"] == "deleted"
 
 
+def test_user_client_does_not_forward_jwt_to_postgrest():
+    src = _read("app/deps.py")
+    assert "postgrest.auth" not in src
+    assert "get_supabase_service_role" in src
+
+
+def test_list_alerts_hides_other_users_rows(override_supabase, fake_supabase):
+    fake_supabase.seed(
+        "alerts",
+        [
+            {"id": "a-mine", "user_id": FARMER_USER_ID, "commodity_id": COMMODITY_ID_ONION,
+             "threshold_price": 1500.0, "condition": "lte", "active": True,
+             "created_at": datetime.now(timezone.utc).isoformat(),
+             "markets": {"name": "Lasalgaon APCM"},
+             "commodities": {"name_en": "Onion", "name_mr": "कांदा"}},
+            {"id": "a-theirs", "user_id": ADMIN_USER_ID, "commodity_id": COMMODITY_ID_ONION,
+             "threshold_price": 9999.0, "condition": "gte", "active": True,
+             "created_at": datetime.now(timezone.utc).isoformat(),
+             "markets": {"name": "Lasalgaon APCM"},
+             "commodities": {"name_en": "Onion", "name_mr": "कांदा"}},
+        ],
+    )
+    resp = client.get("/api/v1/alerts/", headers=farmer_headers())
+    assert resp.status_code == 200
+    ids = {row["id"] for row in resp.json()}
+    assert ids == {"a-mine"}
+
+
 def test_list_alerts_with_farmer_token(override_supabase, fake_supabase):
     fake_supabase.seed(
         "alerts",

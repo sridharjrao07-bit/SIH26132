@@ -133,7 +133,10 @@ def get_lot(
     res = supabase.table("lots").select("*").eq("id", lot_id).execute()
     if not res.data:
         raise HTTPException(404, "lot not found")
-    return res.data[0]
+    lot = res.data[0]
+    if lot.get("user_id") != user_id and lot.get("fpo_id") != user_id:
+        raise HTTPException(404, "lot not found")
+    return lot
 
 
 @router.patch("/{lot_id}/grade")

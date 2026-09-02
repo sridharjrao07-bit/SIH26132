@@ -38,8 +38,6 @@ def create_alert(
         "expires_at": alert.expires_at.isoformat() if alert.expires_at else None
     }
     
-    # RLS will enforce that the inserted user_id matches auth.uid()
-    # (or reject it if someone tries to forge a user_id)
     res = supabase.table("alerts").insert(data).execute()
     if not res.data:
         raise HTTPException(400, "could not create alert")
@@ -55,6 +53,7 @@ def list_alerts(
     res = (
         supabase.table("alerts")
         .select("*, markets(name), commodities(name_en, name_mr)")
+        .eq("user_id", user_id)
         .order("created_at", desc=True)
         .limit(limit)
         .execute()
@@ -83,8 +82,13 @@ def update_alert(
     if not updates:
         return {"status": "ok"}
 
-    # RLS ensures they can only update their own alert
-    res = supabase.table("alerts").update(updates).eq("id", alert_id).execute()
+    res = (
+        supabase.table("alerts")
+        .update(updates)
+        .eq("id", alert_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
     if not res.data:
         raise HTTPException(404, "Alert not found or access denied")
     return res.data[0]
@@ -95,8 +99,13 @@ def delete_alert(
     user_id: str = Depends(get_current_user),
     supabase: Client = Depends(get_supabase_as_user)
 ):
-    # RLS ensures they can only delete their own alert
-    res = supabase.table("alerts").delete().eq("id", alert_id).execute()
+    res = (
+        supabase.table("alerts")
+        .delete()
+        .eq("id", alert_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
     if not res.data:
         raise HTTPException(404, "Alert not found or access denied")
     return {"status": "deleted"}
