@@ -4,7 +4,14 @@ conftest.py — shared fixtures for the Krishi Bazaar ingestion test suite.
 from __future__ import annotations
 
 import os
+import sys
 import pytest
+
+if sys.version_info >= (3, 13):
+    raise RuntimeError(
+        f"Python {sys.version.split()[0]} is not supported. "
+        "Create the venv with 3.11 or 3.12 (pydantic-core has no 3.14 wheels)."
+    )
 import time
 from datetime import date, datetime, timezone
 from typing import Any, List, Optional
