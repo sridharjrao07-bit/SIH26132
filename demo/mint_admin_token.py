@@ -23,15 +23,21 @@ def mint_admin_token(hours: int = 24, sub: str = "admin-demo-user") -> str:
     return jwt.encode(payload, secret, algorithm="HS256")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Mint a JWT for the dashboard demo")
+    parser = argparse.ArgumentParser(
+        description="Mint an HS256 JWT FastAPI will accept. Role still comes from user_profiles."
+    )
     parser.add_argument("--hours", type=int, default=1, help="Token validity in hours")
-    parser.add_argument("--sub", type=str, default="admin-demo-user",
-                        help="auth.users UUID that already has role=admin in user_profiles")
+    parser.add_argument(
+        "--sub",
+        type=str,
+        default="admin-demo-user",
+        help="auth.users UUID that already exists in user_profiles",
+    )
     args = parser.parse_args()
     token = mint_admin_token(hours=args.hours, sub=args.sub)
-    print("\n=== Krishi Bazaar Admin Token ===")
+    print("\n=== Krishi Bazaar token (sub only) ===")
     print(token)
-    print("=================================")
-    print("This token does NOT grant admin by itself.")
-    print("require_role() looks up user_profiles.role for --sub.")
-    print("Elevate with: select public.admin_set_role('<uuid>'::uuid, 'admin');\n")
+    print("======================================")
+    print("Do not commit or paste this token.")
+    print("require_role() reads user_profiles.role for --sub (farmer stays farmer).")
+    print("Admin elevate: select public.admin_set_role('<uuid>'::uuid, 'admin');\n")

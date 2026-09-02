@@ -613,6 +613,12 @@ def test_cors_header_reflects_configured_origin():
     assert resp.headers.get("access-control-allow-origin") == "http://localhost:3000"
 
 
+def test_cors_allows_vite_dev_origin():
+    resp = client.get("/health", headers={"Origin": "http://localhost:5173"})
+    assert resp.status_code == 200
+    assert resp.headers.get("access-control-allow-origin") == "http://localhost:5173"
+
+
 def test_cors_disallows_unknown_origin():
     resp = client.get("/health", headers={"Origin": "https://evil.example"})
     assert resp.headers.get("access-control-allow-origin") != "https://evil.example"
