@@ -136,7 +136,7 @@ def mark_disputed(
     supabase: Client = Depends(get_supabase_as_user),
     service: Client = Depends(get_supabase_service_role),
 ):
-    current = _own_payment(supabase, payment_id, user_id)
+    _own_payment(supabase, payment_id, user_id)
     res = (
         supabase.table("payments")
         .update({"status": "disputed"})

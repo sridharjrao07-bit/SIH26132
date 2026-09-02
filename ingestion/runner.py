@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple, Dict
 from supabase import Client
 from datetime import datetime, timezone
 
-from .base import IngestionSourceAdapter, RawPriceRecord, SourceFetchError
+from .base import IngestionSourceAdapter, SourceFetchError
 from .validator import PriceValidator
 
 logger = structlog.get_logger()

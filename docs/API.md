@@ -106,9 +106,20 @@ HTML ops shell: `/dashboard` (not the farmer product).
 
 ## Errors
 
-Unhandled failures return `{"detail":"Internal server error"}` (no stack).  
-Validation: FastAPI `422`.  
-Geo RPC down: `503` on `/markets/nearby`.
+Bodies are always `{"detail": ...}` — never a stack, SQL, or PostgREST code.
+
+| HTTP | When |
+|---|---|
+| 400 | Bad JSON; missing FK (`23503` → `referenced record not found`) |
+| 401 | Missing/invalid JWT (`PGRST301` included) |
+| 403 | Wrong role; unsigned SMS webhook; privilege (`42501`) |
+| 404 | Unknown lot/offer/payment **or** not yours (no leak) |
+| 409 | Duplicate (`23505`); illegal state (pay a rejected offer) |
+| 422 | Pydantic validation; invalid UUID (`22P02`); bad lot `status` |
+| 500 | Unhandled — `Internal server error` only |
+| 503 | Data store down; geo RPC; admin job failed |
+
+OpenAPI (non-production): `GET /openapi.json` and `/docs`.
 
 ## SMS (not the web UI)
 

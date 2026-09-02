@@ -15,9 +15,6 @@ import hashlib
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.conftest import (
-    FakeSupabase, MARKET_ID_LASALGAON, COMMODITY_ID_ONION
-)
 
 # ─── InboundVerifier ────────────────────────────────────────────────────────
 
@@ -135,7 +132,7 @@ def make_admin_token() -> str:
     """Generate a valid-looking JWT for testing (just tests routing, not real auth)."""
     import jwt as pyjwt
     import os
-    secret = os.environ.get("SUPABASE_JWT_SECRET", "placeholder")
+    secret = os.environ.get("SUPABASE_JWT_SECRET", "ci-placeholder-jwt-secret-32b-min")
     token = pyjwt.encode(
         {"sub": "admin-user-id", "role": "authenticated", "aud": "authenticated"},
         secret, algorithm="HS256"

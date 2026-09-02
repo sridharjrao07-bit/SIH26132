@@ -13,6 +13,7 @@ from __future__ import annotations
 import hmac
 import hashlib
 import inspect
+import os
 import time
 from pathlib import Path
 from datetime import date, datetime, timedelta, timezone
@@ -22,16 +23,14 @@ from fastapi.testclient import TestClient
 import jwt
 
 from app.main import app
-from notifications.alert_checker import normalize_phone, AlertChecker
+from notifications.alert_checker import normalize_phone
 from notifications.prices import latest_price_for_user
 from notifications.sms_gateway import get_sms_gateway, MockSMSGateway, MSG91Gateway
-from forecasting.engine import _make_forecast_rows, build_daily_series
+from forecasting.engine import _make_forecast_rows
 from ingestion.data_gov_in import DataGovInAdapter
 from tests.conftest import (
     MARKET_ID_LASALGAON,
-    MARKET_ID_PIMPALGAON,
     COMMODITY_ID_ONION,
-    COMMODITY_ID_TOMATO,
     FARMER_USER_ID,
     ADMIN_USER_ID,
     mint_jwt,
@@ -51,7 +50,7 @@ def admin_headers():
 # ── Auth / JWT ────────────────────────────────────────────────────────────────
 
 def test_expired_jwt_is_rejected():
-    secret = "placeholder"
+    secret = os.environ["SUPABASE_JWT_SECRET"]
     token = jwt.encode(
         {
             "sub": FARMER_USER_ID,
@@ -68,7 +67,7 @@ def test_expired_jwt_is_rejected():
 
 
 def test_wrong_audience_jwt_is_rejected():
-    secret = "placeholder"
+    secret = os.environ["SUPABASE_JWT_SECRET"]
     token = jwt.encode(
         {
             "sub": FARMER_USER_ID,
@@ -89,7 +88,7 @@ def test_malformed_bearer_is_rejected():
 
 
 def test_jwt_missing_sub_is_rejected():
-    secret = "placeholder"
+    secret = os.environ["SUPABASE_JWT_SECRET"]
     token = jwt.encode(
         {"aud": "authenticated", "role": "authenticated", "exp": int(time.time()) + 3600},
         secret,

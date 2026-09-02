@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, Query, HTTPException
-from typing import List, Optional
+from fastapi import APIRouter, Depends, Query
+from typing import List
 from datetime import date, timedelta, datetime, timezone
 from supabase import Client
 

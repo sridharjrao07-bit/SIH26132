@@ -1,6 +1,6 @@
 import structlog
 from datetime import datetime, timedelta, date, timezone
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 from supabase import Client
 
 from forecasting.engine import build_daily_series, build_district_daily_series

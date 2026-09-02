@@ -20,7 +20,7 @@ def json_for_api_error(exc: APIError) -> JSONResponse:
         return JSONResponse(status_code=409, content={"detail": "already exists"})
     if code == "23514":
         return JSONResponse(status_code=422, content={"detail": "failed a data check"})
-    if code in ("42501", "PGRST301"):
+    if code == "42501":
         return JSONResponse(status_code=403, content={"detail": "not allowed"})
     return JSONResponse(
         status_code=503,

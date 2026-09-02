@@ -20,30 +20,43 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual Environment
-.env
-.venv
-env/
+# Virtualenv
+.venv/
 venv/
 ENV/
 env.bak/
 venv.bak/
 
-# Environment Variables
+# Secrets — never commit
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+!.env.example
 
-# OS
+# Test / lint caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.cache/
+
+# OS / editors
 .DS_Store
 Thumbs.db
-
-# IDEs
 .vscode/
 .idea/
+*.swp
+*~
 
-# Hackathon / API Data
+# Logs / local compose overrides
 *.log
-.pytest_cache/
-.coverage
-htmlcov/
+sms_out.log
+docker-compose.override.yml

@@ -14,8 +14,7 @@ import pytest
 from ingestion.runner import IngestionRunner
 from ingestion.base import SourceFetchError
 from tests.conftest import (
-    make_record, StubAdapter, FakeSupabase,
-    MARKET_ID_LASALGAON, MARKET_ID_PIMPALGAON, COMMODITY_ID_ONION,
+    make_record, StubAdapter, MARKET_ID_LASALGAON, MARKET_ID_PIMPALGAON, COMMODITY_ID_ONION,
 )
 
 

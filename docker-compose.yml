@@ -1,0 +1,30 @@
+# Local API only. Postgres lives on hosted Supabase — do not add a local DB
+# unless you are running a full self-hosted stack.
+#
+#   copy .env.example .env   # then fill real keys
+#   docker compose up --build
+
+services:
+  api:
+    build: .
+    image: krishi-bazaar:local
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      RUN_SCHEDULER: ${RUN_SCHEDULER:-0}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-1}
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s

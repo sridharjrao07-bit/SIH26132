@@ -1,6 +1,8 @@
 .git
 .github
 .pytest_cache
+.ruff_cache
+.mypy_cache
 __pycache__
 *.pyc
 .env
@@ -10,8 +12,14 @@ __pycache__
 venv
 tests
 docs
-*.log
-BACKEND_EVALUATION.md
-project_summary_with_code.md
-pytest_proof.txt
 demo
+scripts
+*.log
+htmlcov
+.coverage
+requirements-dev.txt
+CONTRIBUTING.md
+SECURITY.md
+Makefile
+.pre-commit-config.yaml
+.python-version

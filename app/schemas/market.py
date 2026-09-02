@@ -1,5 +1,4 @@
-from pydantic import BaseModel, Field
-from datetime import date
+from pydantic import BaseModel
 from typing import Optional
 
 class MarketResponse(BaseModel):

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from typing import List, Optional, Literal
+from typing import Optional, Literal
 from pydantic import BaseModel, Field
 from datetime import datetime
 
@@ -49,7 +49,7 @@ def list_alerts(
     user_id: str = Depends(get_current_user),  # 401 for unauthenticated callers
     supabase: Client = Depends(get_supabase_as_user)
 ):
-    # RLS automatically filters to only the user's alerts
+    # Scoped by JWT sub — service-role client does not rely on RLS here.
     res = (
         supabase.table("alerts")
         .select("*, markets(name), commodities(name_en, name_mr)")
