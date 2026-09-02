@@ -159,8 +159,7 @@ def test_production_mode_missing_secret_raises_runtime_error(monkeypatch):
     """
     S3 regression: InboundVerifier() must raise RuntimeError at instantiation when
     APP_ENV=production and INBOUND_HMAC_SECRET is not set.
-    Since sms.py instantiates InboundVerifier() at module level, this failure
-    surfaces at app startup — which is the intended behaviour.
+    sms.warmup_verifier() runs in FastAPI lifespan so this fails closed at startup.
     """
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.delenv("INBOUND_HMAC_SECRET", raising=False)

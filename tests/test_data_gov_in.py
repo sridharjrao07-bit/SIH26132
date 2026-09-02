@@ -250,6 +250,30 @@ async def test_http_error_raises():
     assert "403" in str(exc_info.value)
 
 
+async def test_pune_does_not_try_nashik_spellings():
+    """F-039: TARGET_DISTRICT=Pune must not burn quota on Nashik/Nasik."""
+    spellings_tried = []
+
+    async def mock_get(url, params=None, **kwargs):
+        spellings_tried.append(params.get("filters[district]", ""))
+        resp = MagicMock()
+        resp.raise_for_status = MagicMock()
+        resp.json.return_value = _api_response([_price_record(market="Pune")])
+        return resp
+
+    mock_client = AsyncMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+    mock_client.get = mock_get
+
+    with patch("ingestion.data_gov_in.httpx.AsyncClient", return_value=mock_client):
+        await ADAPTER.fetch_prices(district="Pune", commodity="Onion")
+
+    assert spellings_tried == ["Pune"]
+    assert "Nashik" not in spellings_tried
+    assert "Nasik" not in spellings_tried
+
+
 async def test_unexpected_shape_raises():
     """
     Response without a 'records' key must raise SourceFetchError.

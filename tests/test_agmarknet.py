@@ -4,6 +4,11 @@ from unittest.mock import patch, AsyncMock, MagicMock
 from ingestion.base import SourceFetchError
 from ingestion.agmarknet import AgmarknetAdapter
 
+def test_agmarknet_covers_all_nashik_mandis():
+    from ingestion.agmarknet import NASHIK_MARKETS
+    assert set(NASHIK_MARKETS) >= {"Lasalgaon", "Pimpalgaon", "Yeola", "Nashik", "Manmad"}
+
+
 @pytest.mark.asyncio
 async def test_agmarknet_import_failure():
     adapter = AgmarknetAdapter()

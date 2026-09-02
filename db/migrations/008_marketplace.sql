@@ -51,7 +51,7 @@ begin
 end;
 $$;
 
-revoke execute on function public.admin_set_role(uuid, text) from public, anon;
+revoke execute on function public.admin_set_role(uuid, text) from public, anon, authenticated;
 grant execute on function public.admin_set_role(uuid, text) to service_role;
 
 -- ── Phone lookup RPC (service_role only) ────────────────────────────────────

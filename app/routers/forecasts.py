@@ -70,18 +70,19 @@ def get_forecasts_summary(
         .select("*, markets(name, district), commodities(name_en, name_mr, name_hi)")
         .in_("status", ["ok", "insufficient_data"])  # M7+B2: exclude stale; keep degraded state
         .gte("generated_at", cutoff)
-        .order("generated_at", desc=True)   # newest run first
-        .order("forecast_date", desc=False) # within a run, day-1 first
         .limit(2000)
         .execute()
     )
 
-    # Deduplicate in Python (PostgREST lacks GROUP BY).
-    # First row seen per pair is the newest run's day-1 prediction.
+    # PostgREST keeps only the last .order(); sort in Python:
+    # newest generated_at first, then day-1 (earliest forecast_date) within a run.
+    rows = list(res.data or [])
+    rows.sort(key=lambda r: str(r.get("forecast_date") or ""))
+    rows.sort(key=lambda r: str(r.get("generated_at") or ""), reverse=True)
+
     seen_pairs: set = set()
     summary = []
-
-    for row in res.data:
+    for row in rows:
         pair_key = (row["market_id"], row["commodity_id"])
         if pair_key not in seen_pairs:
             seen_pairs.add(pair_key)
