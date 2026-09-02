@@ -591,7 +591,7 @@ def test_cors_disallows_unknown_origin():
 
 
 def test_sms_inbound_uses_phone_rpc_not_profiles_table():
-    src = open("app/routers/sms.py").read()
+    src = _read("app/routers/sms.py")
     assert "lookup_profile_by_phone" in src
     assert "open_lots_for_user" in src
     assert '.table("user_profiles")' not in src
@@ -599,7 +599,7 @@ def test_sms_inbound_uses_phone_rpc_not_profiles_table():
 
 
 def test_handle_new_user_does_not_trust_client_role():
-    src = open("db/migrations/001_schema.sql").read()
+    src = _read("db/migrations/001_schema.sql")
     assert "raw_user_meta_data ->> 'role'" not in src
     assert "'farmer'" in src
 
@@ -611,7 +611,7 @@ def test_admin_set_role_not_granted_to_authenticated():
         "db/migrations/008_marketplace.sql",
         "db/migrations/011_ops_hardening.sql",
     ):
-        src = open(path).read().lower()
+        src = _read(path).lower()
         assert needle not in src
         assert "to service_role" in src
 
