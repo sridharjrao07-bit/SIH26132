@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Response, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 from supabase import Client
-from app.auth import require_role
+from app.auth import require_role, decode_access_token, ADMIN_COOKIE
 from app.deps import get_supabase_service_role
 from pathlib import Path
 from collections import defaultdict
@@ -13,10 +14,50 @@ templates = Jinja2Templates(directory=str(PROJECT_ROOT / "templates"))
 router = APIRouter(tags=["dashboard"])
 
 
+class DashboardSessionBody(BaseModel):
+    token: str
+
+
 @router.get("/dashboard", response_class=HTMLResponse)
 async def get_dashboard(request: Request):
     """Public HTML shell (data is fetched securely via API)"""
     return templates.TemplateResponse(request, "dashboard.html", {"request": request})
+
+
+@router.post("/dashboard/session")
+async def dashboard_session(
+    request: Request,
+    body: DashboardSessionBody,
+    response: Response,
+    supabase: Client = Depends(get_supabase_service_role),
+):
+    """Exchange a pasted admin JWT for an HttpOnly cookie (not localStorage)."""
+    token = (body.token or "").strip()
+    if not token:
+        raise HTTPException(400, "token required")
+    user_id = decode_access_token(token)
+    row = (
+        supabase.table("user_profiles").select("role").eq("id", user_id).execute().data
+        or []
+    )
+    if not row or row[0].get("role") != "admin":
+        raise HTTPException(403, "requires role in ['admin']")
+    response.set_cookie(
+        key=ADMIN_COOKIE,
+        value=token,
+        httponly=True,
+        samesite="lax",
+        secure=request.url.scheme == "https",
+        max_age=3600,
+        path="/",
+    )
+    return {"status": "ok"}
+
+
+@router.delete("/dashboard/session")
+async def dashboard_logout(response: Response):
+    response.delete_cookie(ADMIN_COOKIE, path="/")
+    return {"status": "ok"}
 
 
 @router.get("/dashboard/api/ingestion-logs", dependencies=[Depends(require_role("admin"))])

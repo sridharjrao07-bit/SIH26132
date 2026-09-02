@@ -1,14 +1,16 @@
+from typing import Optional
+
 import jwt
 from jwt import InvalidTokenError
-from fastapi import Header, HTTPException, Depends
+from fastapi import Header, HTTPException, Depends, Request
 from .config import get_settings
 from .deps import get_supabase_service_role
 
+ADMIN_COOKIE = "kb_admin"
 
-def get_current_user(authorization: str = Header(None)) -> str:
-    """Extract and verify the Supabase JWT from the Authorization header."""
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(401, "missing bearer token")
+
+def decode_access_token(token: str) -> str:
+    """Verify HS256 Supabase JWT and return `sub`."""
     settings = get_settings()
     options = {"require": ["exp", "sub", "aud"]}
     kwargs = dict(
@@ -21,7 +23,7 @@ def get_current_user(authorization: str = Header(None)) -> str:
         kwargs["issuer"] = settings.supabase_jwt_issuer
     try:
         claims = jwt.decode(
-            authorization[7:],
+            token,
             settings.supabase_jwt_secret,
             **kwargs,
         )
@@ -32,6 +34,21 @@ def get_current_user(authorization: str = Header(None)) -> str:
     if not user_id:
         raise HTTPException(401, "token missing subject")
     return user_id
+
+
+def get_current_user(
+    request: Request,
+    authorization: Optional[str] = Header(None),
+) -> str:
+    """Bearer token, or HttpOnly dashboard cookie `kb_admin`."""
+    token = None
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization[7:]
+    elif request.cookies.get(ADMIN_COOKIE):
+        token = request.cookies.get(ADMIN_COOKIE)
+    if not token:
+        raise HTTPException(401, "missing bearer token")
+    return decode_access_token(token)
 
 
 def require_role(*roles: str):

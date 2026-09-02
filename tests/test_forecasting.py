@@ -88,6 +88,17 @@ def test_build_daily_series_iso_vs_date():
     assert series[1][0] == date(2024, 9, 2)
 
 
+def test_horizon_widens_residual_band():
+    """Day-7 interval is wider than day-1 when in-sample σ > 0 (F-031)."""
+    series = [(date(2024, 9, 1) + timedelta(days=i), 2000.0 + (i % 3) * 40) for i in range(16)]
+    rows = _make_forecast_rows("m1", "c1", series, None)
+    assert len(rows) == 7
+    w1 = rows[0]["upper_bound"] - rows[0]["lower_bound"]
+    w7 = rows[6]["upper_bound"] - rows[6]["lower_bound"]
+    assert w1 > 0
+    assert w7 > w1 * 2
+
+
 def test_make_forecast_rows_empty():
     assert _make_forecast_rows("m1", "c1", [], None) == []
 

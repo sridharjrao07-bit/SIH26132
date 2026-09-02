@@ -121,21 +121,58 @@ class FakeSupabase:
     def rpc(self, fn_name: str, params: dict = None):
         """Stub matching supabase-py: rpc(...).execute() → _ExecuteResult."""
         store = self
+        params = params or {}
 
         class _RpcQuery:
             def execute(_self):
                 rpc_result = store._rpc_handlers.get(fn_name)
                 if rpc_result is not None:
                     if callable(rpc_result):
-                        return _ExecuteResult(data=rpc_result(params or {}))
+                        return _ExecuteResult(data=rpc_result(params))
                     return _ExecuteResult(data=rpc_result)
+                if fn_name == "lookup_profile_by_phone":
+                    return _ExecuteResult(data=store._lookup_profile(params.get("p_phone")))
+                if fn_name == "open_lots_for_user":
+                    uid = params.get("p_user_id")
+                    rows = [
+                        dict(l)
+                        for l in store._data.get("lots", [])
+                        if l.get("user_id") == uid and l.get("status") in ("open", "offered")
+                    ]
+                    return _ExecuteResult(data=rows)
+                if fn_name in ("claim_job_lock", "release_job_lock"):
+                    return _ExecuteResult(data=True)
                 return _ExecuteResult(data=True)
 
         return _RpcQuery()
 
-    def upsert_calls(self) -> list:
-        """Return all recorded upsert calls — used in test assertions for B2 regression."""
-        return [c for c in self.calls if c["op"] == "upsert"]
+    @staticmethod
+    def _last10(phone) -> str:
+        digits = "".join(c for c in str(phone or "") if c.isdigit())
+        return digits[-10:] if len(digits) >= 10 else digits
+
+    def _lookup_profile(self, phone):
+        rows = self._data.get("user_profiles", [])
+        for u in rows:
+            if u.get("phone") == phone:
+                return [FakeSupabase._profile_rpc(u)]
+        target = self._last10(phone)
+        if target:
+            for u in rows:
+                if self._last10(u.get("phone")) == target:
+                    return [FakeSupabase._profile_rpc(u)]
+        return []
+
+    @staticmethod
+    def _profile_rpc(u: dict) -> dict:
+        return {
+            "id": u.get("id"),
+            "preferred_language": u.get("preferred_language"),
+            "lat": u.get("lat"),
+            "lng": u.get("lng"),
+            "district": u.get("district"),
+            "name": u.get("name"),
+        }
 
     def set_rpc(self, fn_name: str, result):
         """Pre-configure what an rpc() call returns."""
@@ -221,6 +258,9 @@ class FakeSupabase:
         if "__order__" in filters:
             col, desc = filters["__order__"]
             rows = sorted(rows, key=lambda r: str(r.get(col) or ""), reverse=desc)
+        if "__range__" in filters:
+            start, end = filters["__range__"]
+            rows = rows[start:end + 1]
         if "__limit__" in filters:
             rows = rows[:filters["__limit__"]]
         return rows
@@ -390,11 +430,14 @@ def fake_supabase_with_logs(fake_supabase):
 def override_supabase(fake_supabase):
     from app.main import app
     from app.deps import get_supabase, get_supabase_service_role, get_supabase_as_user
+    from app.routers import sms as sms_mod
     app.dependency_overrides[get_supabase] = lambda: fake_supabase
     app.dependency_overrides[get_supabase_service_role] = lambda: fake_supabase
     app.dependency_overrides[get_supabase_as_user] = lambda: fake_supabase
+    sms_mod.reset_outbound_cap()
     yield
     app.dependency_overrides.clear()
+    sms_mod.reset_outbound_cap()
 
 @pytest.fixture
 def validator(fake_supabase):

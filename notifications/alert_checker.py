@@ -284,7 +284,7 @@ class AlertChecker:
             query = query.eq("market_id", market_id)
         else:
             # District fallback
-            scope_note = "district_avg"
+            scope_note = "district_mean"
             district   = user.get("district", "Nashik")
             market_rows = (
                 self.supabase.table("markets")
@@ -305,7 +305,7 @@ class AlertChecker:
         if not history:
             return False, scope_note, 0.0
 
-        if scope_note == "district_avg":
+        if scope_note == "district_mean":
             series = build_district_daily_series(history)
         else:
             series = build_daily_series(history)

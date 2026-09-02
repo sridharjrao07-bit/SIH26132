@@ -55,41 +55,51 @@
         }
 
         document.addEventListener("DOMContentLoaded", () => {
-            const token = sessionStorage.getItem("admin_jwt");
-            if (token) {
-                document.getElementById("jwt-token").value = token;
-                fetchData(token);
-            }
+            fetchData(true);
         });
 
-        function saveToken() {
+        async function saveToken() {
             const token = document.getElementById("jwt-token").value.trim();
-            if (token) {
-                sessionStorage.setItem("admin_jwt", token);
-                fetchData(token);
+            if (!token) return;
+            document.getElementById("auth-error").style.display = "none";
+            try {
+                const res = await fetch("/dashboard/session", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "same-origin",
+                    body: JSON.stringify({ token }),
+                });
+                if (!res.ok) {
+                    document.getElementById("auth-error").style.display = "block";
+                    return;
+                }
+                document.getElementById("jwt-token").value = "";
+                fetchData();
+            } catch (err) {
+                document.getElementById("auth-error").style.display = "block";
             }
         }
 
         function clearToken() {
-            sessionStorage.removeItem("admin_jwt");
+            fetch("/dashboard/session", { method: "DELETE", credentials: "same-origin" });
             document.getElementById("jwt-token").value = "";
             document.querySelector(".logs").style.display = "none";
             document.querySelector(".stats").style.display = "none";
             document.getElementById("auth-error").style.display = "none";
         }
 
-        async function fetchData(token) {
+        async function fetchData(silent) {
             document.getElementById("auth-error").style.display = "none";
             try {
-                const headers = { "Authorization": `Bearer ${token}` };
+                const opts = { credentials: "same-origin" };
 
                 const [logsRes, statsRes] = await Promise.all([
-                    fetch("/dashboard/api/ingestion-logs", { headers }),
-                    fetch("/dashboard/api/forecast-stats", { headers })
+                    fetch("/dashboard/api/ingestion-logs", opts),
+                    fetch("/dashboard/api/forecast-stats", opts)
                 ]);
 
-                if (logsRes.status === 401 || statsRes.status === 401) {
-                    document.getElementById("auth-error").style.display = "block";
+                if (logsRes.status === 401 || statsRes.status === 401 || logsRes.status === 403 || statsRes.status === 403) {
+                    if (!silent) document.getElementById("auth-error").style.display = "block";
                     document.querySelector(".logs").style.display = "none";
                     document.querySelector(".stats").style.display = "none";
                     return;

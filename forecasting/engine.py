@@ -293,8 +293,12 @@ def _make_forecast_rows(
     rows = []
     for i, (predicted, lower, upper) in enumerate(preds):
         fdate = (horizon_start + timedelta(days=i + 1)).isoformat()
+        # In-sample residual band, widened with horizon (random-walk √h).
+        # Day-1 keeps the in-sample σ; day-7 is √7 ≈ 2.65× that width.
+        margin = (upper - predicted) * ((i + 1) ** 0.5)
+        lower = predicted - margin
+        upper = predicted + margin
         if sanity is not None:
-            margin = upper - predicted
             predicted = _clamp(predicted, sanity[0], sanity[1])
             lower = _clamp(max(0.0, predicted - margin), sanity[0], sanity[1])
             upper = _clamp(predicted + margin, sanity[0], sanity[1])

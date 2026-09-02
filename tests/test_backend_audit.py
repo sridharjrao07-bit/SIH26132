@@ -160,6 +160,9 @@ def test_dashboard_html_does_not_use_innerhtml():
     assert "innerHTML" not in resp.text
     assert "textContent" in resp.text
     assert "createElement" in resp.text
+    assert "localStorage" not in resp.text
+    assert "sessionStorage" not in resp.text
+    assert "/dashboard/session" in resp.text
 
 
 def test_commodities_response_hides_sanity_bands():
@@ -580,6 +583,85 @@ def test_cors_header_reflects_configured_origin():
 def test_cors_disallows_unknown_origin():
     resp = client.get("/health", headers={"Origin": "https://evil.example"})
     assert resp.headers.get("access-control-allow-origin") != "https://evil.example"
+
+
+def test_sms_inbound_uses_phone_rpc_not_profiles_table():
+    src = open("app/routers/sms.py").read()
+    assert "lookup_profile_by_phone" in src
+    assert "open_lots_for_user" in src
+    assert '.table("user_profiles")' not in src
+    assert "get_verifier" in src
+
+
+def test_handle_new_user_does_not_trust_client_role():
+    src = open("db/migrations/001_schema.sql").read()
+    assert "raw_user_meta_data ->> 'role'" not in src
+    assert "'farmer'" in src
+
+
+def test_admin_set_role_not_granted_to_authenticated():
+    needle = "grant execute on function public.admin_set_role(uuid, text) to authenticated"
+    for path in (
+        "db/migrations/003b_admin_set_role_grants.sql",
+        "db/migrations/008_marketplace.sql",
+        "db/migrations/011_ops_hardening.sql",
+    ):
+        src = open(path).read().lower()
+        assert needle not in src
+        assert "to service_role" in src
+
+
+def test_sms_outbound_cap(override_supabase, fake_supabase, tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "app.routers.sms.get_sms_gateway",
+        lambda: MockSMSGateway(log_file=str(tmp_path / "sms.log")),
+    )
+    from app.routers import sms as sms_mod
+    sms_mod.reset_outbound_cap()
+    sms_mod._OUTBOUND_MAX = 2
+    for row in fake_supabase._data["commodity_alias"]:
+        if row.get("source") == "sms":
+            row["commodities"] = {"name_en": "Onion", "name_mr": "कांदा", "name_hi": "प्याज"}
+    today = date.today().isoformat()
+    fake_supabase.seed(
+        "prices",
+        [{"market_id": MARKET_ID_LASALGAON, "commodity_id": COMMODITY_ID_ONION,
+          "arrival_date": today, "modal_price": 2100.0, "source": "data_gov_in",
+          "variety": "General", "markets": {"name": "Lasalgaon APCM"}}],
+    )
+    statuses = []
+    for _ in range(3):
+        resp = client.post(
+            "/api/v1/sms/simulate",
+            json={"sender": "9876543210", "message": "PYAJ"},
+            headers=admin_headers(),
+        )
+        assert resp.status_code == 200
+        statuses.append(resp.json()["status"])
+    sms_mod._OUTBOUND_MAX = 5
+    sms_mod.reset_outbound_cap()
+    assert "rate_limited" in statuses
+    assert statuses.count("replied") == 2
+
+
+def test_dashboard_session_cookie(override_supabase, fake_supabase):
+    token = mint_jwt(ADMIN_USER_ID)
+    try:
+        resp = client.post("/dashboard/session", json={"token": token})
+        assert resp.status_code == 200
+        assert "kb_admin" in resp.cookies
+        logs = client.get("/dashboard/api/ingestion-logs")
+        assert logs.status_code == 200
+        client.delete("/dashboard/session")
+        after = client.get("/dashboard/api/ingestion-logs")
+        assert after.status_code in (401, 403)
+    finally:
+        client.cookies.clear()
+
+
+def test_dashboard_session_rejects_farmer(override_supabase, fake_supabase):
+    resp = client.post("/dashboard/session", json={"token": mint_jwt(FARMER_USER_ID)})
+    assert resp.status_code == 403
 
 
 def test_marketplace_routes_exist():

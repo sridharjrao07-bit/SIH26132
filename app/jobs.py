@@ -23,8 +23,13 @@ def get_supabase_client():
     return create_client(settings.supabase_url, settings.supabase_service_role_key)
 
 
-def _claim(supabase, job_key: str, holder: str = "scheduler"):
-    return supabase.rpc("claim_job_lock", {"p_job_key": job_key, "p_holder": holder}).execute()
+def _claim(supabase, job_key: str, holder: str = "scheduler", ttl_minutes: int = 45):
+    # Default 45 min > worst-case ingest/alert runtime so TTL-steal cannot
+    # double-send SMS while the first holder is still in gateway.send_sms.
+    return supabase.rpc(
+        "claim_job_lock",
+        {"p_job_key": job_key, "p_holder": holder, "p_ttl_minutes": ttl_minutes},
+    ).execute()
 
 
 def _release(supabase, job_key: str, holder: str = "scheduler"):
