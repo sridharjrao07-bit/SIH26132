@@ -30,13 +30,15 @@ docker run --env-file .env -p 8000:8000 krishi-bazaar
 3. `GET /api/v1/lots/{id}/advice` — **Sell Now / Hold** from current arrivals + nearby storage, plus the **best local verified buyer** (not a price list)  
 4. `GET /api/v1/lots/{id}/matches` — same ranking, locality-first  
 5. `POST /api/v1/offers/` (48h TTL) → `PATCH` accept → `POST /api/v1/payments/` → `PATCH .../paid|failed|disputed`  
-6. `POST /api/v1/grievances/` if quality / payment / logistics fails — payment outcomes rescore buyer reliability  
-7. `GET /api/v1/sale-window/?commodity_id=&market_id=&lang=mr` — public Sell Now / Hold  
-8. `GET /api/v1/logistics/?district=Nashik` — storage and transport  
-9. FPO: `POST /api/v1/lots/aggregate` pools member lots  
-10. Admin: `POST /api/v1/admin/buyers`, `PATCH .../verify`, `GET/PATCH /api/v1/admin/grievances`, `POST .../offers/expire`, `POST .../buyers/rescore`  
+6. `GET /api/v1/lots/{id}/ledger` — transparent record (lot → offers → payments → grievances)  
+7. `POST /api/v1/grievances/` if quality / payment / logistics fails — payment outcomes rescore buyer reliability  
+8. `GET /api/v1/sale-window/?commodity_id=&market_id=&lang=mr` — public Sell Now / Hold; `better_market` if a nearby mandi pays more  
+9. `GET /api/v1/buyers/{id}/supply` — open lots that fit that verified buyer's demand  
+10. `GET /api/v1/logistics/?district=Nashik` — storage and transport  
+11. FPO: `POST /api/v1/lots/aggregate` pools member lots  
+12. Admin: `POST /api/v1/admin/buyers`, `PATCH .../verify`, `GET/PATCH /api/v1/admin/grievances`, `POST .../offers/expire`, `POST .../buyers/rescore`  
 
-SMS: registered farmer texts `PYAJ` / `कांदा` → latest modal **plus** sell/hold/wait in their language. Unknown numbers are ignored (no help-SMS amplifier).
+SMS: registered farmer texts `PYAJ` / `कांदा` → latest modal, **Sell Now / Hold**, and the best local buyer (if they have an open lot). Unknown numbers are ignored (no help-SMS amplifier).
 
 ## Public price intel
 

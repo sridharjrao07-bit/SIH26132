@@ -7,6 +7,7 @@ from notifications.sms_gateway import get_sms_gateway, resolve_template
 from notifications.prices import latest_price_for_user
 from notifications.sale_window import compute_sale_window, format_sale_sms
 from app.deps import get_supabase_service_role
+from app.matching_engine import rank_buyers
 from app.rate_limit import limiter, webhook_limit
 from supabase import Client
 import structlog
@@ -66,7 +67,7 @@ async def _process_inbound(payload: dict, supabase: Client):
 
     user_res = (
         supabase.table("user_profiles")
-        .select("preferred_language, lat, lng, district")
+        .select("id, preferred_language, lat, lng, district")
         .eq("phone", sender)
         .execute()
     )
@@ -116,9 +117,40 @@ async def _process_inbound(payload: dict, supabase: Client):
         return {"status": "no_data"}
 
     name = commodity.get(f"name_{lang}") or commodity.get("name_en", "")
-    advice = compute_sale_window(supabase, commodity_id) or {}
+    advice = compute_sale_window(
+        supabase,
+        commodity_id,
+        origin_lat=user.get("lat"),
+        origin_lng=user.get("lng"),
+    ) or {}
     rec = advice.get("recommendation") or "wait"
-    reply = format_sale_sms(lang, name, price, market_name, rec)
+    buyer_name = None
+    uid = user.get("id")
+    if uid:
+        lots = (
+            supabase.table("lots")
+            .select("*")
+            .eq("user_id", uid)
+            .eq("commodity_id", commodity_id)
+            .execute()
+            .data
+            or []
+        )
+        open_lots = [l for l in lots if l.get("status") in ("open", "offered")]
+        if open_lots:
+            lot = max(open_lots, key=lambda l: float(l.get("quantity_qtl") or 0))
+            buyers = (
+                supabase.table("buyers")
+                .select("*")
+                .eq("verified", True)
+                .execute()
+                .data
+                or []
+            )
+            ranked = rank_buyers(lot, user, buyers)
+            if ranked:
+                buyer_name = ranked[0].get("buyer_name")
+    reply = format_sale_sms(lang, name, price, market_name, rec, buyer=buyer_name)
 
     try:
         gateway.send_sms(

@@ -128,3 +128,69 @@ def rank_buyers(lot: dict, profile: dict, buyers: list, limit: int = 10) -> list
             ranked.append(row)
     ranked.sort(key=lambda x: (x["score"], -(x["distance_km"] or 10**9)), reverse=True)
     return ranked[:limit]
+
+
+_LOT_PUBLIC = (
+    "id", "commodity_id", "market_id", "quantity_qtl", "grade",
+    "asking_price", "status", "harvest_date", "fpo_id",
+)
+
+
+def score_lot_for_buyer(buyer: dict, lot: dict, market: Optional[dict] = None) -> Optional[dict]:
+    """Reverse match: does this open lot fit a verified buyer's demand?"""
+    if lot.get("status") not in ("open", "offered"):
+        return None
+    if buyer.get("commodity_id") and lot.get("commodity_id") != buyer["commodity_id"]:
+        return None
+
+    reasons = []
+    score = 0.0
+    market = market or {}
+    if buyer.get("district") and market.get("district") == buyer.get("district"):
+        score += 25
+        reasons.append("same_district")
+
+    asking = lot.get("asking_price")
+    max_p = buyer.get("max_price")
+    if asking is not None and max_p is not None:
+        if float(max_p) >= float(asking):
+            score += 20
+            reasons.append("price_covers_ask")
+        else:
+            score -= 15
+            reasons.append("bid_below_ask")
+
+    demand = buyer.get("demand_qty_qtl")
+    qty = lot.get("quantity_qtl")
+    if demand is not None and qty is not None and float(demand) >= float(qty):
+        score += 15
+        reasons.append("volume_fit")
+    elif demand is not None and qty is not None:
+        reasons.append("over_demand")
+
+    grade = (lot.get("grade") or "").lower()
+    req = (buyer.get("quality_requirements") or "").lower()
+    if grade and req and grade in req:
+        score += 10
+        reasons.append("grade_match")
+
+    row = {k: lot.get(k) for k in _LOT_PUBLIC}
+    row.update({
+        "score": round(score, 1),
+        "reasons": reasons,
+        "market_name": market.get("name"),
+        "market_district": market.get("district"),
+    })
+    return row
+
+
+def rank_lots_for_buyer(buyer: dict, lots: list, markets_by_id: Optional[dict] = None, limit: int = 20) -> list:
+    markets_by_id = markets_by_id or {}
+    ranked = []
+    for lot in lots or []:
+        market = markets_by_id.get(lot.get("market_id")) or {}
+        row = score_lot_for_buyer(buyer, lot, market)
+        if row is not None:
+            ranked.append(row)
+    ranked.sort(key=lambda x: x["score"], reverse=True)
+    return ranked[:limit]
