@@ -120,6 +120,8 @@ class SaleWindowResponse(BaseModel):
     commodity_id: str
     market_id: Optional[str] = None
     recommendation: Literal["sell", "hold", "wait"]
+    action: Optional[Literal["SELL_NOW", "HOLD", "WAIT"]] = None
+    action_label: Optional[str] = None
     reason: str
     reason_code: Optional[str] = None
     lang: Optional[str] = "en"
@@ -127,5 +129,7 @@ class SaleWindowResponse(BaseModel):
     forecast_day1: Optional[float] = None
     forecast_trend: Optional[str] = None
     arrivals_qty: Optional[float] = None
+    supply_pressure: Optional[str] = None
     nearby: Optional[list] = None
     storage: Optional[list] = None
+    storage_available: Optional[bool] = None
