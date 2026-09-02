@@ -44,3 +44,6 @@ Thumbs.db
 
 # Hackathon / API Data
 *.log
+.pytest_cache/
+.coverage
+htmlcov/

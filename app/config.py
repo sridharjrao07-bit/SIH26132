@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     target_state: str = Field(default="Maharashtra")
 
     # CORS — comma-separated origins
-    cors_origin: str = Field(default="http://localhost:3000")
+    cors_origin: str = Field(default="http://localhost:3000,http://localhost:5173")
 
     run_scheduler: bool = Field(default=True)
     rate_limit_enabled: bool = Field(default=True)
