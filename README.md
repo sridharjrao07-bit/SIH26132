@@ -7,7 +7,7 @@ The API aggregates Nashik mandi prices, 7-day statistical forecasts, and **sale-
 ## Run locally
 
 ```bash
-python3.11 -m venv .venv && source .venv/bin/activate
+python3.14 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env   # fill Supabase + DATA_GOV_IN_API_KEY
 # Apply db/migrations/001 … 011 in order — see docs/SQL_APPLY.md

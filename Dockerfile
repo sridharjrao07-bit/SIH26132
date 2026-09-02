@@ -1,6 +1,6 @@
 # SIH26132 — Krishi Bazaar API
 # Single worker: in-process APScheduler + job locks assume --workers 1.
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
