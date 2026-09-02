@@ -110,6 +110,28 @@ def compute_sale_window(supabase, commodity_id: str, market_id: Optional[str] = 
             + reason
         )
 
+    district = (latest.get("markets") or {}).get("district") or "Nashik"
+    storage = (
+        supabase.table("logistics_options")
+        .select("id, name, capacity_qtl, rate_per_qtl, district")
+        .eq("kind", "storage")
+        .eq("is_active", True)
+        .eq("district", district)
+        .limit(5)
+        .execute()
+        .data
+        or []
+    )
+    if recommendation == "hold" and not storage:
+        recommendation = "sell"
+        reason = (
+            "Forecast is higher but no listed storage in this district; "
+            "sell now rather than hold at the farm gate."
+        )
+    elif recommendation == "hold" and storage:
+        names = ", ".join(s.get("name") or "godown" for s in storage[:2])
+        reason = reason + f" Storage available: {names}."
+
     return {
         "commodity_id": commodity_id,
         "market_id": market_id,
@@ -121,6 +143,8 @@ def compute_sale_window(supabase, commodity_id: str, market_id: Optional[str] = 
         "arrivals_qty": arrivals_f,
         "nearby": nearby,
         "market_name": (latest.get("markets") or {}).get("name"),
+        "storage": storage,
+        "district": district,
     }
 
 

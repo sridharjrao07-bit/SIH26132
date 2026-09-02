@@ -23,11 +23,36 @@ class LotCreate(BaseModel):
     commodity_id: str
     market_id: Optional[str] = None
     quantity_qtl: float = Field(gt=0)
-    grade: str = "General"
+    grade: Literal["FAQ", "General", "Special"] = "General"
     quality_notes: Optional[str] = None
     harvest_date: Optional[date] = None
     asking_price: Optional[float] = Field(default=None, gt=0)
     fpo_id: Optional[str] = None
+
+
+class LotAggregate(BaseModel):
+    lot_ids: List[str] = Field(min_length=2, max_length=50)
+    asking_price: Optional[float] = Field(default=None, gt=0)
+    market_id: Optional[str] = None
+
+
+class BuyerCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=200)
+    type: Literal["trader", "processor", "institutional", "fpo", "digital"]
+    district: Optional[str] = "Nashik"
+    phone: Optional[str] = None
+    commodity_id: Optional[str] = None
+    demand_qty_qtl: Optional[float] = Field(default=None, gt=0)
+    max_price: Optional[float] = Field(default=None, gt=0)
+    quality_requirements: Optional[str] = None
+    payment_reliability: Optional[Literal["high", "medium", "low"]] = "medium"
+    lat: Optional[float] = Field(default=None, ge=-90, le=90)
+    lng: Optional[float] = Field(default=None, ge=-180, le=180)
+    verified: bool = False
+
+
+class GrievanceUpdate(BaseModel):
+    status: Literal["open", "in_progress", "resolved", "rejected"]
 
 
 class LotResponse(BaseModel):
