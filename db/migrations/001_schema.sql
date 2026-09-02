@@ -180,6 +180,7 @@ begin
 end;
 $$;
 
+drop trigger if exists trg_prices_updated_at on public.prices;
 create trigger trg_prices_updated_at
     before update on public.prices
     for each row execute function public.set_updated_at();
@@ -219,6 +220,7 @@ comment on table public.user_profiles is
   'Domain-specific user fields extending auth.users. id is FK to auth.users(id).
    role drives RLS. preferred_language drives SMS and API i18n.';
 
+drop trigger if exists trg_user_profiles_updated_at on public.user_profiles;
 create trigger trg_user_profiles_updated_at
     before update on public.user_profiles
     for each row execute function public.set_updated_at();
@@ -252,7 +254,8 @@ begin
 end;
 $$;
 
-create or replace trigger trg_on_auth_user_created
+drop trigger if exists trg_on_auth_user_created on auth.users;
+create trigger trg_on_auth_user_created
     after insert on auth.users
     for each row execute function public.handle_new_user();
 
@@ -293,6 +296,7 @@ create index if not exists idx_alerts_active_user
 create index if not exists idx_alerts_active_commodity
     on public.alerts (commodity_id, active) where active = true;
 
+drop trigger if exists trg_alerts_updated_at on public.alerts;
 create trigger trg_alerts_updated_at
     before update on public.alerts
     for each row execute function public.set_updated_at();
@@ -445,14 +449,17 @@ alter table public.notification_log enable row level security;
 -- ── markets & commodities: public read (no auth required) ───────────────────
 -- /markets/nearby and /commodities are called without auth for dropdowns and
 -- map views. Market names are not sensitive. Service role covers admin writes.
+drop policy if exists "Public can read markets" on public.markets;
 create policy "Public can read markets"
     on public.markets for select
     using (true);
 
+drop policy if exists "Public can read commodities" on public.commodities;
 create policy "Public can read commodities"
     on public.commodities for select
     using (true);
 
+drop policy if exists "Public can read commodity aliases" on public.commodity_alias;
 create policy "Public can read commodity aliases"
     on public.commodity_alias for select
     using (true);
@@ -461,30 +468,36 @@ create policy "Public can read commodity aliases"
 -- /prices is called before the user logs in (price ticker, market overview).
 -- Price data is public-good information — no reason to gate it.
 -- All inserts: ingestion service (service_role) or admin manual entry.
+drop policy if exists "Public can read prices" on public.prices;
 create policy "Public can read prices"
     on public.prices for select
     using (true);
 
+drop policy if exists "Admins can insert prices" on public.prices;
 create policy "Admins can insert prices"
     on public.prices for insert
     with check (public.has_role('admin'));
 
+drop policy if exists "Admins can update prices" on public.prices;
 create policy "Admins can update prices"
     on public.prices for update
     using (public.has_role('admin'));
 
 -- ── forecasts: public read ──────────────────────────────────────────────────
 -- Same reasoning as prices. Writes from forecasting job (service_role).
+drop policy if exists "Public can read forecasts" on public.forecasts;
 create policy "Public can read forecasts"
     on public.forecasts for select
     using (true);
 
 -- ── user_profiles: own row only for farmers; admins see all ─────────────────
 -- A farmer must never see another farmer's phone or location.
+drop policy if exists "Users read own profile" on public.user_profiles;
 create policy "Users read own profile"
     on public.user_profiles for select
     using (auth.uid() = id or public.has_role('admin'));
 
+drop policy if exists "Users update own profile" on public.user_profiles;
 create policy "Users update own profile"
     on public.user_profiles for update
     using (auth.uid() = id)
@@ -492,25 +505,30 @@ create policy "Users update own profile"
 
 -- ── alerts: farmers CRUD own alerts; admins read all ───────────────────────
 -- Alerts contain personal data (price expectations, phone). Farmer-only writes.
+drop policy if exists "Farmers read own alerts" on public.alerts;
 create policy "Farmers read own alerts"
     on public.alerts for select
     using (auth.uid() = user_id or public.has_role('admin'));
 
+drop policy if exists "Farmers create own alerts" on public.alerts;
 create policy "Farmers create own alerts"
     on public.alerts for insert
     with check (auth.uid() = user_id);
 
+drop policy if exists "Farmers update own alerts" on public.alerts;
 create policy "Farmers update own alerts"
     on public.alerts for update
     using (auth.uid() = user_id)
     with check (auth.uid() = user_id);
 
+drop policy if exists "Farmers delete own alerts" on public.alerts;
 create policy "Farmers delete own alerts"
     on public.alerts for delete
     using (auth.uid() = user_id);
 
 -- ── ingestion_log: admin-only ────────────────────────────────────────────────
 -- Operational logs reveal source endpoints and data volumes. Not public.
+drop policy if exists "Admins read ingestion log" on public.ingestion_log;
 create policy "Admins read ingestion log"
     on public.ingestion_log for select
     using (public.has_role('admin'));
