@@ -56,13 +56,15 @@ jobs:
         with:
           python-version: "3.14"
           allow-prereleases: true
-      - name: Install audit tools
-        run: pip install -r requirements-dev.txt
+      - name: Install pip-audit
+        run: pip install "pip-audit==2.9.0"
       - name: pip-audit (production lock)
         run: pip-audit -r requirements.txt
       - name: Secret patterns
         run: |
-          if git grep -I -E 'sk_live_|ghp_[A-Za-z0-9]{20,}|supabase_service_role_eyJ' -- ':!.env.example' ':!docs/archive/**'; then
+          # Character classes so this workflow file does not match itself.
+          if git grep -I -E 'sk[_]live_|ghp[_][A-Za-z0-9]{20,}|supabase[_]service[_]role[_]eyJ' \
+            -- ':!.env.example' ':!docs/archive/**' ':!.github/workflows/**'; then
             echo "Possible secret in the tree" >&2
             exit 1
           fi
