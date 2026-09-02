@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     supabase_anon_key: str = Field(..., alias="SUPABASE_ANON_KEY")
     supabase_service_role_key: str = Field(..., alias="SUPABASE_SERVICE_ROLE_KEY")
     supabase_jwt_secret: str = Field(..., alias="SUPABASE_JWT_SECRET")
-    supabase_db_url: str = Field(..., alias="SUPABASE_DB_URL")
+    supabase_db_url: str = Field(default="", alias="SUPABASE_DB_URL")
     
     # Data Sources
     data_gov_in_api_key: str = Field(..., alias="DATA_GOV_IN_API_KEY")

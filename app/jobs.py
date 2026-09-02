@@ -1,13 +1,59 @@
-import os
 import structlog
+import asyncio
+from typing import Optional
 from datetime import datetime, timezone, timedelta
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.triggers.cron import CronTrigger
 from supabase import create_client
 
 from .config import get_settings
 from ingestion.runner import IngestionRunner
 from ingestion.data_gov_in import DataGovInAdapter
+from forecasting.runner import run_forecast_job
+
+# We need a dedicated wrapper for alerts just like forecasting
+async def run_alert_job():
+    from app.config import get_settings
+    from supabase import create_client
+    import asyncio
+    from notifications.alert_checker import AlertChecker
+    
+    settings = get_settings()
+    supabase = create_client(settings.supabase_url, settings.supabase_service_role_key)
+    
+    lock_res = supabase.rpc("claim_job_lock", {"p_job_key": "alert_check", "p_holder": "scheduler"}).execute()
+    if not lock_res.data:
+        logger.info("alert_job_locked")
+        return {"status": "locked"}
+        
+    try:
+        checker = AlertChecker(supabase)
+        summary = await asyncio.to_thread(checker.run)
+        logger.info("alert_job_done", **summary)
+        return summary
+    finally:
+        supabase.rpc("release_job_lock", {"p_job_key": "alert_check", "p_holder": "scheduler"}).execute()
+
+async def run_stale_forecasts_job():
+    from app.config import get_settings
+    from supabase import create_client
+    import asyncio
+    
+    settings = get_settings()
+    supabase = create_client(settings.supabase_url, settings.supabase_service_role_key)
+    
+    lock_res = supabase.rpc("claim_job_lock", {"p_job_key": "mark_stale", "p_holder": "scheduler"}).execute()
+    if not lock_res.data:
+        return
+        
+    try:
+        # Mark stale forecasts
+        res = await asyncio.to_thread(supabase.rpc("mark_stale_forecasts").execute)
+        logger.info("mark_stale_forecasts_done", count=res.data)
+    finally:
+        supabase.rpc("release_job_lock", {"p_job_key": "mark_stale", "p_holder": "scheduler"}).execute()
+
 
 logger = structlog.get_logger()
 settings = get_settings()
@@ -80,6 +126,7 @@ async def _run_catchup_task():
         logger.info("startup_catchup_running",
                     reason="no recent successful ingestion found")
         await run_ingestion_job()
+        await run_forecast_job()
 
     except Exception as e:
         # Catch-up is best-effort: log and continue. API is already serving.
@@ -120,23 +167,37 @@ def setup_scheduler() -> AsyncIOScheduler:
 
     scheduler = AsyncIOScheduler()
 
-    # Ingestion Job — max_instances=1 prevents overlap; coalesce=True collapses
-    # misfired ticks into one run; misfire_grace_time gives a 1h window.
+    # Hourly cascade: Ingest -> Forecast -> Alerts -> Mark Stale
     scheduler.add_job(
         run_ingestion_job,
-        trigger=IntervalTrigger(hours=settings.ingestion_interval_hours),
-        id="ingestion_job",
-        name="Daily Mandi Price Ingestion",
+        CronTrigger(minute=0),
+        id="hourly_ingestion",
+        name="Source Data Ingestion",
         replace_existing=True,
-        max_instances=1,
-        coalesce=True,
-        misfire_grace_time=3600,
     )
-
-    # Forecast Job (Stage 4 placeholder)
-    # scheduler.add_job(run_forecast_job, ...)
-
-    # Alerts Job (Stage 5 placeholder)
-    # scheduler.add_job(run_alert_checker, ...)
+    
+    scheduler.add_job(
+        run_forecast_job,
+        CronTrigger(minute=5),
+        id="hourly_forecast",
+        name="Forecast Generation",
+        replace_existing=True,
+    )
+    
+    scheduler.add_job(
+        run_alert_job,
+        CronTrigger(minute=10),
+        id="hourly_alerts",
+        name="Alert SMS Dispatch",
+        replace_existing=True,
+    )
+    
+    scheduler.add_job(
+        run_stale_forecasts_job,
+        CronTrigger(minute=15),
+        id="hourly_stale_forecasts",
+        name="Mark Stale Forecasts",
+        replace_existing=True,
+    )
 
     return scheduler

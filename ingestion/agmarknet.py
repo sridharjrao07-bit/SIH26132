@@ -4,7 +4,7 @@ import sys
 import os
 from typing import List
 from datetime import datetime
-from .base import IngestionSourceAdapter, RawPriceRecord
+from .base import IngestionSourceAdapter, RawPriceRecord, SourceFetchError
 
 logger = structlog.get_logger()
 
@@ -31,9 +31,9 @@ class AgmarknetAdapter(IngestionSourceAdapter):
             # We must import inside the method or safely at top to avoid crashing 
             # the whole app if selenium is missing.
             from APIwebScraping import script
-        except ImportError:
+        except ImportError as e:
             log.error("agmarknet_scraper_import_failed", reason="Is selenium installed and agmarknetAPI cloned?")
-            return records
+            raise SourceFetchError("agmarknetAPI script import failed") from e
             
         log.info("fetching_data_via_selenium")
         
@@ -45,7 +45,7 @@ class AgmarknetAdapter(IngestionSourceAdapter):
         
         try:
             # Run the synchronous selenium script in a thread pool so we don't block the async event loop
-            raw_data = await asyncio.to_thread(script, state, commodity, market_to_query)
+            raw_data = await asyncio.wait_for(asyncio.to_thread(script, state, commodity, market_to_query), timeout=120)
             
             log.info("received_records", count=len(raw_data))
             
@@ -86,6 +86,6 @@ class AgmarknetAdapter(IngestionSourceAdapter):
                     
         except Exception as e:
             log.error("selenium_scraper_failed", error=str(e))
-            # Gracefully fail. This might happen if Chrome/ChromeDriver is not installed.
+            raise SourceFetchError(f"agmarknet scraper failed: {e}") from e
             
         return records
