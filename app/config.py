@@ -5,56 +5,63 @@ from typing import List
 
 
 class Settings(BaseSettings):
-    app_env: str = Field(default="development", alias="APP_ENV")
-    log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+    """Env names match field names case-insensitively (SUPABASE_URL → supabase_url).
+
+    Do not set Field(alias="ENV_NAME"): pydantic-settings then stores env under the
+    alias and constructor kwargs under the field name, so .env silently wins.
+    """
+
+    app_env: str = Field(default="development")
+    log_level: str = Field(default="INFO")
 
     # Supabase
-    supabase_url: str = Field(..., alias="SUPABASE_URL")
-    supabase_anon_key: str = Field(..., alias="SUPABASE_ANON_KEY")
-    supabase_service_role_key: str = Field(..., alias="SUPABASE_SERVICE_ROLE_KEY")
-    supabase_jwt_secret: str = Field(..., alias="SUPABASE_JWT_SECRET")
-    supabase_jwt_issuer: str = Field(default="", alias="SUPABASE_JWT_ISSUER")
-    supabase_db_url: str = Field(default="", alias="SUPABASE_DB_URL")
+    supabase_url: str
+    supabase_anon_key: str
+    supabase_service_role_key: str
+    supabase_jwt_secret: str
+    supabase_jwt_issuer: str = Field(default="")
+    supabase_db_url: str = Field(default="")
 
     # Data Sources
-    data_gov_in_api_key: str = Field(..., alias="DATA_GOV_IN_API_KEY")
-    enable_agmarknet: bool = Field(default=False, alias="ENABLE_AGMARKNET")
+    data_gov_in_api_key: str
+    enable_agmarknet: bool = Field(default=False)
 
     # SMS Gateway
-    sms_gateway: str = Field(default="mock", alias="SMS_GATEWAY")
-    msg91_api_key: str = Field(default="", alias="MSG91_API_KEY")
-    msg91_sender_id: str = Field(default="KRBAZR", alias="MSG91_SENDER_ID")
-    msg91_dlt_pe_id: str = Field(default="", alias="MSG91_DLT_PE_ID")
-    msg91_dlt_te_id_en: str = Field(default="", alias="MSG91_DLT_TE_ID_EN")
-    msg91_dlt_te_id_mr: str = Field(default="", alias="MSG91_DLT_TE_ID_MR")
-    msg91_dlt_te_id_hi: str = Field(default="", alias="MSG91_DLT_TE_ID_HI")
+    sms_gateway: str = Field(default="mock")
+    msg91_api_key: str = Field(default="")
+    msg91_sender_id: str = Field(default="KRBAZR")
+    msg91_dlt_pe_id: str = Field(default="")
+    msg91_dlt_te_id_en: str = Field(default="")
+    msg91_dlt_te_id_mr: str = Field(default="")
+    msg91_dlt_te_id_hi: str = Field(default="")
 
     # Webhook HMAC — also read here so a value that only exists in `.env`
     # (not exported into os.environ) still protects /sms/webhook.
-    inbound_hmac_secret: str = Field(default="", alias="INBOUND_HMAC_SECRET")
-    inbound_sig_header: str = Field(default="X-Signature", alias="INBOUND_SIG_HEADER")
-    inbound_ts_header: str = Field(default="X-Timestamp", alias="INBOUND_TS_HEADER")
+    inbound_hmac_secret: str = Field(default="")
+    inbound_sig_header: str = Field(default="X-Signature")
+    inbound_ts_header: str = Field(default="X-Timestamp")
 
     # Scheduler intervals
-    ingestion_interval_hours: int = Field(default=6, alias="INGESTION_INTERVAL_HOURS")
-    alert_check_interval_minutes: int = Field(default=60, alias="ALERT_CHECK_INTERVAL_MINUTES")
-    forecast_interval_hours: int = Field(default=6, alias="FORECAST_INTERVAL_HOURS")
+    ingestion_interval_hours: int = Field(default=6)
+    alert_check_interval_minutes: int = Field(default=60)
+    forecast_interval_hours: int = Field(default=6)
 
     # Scope
-    target_district: str = Field(default="Nashik", alias="TARGET_DISTRICT")
-    target_state: str = Field(default="Maharashtra", alias="TARGET_STATE")
+    target_district: str = Field(default="Nashik")
+    target_state: str = Field(default="Maharashtra")
 
     # CORS — comma-separated origins
-    cors_origin: str = Field(default="http://localhost:3000", alias="CORS_ORIGIN")
+    cors_origin: str = Field(default="http://localhost:3000")
 
-    run_scheduler: bool = Field(default=True, alias="RUN_SCHEDULER")
-    rate_limit_enabled: bool = Field(default=True, alias="RATE_LIMIT_ENABLED")
+    run_scheduler: bool = Field(default=True)
+    rate_limit_enabled: bool = Field(default=True)
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
         populate_by_name=True,
+        env_ignore_empty=True,
     )
 
     def cors_origins(self) -> List[str]:
