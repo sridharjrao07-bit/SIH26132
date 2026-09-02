@@ -10,7 +10,7 @@ The API aggregates Nashik mandi prices, 7-day statistical forecasts, and **sale-
 python3.11 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env   # fill Supabase + DATA_GOV_IN_API_KEY
-# Apply db/migrations/001 … 008 in order on the Supabase project
+# Apply db/migrations/001 … 009 in order on the Supabase project
 RUN_SCHEDULER=0 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -21,7 +21,7 @@ docker build -t krishi-bazaar .
 docker run --env-file .env -p 8000:8000 krishi-bazaar
 ```
 
-`pytest -q` is offline (FakeSupabase). Production needs migrations through `008_marketplace.sql`.
+`pytest -q` is offline (FakeSupabase). Production needs migrations through `009_logistics_bookings.sql`.
 
 ## Farmer / FPO flow
 
@@ -34,9 +34,10 @@ docker run --env-file .env -p 8000:8000 krishi-bazaar
 7. `POST /api/v1/grievances/` if quality / payment / logistics fails — payment outcomes rescore buyer reliability  
 8. `GET /api/v1/sale-window/?commodity_id=&market_id=&lang=mr` — public Sell Now / Hold; `better_market` if a nearby mandi pays more  
 9. `GET /api/v1/buyers/{id}/supply` — open lots that fit that verified buyer's demand  
-10. `GET /api/v1/logistics/?district=Nashik` — storage and transport  
-11. FPO: `POST /api/v1/lots/aggregate` pools member lots  
-12. Admin: `POST /api/v1/admin/buyers`, `PATCH .../verify`, `GET/PATCH /api/v1/admin/grievances`, `POST .../offers/expire`, `POST .../buyers/rescore`  
+10. `GET /api/v1/logistics/?district=Nashik` — storage and transport directory  
+11. `POST /api/v1/logistics/bookings` → `PATCH .../confirmed|cancelled|completed` — book a godown or truck against a lot (capacity-checked)  
+12. FPO: `POST /api/v1/lots/aggregate` pools member lots  
+13. Admin: `POST /api/v1/admin/buyers`, `PATCH .../verify`, `GET/PATCH /api/v1/admin/grievances`, `POST .../offers/expire`, `POST .../buyers/rescore`  
 
 SMS: registered farmer texts `PYAJ` / `कांदा` → latest modal, **Sell Now / Hold**, and the best local buyer (if they have an open lot). Unknown numbers are ignored (no help-SMS amplifier).
 

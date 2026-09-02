@@ -828,3 +828,129 @@ def test_sms_names_best_local_buyer_when_lot_open(override_supabase, fake_supaba
     assert resp.json()["status"] == "replied"
     assert "Lasalgaon" in resp.json()["message"]
     assert "विका" in resp.json()["message"] or "SELL" in resp.json()["message"]
+
+
+def test_book_storage_and_confirm(override_supabase, fake_supabase):
+    fake_supabase.seed("logistics_options", [{
+        "id": "st-1", "district": "Nashik", "kind": "storage",
+        "name": "MSWC Lasalgaon Godown", "is_active": True, "capacity_qtl": 5000,
+        "rate_per_qtl": 8,
+    }])
+    fake_supabase.seed("lots", [{
+        "id": "lot-bk", "user_id": FARMER_USER_ID, "commodity_id": COMMODITY_ID_ONION,
+        "quantity_qtl": 40, "grade": "FAQ", "status": "open",
+    }])
+    fake_supabase.seed("logistics_bookings", [])
+    booked = client.post("/api/v1/logistics/bookings", json={
+        "lot_id": "lot-bk",
+        "logistics_id": "st-1",
+        "quantity_qtl": 40,
+    }, headers=farmer_headers())
+    assert booked.status_code == 200, booked.text
+    assert booked.json()["status"] == "requested"
+    assert booked.json()["kind"] == "storage"
+    bid = booked.json()["id"]
+    confirmed = client.patch(
+        f"/api/v1/logistics/bookings/{bid}",
+        json={"status": "confirmed"},
+        headers=farmer_headers(),
+    )
+    assert confirmed.status_code == 200
+    assert confirmed.json()["status"] == "confirmed"
+    listed = client.get("/api/v1/logistics/bookings?lot_id=lot-bk", headers=farmer_headers())
+    assert listed.status_code == 200
+    assert listed.json()[0]["id"] == bid
+
+
+def test_booking_rejected_when_capacity_exceeded(override_supabase, fake_supabase):
+    fake_supabase.seed("logistics_options", [{
+        "id": "st-small", "district": "Nashik", "kind": "storage",
+        "name": "Tiny Godown", "is_active": True, "capacity_qtl": 50,
+    }])
+    fake_supabase.seed("lots", [{
+        "id": "lot-cap", "user_id": FARMER_USER_ID, "commodity_id": COMMODITY_ID_ONION,
+        "quantity_qtl": 80, "grade": "FAQ", "status": "open",
+    }])
+    fake_supabase.seed("logistics_bookings", [{
+        "id": "existing", "user_id": FARMER_USER_ID, "lot_id": "other",
+        "logistics_id": "st-small", "kind": "storage", "quantity_qtl": 40,
+        "status": "confirmed",
+    }])
+    resp = client.post("/api/v1/logistics/bookings", json={
+        "lot_id": "lot-cap",
+        "logistics_id": "st-small",
+        "quantity_qtl": 20,
+    }, headers=farmer_headers())
+    assert resp.status_code == 409
+
+
+def test_cannot_book_sold_lot(override_supabase, fake_supabase):
+    fake_supabase.seed("logistics_options", [{
+        "id": "tr-1", "district": "Nashik", "kind": "transport",
+        "name": "Niphad Mandi Tempo Pool", "is_active": True, "capacity_qtl": 200,
+    }])
+    fake_supabase.seed("lots", [{
+        "id": "lot-sold", "user_id": FARMER_USER_ID, "commodity_id": COMMODITY_ID_ONION,
+        "quantity_qtl": 10, "status": "sold",
+    }])
+    resp = client.post("/api/v1/logistics/bookings", json={
+        "lot_id": "lot-sold",
+        "logistics_id": "tr-1",
+    }, headers=farmer_headers())
+    assert resp.status_code == 409
+
+
+def test_lot_advice_next_step_is_book_transport_on_sell_now(override_supabase, fake_supabase):
+    today = date.today().isoformat()
+    fake_supabase.seed("buyers", [{
+        "id": "buyer-1", "name": "Lasalgaon Onion Traders", "type": "trader",
+        "verified": True, "district": "Nashik", "commodity_id": COMMODITY_ID_ONION,
+        "demand_qty_qtl": 800, "max_price": 2400, "lat": 20.12, "lng": 74.33,
+    }])
+    fake_supabase.seed("prices", [{
+        "market_id": MARKET_ID_LASALGAON, "commodity_id": COMMODITY_ID_ONION,
+        "arrival_date": today, "modal_price": 2000.0, "arrival_qty": 1500,
+        "markets": {"name": "Lasalgaon APCM", "district": "Nashik"},
+    }])
+    fake_supabase.seed("forecasts", [{
+        "market_id": MARKET_ID_LASALGAON, "commodity_id": COMMODITY_ID_ONION,
+        "forecast_date": today, "predicted_price": 1800.0, "status": "ok",
+    }])
+    fake_supabase.seed("logistics_options", [{
+        "id": "tr-1", "district": "Nashik", "kind": "transport",
+        "name": "Niphad Mandi Tempo Pool", "is_active": True, "capacity_qtl": 200,
+    }])
+    fake_supabase.seed("logistics_bookings", [])
+    lot_resp = client.post("/api/v1/lots/", json={
+        "commodity_id": COMMODITY_ID_ONION,
+        "market_id": MARKET_ID_LASALGAON,
+        "quantity_qtl": 20,
+        "grade": "FAQ",
+        "asking_price": 2000,
+    }, headers=farmer_headers())
+    lot_id = lot_resp.json()["id"]
+    advice = client.get(f"/api/v1/lots/{lot_id}/advice", headers=farmer_headers())
+    assert advice.status_code == 200, advice.text
+    assert advice.json()["action"] == "SELL_NOW"
+    assert "Niphad" in (advice.json()["next_step"] or "")
+
+
+def test_ledger_includes_logistics_booking(override_supabase, fake_supabase):
+    fake_supabase.seed("lots", [{
+        "id": "lot-led2", "user_id": FARMER_USER_ID, "commodity_id": COMMODITY_ID_ONION,
+        "quantity_qtl": 20, "grade": "FAQ", "status": "open",
+        "created_at": "2026-09-01T10:00:00+00:00",
+    }])
+    fake_supabase.seed("offers", [])
+    fake_supabase.seed("payments", [])
+    fake_supabase.seed("grievances", [])
+    fake_supabase.seed("logistics_bookings", [{
+        "id": "bk-1", "lot_id": "lot-led2", "user_id": FARMER_USER_ID,
+        "logistics_id": "st-1", "kind": "storage", "quantity_qtl": 20,
+        "status": "confirmed", "created_at": "2026-09-01T11:00:00+00:00",
+    }])
+    resp = client.get("/api/v1/lots/lot-led2/ledger", headers=farmer_headers())
+    assert resp.status_code == 200, resp.text
+    types = [e["type"] for e in resp.json()["events"]]
+    assert "booking_confirmed" in types
+    assert resp.json()["bookings"][0]["id"] == "bk-1"

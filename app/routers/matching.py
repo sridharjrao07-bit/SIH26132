@@ -5,6 +5,7 @@ from supabase import Client
 from app.deps import get_supabase, get_supabase_as_user
 from app.auth import get_current_user
 from app.matching_engine import rank_buyers
+from app.marketplace import logistics_next_step
 from notifications.sale_window import compute_sale_window, apply_sale_language
 
 router = APIRouter(prefix="/api/v1/lots", tags=["Matching"])
@@ -78,12 +79,34 @@ def lot_advice(
     reason = (window or {}).get("reason") or "No recent mandi price; wait for today's arrival."
     if action == "SELL_NOW" and best:
         reason = f"{reason} {best['summary']}"
+    bookings = (
+        as_user.table("logistics_bookings")
+        .select("*")
+        .eq("lot_id", lot_id)
+        .execute()
+        .data
+        or []
+    )
+    district = profile.get("district") or (window or {}).get("district") or "Nashik"
+    transport_q = (
+        public.table("logistics_options")
+        .select("*")
+        .eq("kind", "transport")
+        .eq("is_active", True)
+        .eq("district", district)
+        .limit(5)
+    )
+    transport = transport_q.execute().data or []
+    next_step = logistics_next_step(action, window, bookings, transport)
     return {
         "lot_id": lot_id,
         "action": action,
         "action_label": (window or {}).get("action_label") or "Wait",
         "reason": reason,
+        "next_step": next_step,
         "sale_window": window,
         "best_buyer": best,
         "matches": ranked[:5],
+        "bookings": bookings,
+        "suggested_transport": transport[:3],
     }
