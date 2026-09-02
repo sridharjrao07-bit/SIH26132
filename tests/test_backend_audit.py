@@ -14,6 +14,7 @@ import hmac
 import hashlib
 import inspect
 import time
+from pathlib import Path
 from datetime import date, datetime, timedelta, timezone
 
 import pytest
@@ -468,11 +469,15 @@ def test_ingestion_job_takes_distributed_lock():
     assert "claim_job_lock" in inspect.getsource(_claim)
 
 
+def _read(path: str) -> str:
+    return Path(path).read_text(encoding="utf-8")
+
+
 def test_slowapi_is_wired_into_the_app():
     assert hasattr(app.state, "limiter")
-    src = open("app/main.py").read()
+    src = _read("app/main.py")
     assert "SlowAPIMiddleware" in src
-    assert "Limiter" in open("app/rate_limit.py").read()
+    assert "Limiter" in _read("app/rate_limit.py")
 
 
 def test_settings_constructor_accepts_field_names():
@@ -665,9 +670,17 @@ def test_dashboard_session_rejects_farmer(override_supabase, fake_supabase):
 
 
 def test_marketplace_routes_exist():
-    paths = {getattr(r, "path", "") for r in app.routes}
-    for needle in ("/buyers", "/lots", "/offers", "/payments", "/grievances", "/logistics", "/sale-window"):
-        assert any(needle in p for p in paths), f"missing route matching {needle}: {paths}"
+    # Probe HTTP, not app.routes: middleware wrappers hide mounted paths on some stacks.
+    assert client.get("/api/v1/buyers/").status_code != 404
+    assert client.get("/api/v1/logistics/").status_code != 404
+    assert client.get("/api/v1/sale-window/").status_code != 404
+    for path in (
+        "/api/v1/lots/",
+        "/api/v1/offers/",
+        "/api/v1/payments/",
+        "/api/v1/grievances/",
+    ):
+        assert client.get(path).status_code != 404, path
     resp = client.get("/health")
     assert resp.headers.get("x-content-type-options") == "nosniff"
     assert resp.headers.get("x-frame-options") == "DENY"
