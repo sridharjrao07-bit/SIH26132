@@ -208,6 +208,9 @@ def _blend_predictions(
 # ── Forecast row builder (module-level for unit-testability) ───────────────────
 
 def _clamp(value: float, lo: float, hi: float) -> float:
+    if lo > hi:
+        logger.warning("reversed_sanity_band", lo=lo, hi=hi, action="skipping_clamp")
+        return round(value, 2)
     return round(max(lo, min(hi, value)), 2)
 
 

@@ -158,3 +158,20 @@ def test_engine_run(fake_supabase):
     assert len(upserts) == 1
     assert len(upserts[0]["payload"]) == 7
     assert upserts[0]["table"] == "forecasts"
+
+def test_reversed_sanity_band(capsys):
+    from forecasting.engine import _clamp
+    val = _clamp(100.123, 500.0, 10.0)
+    assert val == 100.12
+    captured = capsys.readouterr()
+    assert "reversed_sanity_band" in captured.out or "reversed_sanity_band" in captured.err
+
+def test_reversed_sanity_band_invariant():
+    from forecasting.engine import _make_forecast_rows
+    from datetime import date
+    series = [(date(2024, 9, i+1), 2000.0) for i in range(25)]
+    # Reversed sanity band
+    rows = _make_forecast_rows('m1', 'c1', series, sanity=(5000, 10))
+    for r in rows:
+        assert 0 <= r['lower_bound'] <= r['predicted_price'] <= r['upper_bound']
+
