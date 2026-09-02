@@ -2,11 +2,36 @@ import uuid
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from supabase import Client
-from app.deps import get_supabase_as_user
+from app.deps import get_supabase_as_user, get_supabase_service_role
 from app.auth import get_current_user
 from app.schemas.marketplace import PaymentCreate
+from app.marketplace import recompute_buyer_reliability
 
 router = APIRouter(prefix="/api/v1/payments", tags=["Payments"])
+
+
+def _own_payment(supabase, payment_id: str, user_id: str):
+    rows = (
+        supabase.table("payments")
+        .select("*")
+        .eq("id", payment_id)
+        .eq("user_id", user_id)
+        .execute()
+        .data
+        or []
+    )
+    if not rows:
+        raise HTTPException(404, "payment not found")
+    return rows[0]
+
+
+def _rescore_offer_buyer(user_db: Client, service_db: Client, offer_id: str) -> None:
+    offers = user_db.table("offers").select("buyer_id").eq("id", offer_id).execute().data or []
+    if not offers:
+        return
+    buyer_id = offers[0].get("buyer_id")
+    if buyer_id:
+        recompute_buyer_reliability(service_db, buyer_id)
 
 
 @router.post("/")
@@ -56,7 +81,11 @@ def mark_paid(
     payment_id: str,
     user_id: str = Depends(get_current_user),
     supabase: Client = Depends(get_supabase_as_user),
+    service: Client = Depends(get_supabase_service_role),
 ):
+    current = _own_payment(supabase, payment_id, user_id)
+    if current.get("status") in ("failed", "disputed"):
+        raise HTTPException(409, f"cannot mark a {current['status']} payment as paid")
     res = (
         supabase.table("payments")
         .update({
@@ -73,4 +102,49 @@ def mark_paid(
     offer = supabase.table("offers").select("lot_id").eq("id", payment["offer_id"]).execute().data
     if offer:
         supabase.table("lots").update({"status": "sold"}).eq("id", offer[0]["lot_id"]).execute()
+    _rescore_offer_buyer(supabase, service, payment["offer_id"])
     return payment
+
+
+@router.patch("/{payment_id}/failed")
+def mark_failed(
+    payment_id: str,
+    user_id: str = Depends(get_current_user),
+    supabase: Client = Depends(get_supabase_as_user),
+    service: Client = Depends(get_supabase_service_role),
+):
+    current = _own_payment(supabase, payment_id, user_id)
+    if current.get("status") == "paid":
+        raise HTTPException(409, "cannot fail a paid payment")
+    res = (
+        supabase.table("payments")
+        .update({"status": "failed"})
+        .eq("id", payment_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    if not res.data:
+        raise HTTPException(404, "payment not found")
+    _rescore_offer_buyer(supabase, service, res.data[0]["offer_id"])
+    return res.data[0]
+
+
+@router.patch("/{payment_id}/disputed")
+def mark_disputed(
+    payment_id: str,
+    user_id: str = Depends(get_current_user),
+    supabase: Client = Depends(get_supabase_as_user),
+    service: Client = Depends(get_supabase_service_role),
+):
+    current = _own_payment(supabase, payment_id, user_id)
+    res = (
+        supabase.table("payments")
+        .update({"status": "disputed"})
+        .eq("id", payment_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    if not res.data:
+        raise HTTPException(404, "payment not found")
+    _rescore_offer_buyer(supabase, service, res.data[0]["offer_id"])
+    return res.data[0]

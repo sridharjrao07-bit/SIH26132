@@ -1,9 +1,10 @@
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from supabase import Client
-from app.deps import get_supabase_as_user
+from app.deps import get_supabase_as_user, get_supabase_service_role
 from app.auth import get_current_user
 from app.schemas.marketplace import GrievanceCreate
+from app.marketplace import recompute_buyer_reliability
 
 router = APIRouter(prefix="/api/v1/grievances", tags=["Grievances"])
 
@@ -13,6 +14,7 @@ def create_grievance(
     body: GrievanceCreate,
     user_id: str = Depends(get_current_user),
     supabase: Client = Depends(get_supabase_as_user),
+    service: Client = Depends(get_supabase_service_role),
 ):
     row = {
         "id": str(uuid.uuid4()),

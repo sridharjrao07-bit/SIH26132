@@ -7,6 +7,7 @@ import uuid
 from app.auth import require_role
 from app.deps import get_supabase_service_role
 from app.schemas.marketplace import BuyerCreate, GrievanceUpdate
+from app.marketplace import expire_stale_offers, recompute_buyer_reliability
 
 from forecasting.engine import ForecastEngine
 from notifications.alert_checker import AlertChecker
@@ -97,4 +98,26 @@ def admin_update_grievance(
     )
     if not res.data:
         raise HTTPException(404, "grievance not found")
-    return res.data[0]
+    row = res.data[0]
+    if row.get("category") == "payment" and row.get("offer_id"):
+        offers = supabase.table("offers").select("buyer_id").eq("id", row["offer_id"]).execute().data or []
+        if offers and offers[0].get("buyer_id"):
+            recompute_buyer_reliability(supabase, offers[0]["buyer_id"])
+    return row
+
+
+@router.post("/offers/expire", dependencies=[Depends(require_role("admin"))])
+def admin_expire_offers(supabase: Client = Depends(get_supabase_service_role)):
+    """Expire pending offers older than 48h and reopen idle lots."""
+    return {"status": "success", **expire_stale_offers(supabase)}
+
+
+@router.post("/buyers/rescore", dependencies=[Depends(require_role("admin"))])
+def admin_rescore_buyers(supabase: Client = Depends(get_supabase_service_role)):
+    buyers = supabase.table("buyers").select("id").limit(500).execute().data or []
+    updated = {}
+    for b in buyers:
+        grade = recompute_buyer_reliability(supabase, b["id"])
+        if grade is not None:
+            updated[b["id"]] = grade
+    return {"status": "success", "updated": updated}

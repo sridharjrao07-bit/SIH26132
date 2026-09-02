@@ -374,6 +374,140 @@ def test_fpo_aggregate_lots(override_supabase, fake_supabase):
     assert farmer_blocked.status_code == 403
 
 
+def test_stale_offer_expires_and_cannot_be_accepted(override_supabase, fake_supabase):
+    from datetime import timedelta
+    from tests.conftest import ADMIN_USER_ID
+    past = (datetime.now(timezone.utc) - timedelta(hours=72)).isoformat()
+    fake_supabase.seed("lots", [{
+        "id": "lot-old", "user_id": FARMER_USER_ID, "commodity_id": COMMODITY_ID_ONION,
+        "quantity_qtl": 20, "grade": "FAQ", "status": "offered",
+    }])
+    fake_supabase.seed("offers", [{
+        "id": "off-old", "lot_id": "lot-old", "buyer_id": "buyer-1",
+        "user_id": FARMER_USER_ID, "price_per_qtl": 2000, "quantity_qtl": 20,
+        "status": "pending", "created_at": past,
+    }])
+    admin = {"Authorization": f"Bearer {mint_jwt(ADMIN_USER_ID)}"}
+    expired = client.post("/api/v1/admin/offers/expire", headers=admin)
+    assert expired.status_code == 200, expired.text
+    assert expired.json()["expired"] == 1
+    lot = next(r for r in fake_supabase._data["lots"] if r["id"] == "lot-old")
+    assert lot["status"] == "open"
+    acc = client.patch(
+        "/api/v1/offers/off-old",
+        json={"status": "accepted"},
+        headers=farmer_headers(),
+    )
+    assert acc.status_code == 409
+
+
+def test_fresh_offer_includes_expires_at(override_supabase, fake_supabase):
+    fake_supabase.seed("lots", [{
+        "id": "lot-new", "user_id": FARMER_USER_ID, "commodity_id": COMMODITY_ID_ONION,
+        "quantity_qtl": 10, "grade": "General", "status": "open",
+    }])
+    fake_supabase.seed("buyers", [{
+        "id": "buyer-1", "name": "Desk", "type": "trader", "verified": True,
+    }])
+    resp = client.post("/api/v1/offers/", json={
+        "lot_id": "lot-new",
+        "buyer_id": "buyer-1",
+        "price_per_qtl": 1900,
+        "quantity_qtl": 10,
+    }, headers=farmer_headers())
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["expires_at"]
+    assert resp.json()["status"] == "pending"
+
+
+def test_disputed_payment_lowers_buyer_reliability(override_supabase, fake_supabase):
+    fake_supabase.seed("buyers", [{
+        "id": "buyer-1", "name": "Desk", "type": "trader",
+        "verified": True, "payment_reliability": "high",
+    }])
+    fake_supabase.seed("lots", [{
+        "id": "lot-p", "user_id": FARMER_USER_ID, "commodity_id": COMMODITY_ID_ONION,
+        "quantity_qtl": 10, "status": "matched",
+    }])
+    fake_supabase.seed("offers", [{
+        "id": "off-p", "lot_id": "lot-p", "buyer_id": "buyer-1",
+        "user_id": FARMER_USER_ID, "status": "accepted", "price_per_qtl": 2000,
+        "quantity_qtl": 10,
+    }])
+    fake_supabase.seed("payments", [{
+        "id": "pay-1", "offer_id": "off-p", "user_id": FARMER_USER_ID,
+        "amount": 20000, "status": "pending",
+    }])
+    disp = client.patch("/api/v1/payments/pay-1/disputed", headers=farmer_headers())
+    assert disp.status_code == 200, disp.text
+    assert disp.json()["status"] == "disputed"
+    buyer = next(b for b in fake_supabase._data["buyers"] if b["id"] == "buyer-1")
+    assert buyer["payment_reliability"] == "low"
+
+
+def test_two_paid_settlements_mark_buyer_high(override_supabase, fake_supabase):
+    fake_supabase.seed("buyers", [{
+        "id": "buyer-1", "name": "Desk", "type": "trader",
+        "verified": True, "payment_reliability": "medium",
+    }])
+    fake_supabase.seed("offers", [
+        {"id": "o1", "buyer_id": "buyer-1", "user_id": FARMER_USER_ID, "status": "accepted", "lot_id": "l1"},
+        {"id": "o2", "buyer_id": "buyer-1", "user_id": FARMER_USER_ID, "status": "accepted", "lot_id": "l2"},
+    ])
+    fake_supabase.seed("lots", [
+        {"id": "l1", "user_id": FARMER_USER_ID, "status": "matched", "commodity_id": COMMODITY_ID_ONION, "quantity_qtl": 1},
+        {"id": "l2", "user_id": FARMER_USER_ID, "status": "matched", "commodity_id": COMMODITY_ID_ONION, "quantity_qtl": 1},
+    ])
+    fake_supabase.seed("payments", [
+        {"id": "p1", "offer_id": "o1", "user_id": FARMER_USER_ID, "amount": 100, "status": "pending"},
+        {"id": "p2", "offer_id": "o2", "user_id": FARMER_USER_ID, "amount": 100, "status": "pending"},
+    ])
+    assert client.patch("/api/v1/payments/p1/paid", headers=farmer_headers()).status_code == 200
+    assert client.patch("/api/v1/payments/p2/paid", headers=farmer_headers()).status_code == 200
+    buyer = next(b for b in fake_supabase._data["buyers"] if b["id"] == "buyer-1")
+    assert buyer["payment_reliability"] == "high"
+
+
+def test_sale_window_marathi_and_hindi(override_supabase, fake_supabase):
+    today = date.today().isoformat()
+    fake_supabase.seed("prices", [{
+        "market_id": MARKET_ID_LASALGAON,
+        "commodity_id": COMMODITY_ID_ONION,
+        "arrival_date": today,
+        "modal_price": 2000.0,
+        "arrival_qty": 1500,
+        "markets": {"name": "Lasalgaon APCM", "district": "Nashik"},
+    }])
+    fake_supabase.seed("forecasts", [{
+        "market_id": MARKET_ID_LASALGAON,
+        "commodity_id": COMMODITY_ID_ONION,
+        "forecast_date": today,
+        "predicted_price": 1800.0,
+        "status": "ok",
+    }])
+    mr = client.get(
+        f"/api/v1/sale-window/?commodity_id={COMMODITY_ID_ONION}&market_id={MARKET_ID_LASALGAON}&lang=mr"
+    )
+    hi = client.get(
+        f"/api/v1/sale-window/?commodity_id={COMMODITY_ID_ONION}&market_id={MARKET_ID_LASALGAON}&lang=hi"
+    )
+    assert mr.status_code == 200
+    assert hi.status_code == 200
+    assert mr.json()["recommendation"] == "sell"
+    assert mr.json()["lang"] == "mr"
+    assert "विका" in mr.json()["reason"]
+    assert "बेचें" in hi.json()["reason"]
+
+
+def test_reliability_scoring_unit():
+    from app.marketplace import score_payment_reliability
+    assert score_payment_reliability(0, 0, 0, 0) is None
+    assert score_payment_reliability(2, 0, 0, 0) == "high"
+    assert score_payment_reliability(1, 0, 0, 0) == "medium"
+    assert score_payment_reliability(0, 0, 1, 0) == "low"
+    assert score_payment_reliability(0, 2, 0, 0) == "low"
+
+
 def test_format_sale_and_alert_sms_fit_ucs2():
     from notifications.sale_window import format_sale_sms, format_alert_sms
     mr_sale = format_sale_sms("mr", "कांदा", 2100, "Lasalgaon", "sell")
