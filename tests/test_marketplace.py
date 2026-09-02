@@ -508,6 +508,157 @@ def test_reliability_scoring_unit():
     assert score_payment_reliability(0, 2, 0, 0) == "low"
 
 
+def test_local_buyer_outranks_distant_high_bid(override_supabase, fake_supabase):
+    fake_supabase.seed("buyers", [
+        {
+            "id": "local",
+            "name": "Lasalgaon Onion Traders",
+            "type": "trader",
+            "verified": True,
+            "district": "Nashik",
+            "commodity_id": COMMODITY_ID_ONION,
+            "demand_qty_qtl": 80,
+            "max_price": 2050,
+            "payment_reliability": "medium",
+            "lat": 20.12,
+            "lng": 74.33,
+        },
+        {
+            "id": "pune",
+            "name": "Pune Export Desk",
+            "type": "processor",
+            "verified": True,
+            "district": "Pune",
+            "commodity_id": COMMODITY_ID_ONION,
+            "demand_qty_qtl": 5000,
+            "max_price": 3500,
+            "payment_reliability": "high",
+            "lat": 18.52,
+            "lng": 73.85,
+        },
+    ])
+    lot_resp = client.post("/api/v1/lots/", json={
+        "commodity_id": COMMODITY_ID_ONION,
+        "market_id": MARKET_ID_LASALGAON,
+        "quantity_qtl": 50,
+        "grade": "FAQ",
+        "asking_price": 2000,
+    }, headers=farmer_headers())
+    lot_id = lot_resp.json()["id"]
+    matches = client.get(f"/api/v1/lots/{lot_id}/matches", headers=farmer_headers())
+    assert matches.status_code == 200, matches.text
+    body = matches.json()
+    assert body["best_buyer"]["buyer_id"] == "local"
+    assert body["matches"][0]["buyer_id"] == "local"
+    assert body["matches"][1]["buyer_id"] == "pune"
+    assert "local" in body["advice"].lower() or "Lasalgaon" in body["advice"]
+
+
+def test_lot_advice_sell_now_names_best_local_buyer(override_supabase, fake_supabase):
+    today = date.today().isoformat()
+    fake_supabase.seed("buyers", [{
+        "id": "buyer-1",
+        "name": "Lasalgaon Onion Traders",
+        "type": "trader",
+        "verified": True,
+        "district": "Nashik",
+        "commodity_id": COMMODITY_ID_ONION,
+        "demand_qty_qtl": 800,
+        "max_price": 2400,
+        "payment_reliability": "high",
+        "lat": 20.12,
+        "lng": 74.33,
+    }])
+    fake_supabase.seed("prices", [{
+        "market_id": MARKET_ID_LASALGAON,
+        "commodity_id": COMMODITY_ID_ONION,
+        "arrival_date": today,
+        "modal_price": 2000.0,
+        "arrival_qty": 1500,
+        "markets": {"name": "Lasalgaon APCM", "district": "Nashik"},
+    }])
+    fake_supabase.seed("forecasts", [{
+        "market_id": MARKET_ID_LASALGAON,
+        "commodity_id": COMMODITY_ID_ONION,
+        "forecast_date": today,
+        "predicted_price": 1800.0,
+        "status": "ok",
+    }])
+    fake_supabase.seed("logistics_options", [])
+    lot_resp = client.post("/api/v1/lots/", json={
+        "commodity_id": COMMODITY_ID_ONION,
+        "market_id": MARKET_ID_LASALGAON,
+        "quantity_qtl": 50,
+        "grade": "FAQ",
+        "asking_price": 2000,
+    }, headers=farmer_headers())
+    lot_id = lot_resp.json()["id"]
+    advice = client.get(f"/api/v1/lots/{lot_id}/advice", headers=farmer_headers())
+    assert advice.status_code == 200, advice.text
+    body = advice.json()
+    assert body["action"] == "SELL_NOW"
+    assert body["best_buyer"]["buyer_id"] == "buyer-1"
+    assert body["sale_window"]["supply_pressure"] == "high"
+    assert body["sale_window"]["storage_available"] is False
+
+
+def test_sale_window_hold_through_glut_when_storage_nearby(override_supabase, fake_supabase):
+    today = date.today().isoformat()
+    fake_supabase.seed("prices", [{
+        "market_id": MARKET_ID_LASALGAON,
+        "commodity_id": COMMODITY_ID_ONION,
+        "arrival_date": today,
+        "modal_price": 2000.0,
+        "arrival_qty": 1500,
+        "markets": {"name": "Lasalgaon APCM", "district": "Nashik"},
+    }])
+    fake_supabase.seed("forecasts", [{
+        "market_id": MARKET_ID_LASALGAON,
+        "commodity_id": COMMODITY_ID_ONION,
+        "forecast_date": today,
+        "predicted_price": 2200.0,
+        "status": "ok",
+    }])
+    fake_supabase.seed("logistics_options", [{
+        "id": "st-1", "district": "Nashik", "kind": "storage",
+        "name": "MSWC Lasalgaon Godown", "is_active": True,
+        "capacity_qtl": 5000, "lat": 20.12, "lng": 74.33,
+    }])
+    resp = client.get(
+        f"/api/v1/sale-window/?commodity_id={COMMODITY_ID_ONION}&market_id={MARKET_ID_LASALGAON}"
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["action"] == "HOLD"
+    assert body["supply_pressure"] == "high"
+    assert body["storage_available"] is True
+
+
+def test_sale_window_exposes_sell_now_action(override_supabase, fake_supabase):
+    today = date.today().isoformat()
+    fake_supabase.seed("prices", [{
+        "market_id": MARKET_ID_LASALGAON,
+        "commodity_id": COMMODITY_ID_ONION,
+        "arrival_date": today,
+        "modal_price": 2000.0,
+        "arrival_qty": 1500,
+        "markets": {"name": "Lasalgaon APCM", "district": "Nashik"},
+    }])
+    fake_supabase.seed("forecasts", [{
+        "market_id": MARKET_ID_LASALGAON,
+        "commodity_id": COMMODITY_ID_ONION,
+        "forecast_date": today,
+        "predicted_price": 1800.0,
+        "status": "ok",
+    }])
+    resp = client.get(
+        f"/api/v1/sale-window/?commodity_id={COMMODITY_ID_ONION}&market_id={MARKET_ID_LASALGAON}"
+    )
+    assert resp.status_code == 200
+    assert resp.json()["action"] == "SELL_NOW"
+    assert resp.json()["action_label"] == "Sell Now"
+
+
 def test_format_sale_and_alert_sms_fit_ucs2():
     from notifications.sale_window import format_sale_sms, format_alert_sms
     mr_sale = format_sale_sms("mr", "कांदा", 2100, "Lasalgaon", "sell")
