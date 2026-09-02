@@ -133,3 +133,4 @@ class SaleWindowResponse(BaseModel):
     nearby: Optional[list] = None
     storage: Optional[list] = None
     storage_available: Optional[bool] = None
+    better_market: Optional[dict] = None

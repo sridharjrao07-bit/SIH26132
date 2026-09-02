@@ -157,3 +157,73 @@ def recompute_buyer_reliability(supabase, buyer_id: str) -> Optional[str]:
         return None
     supabase.table("buyers").update({"payment_reliability": grade}).eq("id", buyer_id).execute()
     return grade
+
+
+def lot_ledger(supabase, lot: dict) -> dict:
+    """Transparent record: lot + offers + payments + grievances as a timeline."""
+    lot_id = lot["id"]
+    events = []
+    if lot.get("created_at"):
+        events.append({
+            "at": lot["created_at"],
+            "type": "lot_created",
+            "detail": {
+                "status": lot.get("status"),
+                "quantity_qtl": lot.get("quantity_qtl"),
+                "grade": lot.get("grade"),
+                "asking_price": lot.get("asking_price"),
+            },
+        })
+    offers = supabase.table("offers").select("*").eq("lot_id", lot_id).execute().data or []
+    for o in offers:
+        events.append({
+            "at": o.get("updated_at") or o.get("created_at") or "",
+            "type": f"offer_{o.get('status') or 'pending'}",
+            "detail": {
+                "offer_id": o.get("id"),
+                "buyer_id": o.get("buyer_id"),
+                "price_per_qtl": o.get("price_per_qtl"),
+                "quantity_qtl": o.get("quantity_qtl"),
+            },
+        })
+    offer_ids = [o["id"] for o in offers if o.get("id")]
+    payments = []
+    if offer_ids:
+        payments = (
+            supabase.table("payments")
+            .select("*")
+            .in_("offer_id", offer_ids)
+            .execute()
+            .data
+            or []
+        )
+    for p in payments:
+        events.append({
+            "at": p.get("paid_at") or p.get("created_at") or "",
+            "type": f"payment_{p.get('status') or 'pending'}",
+            "detail": {
+                "payment_id": p.get("id"),
+                "offer_id": p.get("offer_id"),
+                "amount": p.get("amount"),
+                "reference": p.get("reference"),
+            },
+        })
+    grievances = supabase.table("grievances").select("*").eq("lot_id", lot_id).execute().data or []
+    for g in grievances:
+        events.append({
+            "at": g.get("updated_at") or g.get("created_at") or "",
+            "type": f"grievance_{g.get('status') or 'open'}",
+            "detail": {
+                "grievance_id": g.get("id"),
+                "category": g.get("category"),
+                "description": g.get("description"),
+            },
+        })
+    events.sort(key=lambda e: str(e.get("at") or ""))
+    return {
+        "lot": lot,
+        "offers": offers,
+        "payments": payments,
+        "grievances": grievances,
+        "events": events,
+    }

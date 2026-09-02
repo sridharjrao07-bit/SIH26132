@@ -5,6 +5,7 @@ from supabase import Client
 from app.deps import get_supabase_as_user
 from app.auth import get_current_user
 from app.schemas.marketplace import LotCreate, LotAggregate
+from app.marketplace import lot_ledger
 
 router = APIRouter(prefix="/api/v1/lots", tags=["Lots"])
 
@@ -105,6 +106,22 @@ def list_lots(
     for row in own + as_fpo:
         by_id[row.get("id")] = row
     return list(by_id.values())[:100]
+
+
+@router.get("/{lot_id}/ledger")
+def get_lot_ledger(
+    lot_id: str,
+    user_id: str = Depends(get_current_user),
+    supabase: Client = Depends(get_supabase_as_user),
+):
+    """Transparent transaction record for a lot (SIH outcome)."""
+    res = supabase.table("lots").select("*").eq("id", lot_id).execute()
+    if not res.data:
+        raise HTTPException(404, "lot not found")
+    lot = res.data[0]
+    if lot.get("user_id") != user_id and lot.get("fpo_id") != user_id:
+        raise HTTPException(404, "lot not found")
+    return lot_ledger(supabase, lot)
 
 
 @router.get("/{lot_id}")

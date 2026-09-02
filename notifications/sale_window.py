@@ -245,6 +245,25 @@ def compute_sale_window(
         recommendation, reason_code = "wait", "wait"
         reason = "Wait: supply is not elevated and the forecast is near today's price."
 
+    better_market = None
+    for n in nearby:
+        mp = _f(n.get("modal_price"))
+        if mp is None or mp < latest_price * 1.05:
+            continue
+        if better_market is None or mp > float(better_market["modal_price"]):
+            better_market = {
+                "market": n.get("market"),
+                "modal_price": mp,
+                "premium_rs": round(mp - latest_price, 2),
+                "arrival_qty": n.get("arrival_qty"),
+            }
+    if better_market and recommendation == "sell" and better_market.get("market"):
+        reason = (
+            reason
+            + f" Nearby {better_market['market']} is ₹{better_market['modal_price']:.0f} "
+            f"(₹{better_market['premium_rs']:.0f} above here)."
+        )
+
     action = {"sell": "SELL_NOW", "hold": "HOLD", "wait": "WAIT"}[recommendation]
     return {
         "commodity_id": commodity_id,
@@ -265,6 +284,7 @@ def compute_sale_window(
         "storage": storage,
         "storage_available": storage_available,
         "district": district,
+        "better_market": better_market,
         "lang": "en",
     }
 
@@ -334,23 +354,36 @@ def apply_sale_language(window: dict, lang: str) -> dict:
     return out
 
 
-def format_sale_sms(lang: str, name: str, price, market: Optional[str], recommendation: str) -> str:
+def format_sale_sms(
+    lang: str,
+    name: str,
+    price,
+    market: Optional[str],
+    recommendation: str,
+    buyer: Optional[str] = None,
+) -> str:
     """Compact UCS-2-safe sale-window SMS (target ≤70 chars for Devanagari)."""
     rec = (recommendation or "wait").lower()
-    if rec == "sell_now":
+    if rec in ("sell_now", "sell-now"):
         rec = "sell"
     p = int(round(float(price))) if price is not None else 0
     mkt = (market or "").split()[0] if market else ""
     if lang == "mr":
         verb = {"sell": "आज विका", "hold": "थोडे थांबा"}.get(rec, "थांबा")
-        return f"KB: {name} ₹{p}. {verb}."
-    if lang == "hi":
+        msg = f"KB: {name} ₹{p}. {verb}."
+    elif lang == "hi":
         verb = {"sell": "आज बेचें", "hold": "थोड़ा रुकें"}.get(rec, "रुकें")
-        return f"KB: {name} ₹{p}. {verb}."
-    verb = {"sell": "SELL NOW", "hold": "HOLD", "wait": "WAIT"}.get(rec, "WAIT")
-    if mkt:
-        return f"KB: {name} ₹{p} {mkt}. {verb}."
-    return f"KB: {name} ₹{p}. {verb}."
+        msg = f"KB: {name} ₹{p}. {verb}."
+    else:
+        verb = {"sell": "SELL NOW", "hold": "HOLD", "wait": "WAIT"}.get(rec, "WAIT")
+        msg = f"KB: {name} ₹{p} {mkt}. {verb}." if mkt else f"KB: {name} ₹{p}. {verb}."
+    if buyer:
+        short = buyer.split()[0][:12]
+        if short:
+            candidate = msg.rstrip(".") + f". {short}."
+            if len(candidate) <= 70:
+                msg = candidate
+    return msg
 
 
 def format_alert_sms(lang: str, comm_name: str, price, threshold, scope: str = "") -> str:
