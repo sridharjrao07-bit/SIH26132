@@ -3,8 +3,8 @@
 # Recommended: Python 3.11 or 3.12. Do NOT use 3.13+ until numpy/pandas release wheels.
 
 # ── FastAPI web framework ─────────────────────────────────────────────────────
-fastapi==0.111.0
-uvicorn[standard]==0.29.0
+fastapi
+uvicorn[standard]
 python-multipart==0.0.9      # for form data (manual price entry)
 slowapi==0.1.9               # rate limiting middleware
 
@@ -12,9 +12,8 @@ slowapi==0.1.9               # rate limiting middleware
 supabase==2.4.3              # supabase-py client (ingestion/forecast/alert jobs)
 python-jose[cryptography]==3.3.0  # JWT verification for Supabase Auth tokens
 
-# ── Database (SQLAlchemy for complex joins/transactions) ──────────────────────
-sqlalchemy==2.0.30
-psycopg2-binary==2.9.9       # PostgreSQL driver
+# ── Database ────────────────────────────────────────────────────────
+# Using Supabase PostgREST (via supabase-py) exclusively; SQLAlchemy removed.
 
 # ── Scheduler ─────────────────────────────────────────────────────────────────
 apscheduler==3.10.4
@@ -22,22 +21,61 @@ apscheduler==3.10.4
 # ── Data ingestion / processing ───────────────────────────────────────────────
 httpx==0.27.0                # async HTTP client for data.gov.in API
 tenacity==8.3.0              # retry logic with exponential backoff
+selenium                     # Agmarknet fallback scraper
+beautifulsoup4               # Agmarknet fallback scraper
+webdriver-manager            # Agmarknet fallback scraper
 
 # ── Forecasting ───────────────────────────────────────────────────────────────
-pandas==2.2.3               # 2.2.3 has cp312 wheels; 2.2.2 does not
-scikit-learn==1.5.0
-numpy==1.26.4               # cp312 wheel available; bump to 2.x after event if needed
+# Commented out for now because Python 3.14 does not have pre-built wheels
+# pandas==2.2.3               
+# scikit-learn==1.5.0
+# numpy==1.26.4               
 
 # ── Validation ────────────────────────────────────────────────────────────────
-pydantic==2.7.1
-pydantic-settings==2.3.0     # settings management from .env
+pydantic
+# SIH26132 — Krishi Bazaar Backend
+# Python >=3.11,<3.13  (pandas/numpy wheels are built for 3.11 and 3.12 only)
+# Recommended: Python 3.11 or 3.12. Do NOT use 3.13+ until numpy/pandas release wheels.
+
+# ── FastAPI web framework ─────────────────────────────────────────────────────
+fastapi
+uvicorn[standard]
+python-multipart==0.0.9      # for form data (manual price entry)
+slowapi==0.1.9               # rate limiting middleware
+
+# ── Supabase ──────────────────────────────────────────────────────────────────
+supabase==2.4.3              # supabase-py client (ingestion/forecast/alert jobs)
+python-jose[cryptography]==3.3.0  # JWT verification for Supabase Auth tokens
+
+# ── Database ────────────────────────────────────────────────────────
+# Using Supabase PostgREST (via supabase-py) exclusively; SQLAlchemy removed.
+
+# ── Scheduler ─────────────────────────────────────────────────────────────────
+apscheduler==3.10.4
+
+# ── Data ingestion / processing ───────────────────────────────────────────────
+httpx==0.27.0                # async HTTP client for data.gov.in API
+tenacity==8.3.0              # retry logic with exponential backoff
+selenium                     # Agmarknet fallback scraper
+beautifulsoup4               # Agmarknet fallback scraper
+webdriver-manager            # Agmarknet fallback scraper
+
+# ── Forecasting ───────────────────────────────────────────────────────────────
+# Commented out for now because Python 3.14 does not have pre-built wheels
+# pandas==2.2.3               
+# scikit-learn==1.5.0
+# numpy==1.26.4               
+
+# ── Validation ────────────────────────────────────────────────────────────────
+pydantic
+pydantic-settings
 
 # ── SMS ───────────────────────────────────────────────────────────────────────
 # No MSG91 SDK pinned — we call their REST API directly via httpx
 # (avoids heavy dependency, easier to mock)
 
 # ── Utilities ─────────────────────────────────────────────────────────────────
-python-dotenv==1.0.1
+# pydantic-settings handles .env reading natively
 structlog==24.1.0            # structured JSON logging
 
 # ── Development / testing only ────────────────────────────────────────────────

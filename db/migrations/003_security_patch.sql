@@ -132,6 +132,11 @@ comment on function public.admin_set_role(uuid, text) is
 -- Belt-and-braces: prevent this function from being called via PostgREST HTTP.
 -- has_role() already blocks anon/authenticated in the function body,
 -- but an explicit REVOKE is cleaner and survives future RLS changes.
+--
+-- IMPORTANT: must also revoke from public (the default grant at CREATE FUNCTION).
+-- Revoking only from anon/authenticated leaves the PUBLIC grant intact,
+-- which PostgREST inherits — so the function would still be HTTP-callable.
+revoke execute on function public.admin_set_role(uuid, text) from public;
 revoke execute on function public.admin_set_role(uuid, text) from anon, authenticated;
 
 -- ─────────────────────────────────────────────────────────────────────────────

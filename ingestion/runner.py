@@ -1,6 +1,5 @@
 import structlog
 import time
-import asyncio
 from typing import List, Optional, Tuple, Dict
 from supabase import Client
 from datetime import datetime, timezone
@@ -101,16 +100,26 @@ class IngestionRunner:
             adapter_start = time.monotonic()
             adapter_log = log.bind(adapter=adapter.source_name)
 
-            # Determine fetch keys: prefer alias spellings for this source,
-            # fall back to the normalized commodity names
+            # Determine fetch keys: prefer alias spellings for this source.
             fetch_keys = source_fetch_keys.get(adapter.source_name, [])
             if not fetch_keys:
-                resp_c = self.supabase.table("commodities").select("name_en").execute()
-                fetch_keys = [r["name_en"] for r in resp_c.data]
+                # Stage 3.5: do NOT fall back to commodities.name_en — name_en keys
+                # (e.g. 'Soybean') may not exist in commodity_alias (API spells it 'Soyabean'),
+                # so every record would be rejected as unknown_commodity with no clear signal.
+                self._log_run(
+                    source=adapter.source_name, status="failed",
+                    records_seen=0, records_written=0, records_rejected=0,
+                    error_message=(
+                        f"no_aliases_for_source: add commodity_alias rows for source "
+                        f"'{adapter.source_name}' before enabling it"),
+                    filters={"district": district, "state": state},
+                )
+                adapter_log.error("no_aliases_for_source")
+                continue
 
             try:
-                all_valid_for_adapter: List[dict] = []
-
+                all_valid_for_adapter = []
+                fetch_errors = []
                 for fetch_key in fetch_keys:
                     try:
                         raw_records = await adapter.fetch_prices(
@@ -118,6 +127,7 @@ class IngestionRunner:
                         )
                     except SourceFetchError as e:
                         adapter_log.warning("fetch_key_failed", fetch_key=fetch_key, error=str(e))
+                        fetch_errors.append(str(e))
                         continue
 
                     seen += len(raw_records)
@@ -150,7 +160,13 @@ class IngestionRunner:
                     written = len(all_valid_for_adapter)
 
                 duration_ms = int((time.monotonic() - adapter_start) * 1000)
-                status = "success" if rejected == 0 else "partial"
+                if fetch_errors and seen == 0:
+                    status = "failed"
+                    err_msg = "; ".join(fetch_errors)
+                else:
+                    status = "success" if (rejected == 0 and not fetch_errors) else "partial"
+                    err_msg = "; ".join(fetch_errors) if fetch_errors else None
+
                 adapter_log.info("adapter_done",
                                  seen=seen, written=written, rejected=rejected, ms=duration_ms)
 
@@ -161,6 +177,7 @@ class IngestionRunner:
                     records_seen=seen,
                     records_written=written,
                     records_rejected=rejected,
+                    error_message=err_msg,
                     filters={"district": district, "state": state},
                     duration_ms=duration_ms,
                 )
