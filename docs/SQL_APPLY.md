@@ -7,6 +7,23 @@ If this is a **new** project, start at `001`.
 If you already applied a senior-review pass through `007`, start at `008` and continue through `011`.  
 If `008`–`010` are already applied, run only `011`.
 
+**Do not re-run a file that already succeeded.** `create table if not exists` is safe; `create trigger` / `create policy` used to fail with `42710 already exists`. Current `001`/`008`/`009` drop-then-create those objects, but the right move on an existing project is to **skip** what is already there.
+
+Paste this probe first:
+
+```sql
+select table_name
+from information_schema.tables
+where table_schema = 'public'
+order by 1;
+```
+
+| If you see | Skip through | Next file |
+|---|---|---|
+| `prices` (and no `buyers`) | `001`–`007` | `008` |
+| `buyers` but no `logistics_bookings` | `001`–`008` | `009` |
+| `logistics_bookings` | `001`–`009` | `010` then `011` |
+
 | # | File | What it does |
 |---|---|---|
 | 1 | `db/migrations/001_schema.sql` | Core schema: markets, commodities, prices, forecasts, profiles, alerts, RLS, `set_updated_at` |

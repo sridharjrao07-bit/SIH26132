@@ -102,9 +102,11 @@ create index if not exists idx_buyers_district on public.buyers (district);
 create index if not exists idx_buyers_commodity on public.buyers (commodity_id);
 
 alter table public.buyers enable row level security;
+drop policy if exists "Public can read verified buyers" on public.buyers;
 create policy "Public can read verified buyers"
     on public.buyers for select
     using (verified = true);
+drop policy if exists "Admins write buyers" on public.buyers;
 create policy "Admins write buyers"
     on public.buyers for all
     using (public.has_role('admin'))
@@ -131,17 +133,21 @@ create table if not exists public.lots (
 create index if not exists idx_lots_user on public.lots (user_id, status);
 create index if not exists idx_lots_commodity on public.lots (commodity_id, status);
 
+drop trigger if exists trg_lots_updated_at on public.lots;
 create trigger trg_lots_updated_at
     before update on public.lots
     for each row execute function public.set_updated_at();
 
 alter table public.lots enable row level security;
+drop policy if exists "Owners read own lots" on public.lots;
 create policy "Owners read own lots"
     on public.lots for select
     using (auth.uid() = user_id or auth.uid() = fpo_id or public.has_role('admin'));
+drop policy if exists "Owners create lots" on public.lots;
 create policy "Owners create lots"
     on public.lots for insert
     with check (auth.uid() = user_id);
+drop policy if exists "Owners update lots" on public.lots;
 create policy "Owners update lots"
     on public.lots for update
     using (auth.uid() = user_id or public.has_role('admin'))
@@ -164,17 +170,21 @@ create table if not exists public.offers (
 create index if not exists idx_offers_lot on public.offers (lot_id, status);
 create index if not exists idx_offers_user on public.offers (user_id);
 
+drop trigger if exists trg_offers_updated_at on public.offers;
 create trigger trg_offers_updated_at
     before update on public.offers
     for each row execute function public.set_updated_at();
 
 alter table public.offers enable row level security;
+drop policy if exists "Owners read offers" on public.offers;
 create policy "Owners read offers"
     on public.offers for select
     using (auth.uid() = user_id or public.has_role('admin'));
+drop policy if exists "Owners create offers" on public.offers;
 create policy "Owners create offers"
     on public.offers for insert
     with check (auth.uid() = user_id);
+drop policy if exists "Owners update offers" on public.offers;
 create policy "Owners update offers"
     on public.offers for update
     using (auth.uid() = user_id or public.has_role('admin'));
@@ -195,12 +205,15 @@ create table if not exists public.payments (
 create index if not exists idx_payments_user on public.payments (user_id, created_at desc);
 
 alter table public.payments enable row level security;
+drop policy if exists "Owners read payments" on public.payments;
 create policy "Owners read payments"
     on public.payments for select
     using (auth.uid() = user_id or public.has_role('admin'));
+drop policy if exists "Owners create payments" on public.payments;
 create policy "Owners create payments"
     on public.payments for insert
     with check (auth.uid() = user_id or public.has_role('admin'));
+drop policy if exists "Owners update payments" on public.payments;
 create policy "Owners update payments"
     on public.payments for update
     using (auth.uid() = user_id or public.has_role('admin'));
@@ -221,17 +234,21 @@ create table if not exists public.grievances (
 
 create index if not exists idx_grievances_user on public.grievances (user_id, status);
 
+drop trigger if exists trg_grievances_updated_at on public.grievances;
 create trigger trg_grievances_updated_at
     before update on public.grievances
     for each row execute function public.set_updated_at();
 
 alter table public.grievances enable row level security;
+drop policy if exists "Owners read grievances" on public.grievances;
 create policy "Owners read grievances"
     on public.grievances for select
     using (auth.uid() = user_id or public.has_role('admin'));
+drop policy if exists "Owners create grievances" on public.grievances;
 create policy "Owners create grievances"
     on public.grievances for insert
     with check (auth.uid() = user_id);
+drop policy if exists "Owners update grievances" on public.grievances;
 create policy "Owners update grievances"
     on public.grievances for update
     using (auth.uid() = user_id or public.has_role('admin'));
@@ -252,6 +269,7 @@ create table if not exists public.logistics_options (
 );
 
 alter table public.logistics_options enable row level security;
+drop policy if exists "Public can read logistics" on public.logistics_options;
 create policy "Public can read logistics"
     on public.logistics_options for select
     using (is_active = true);
