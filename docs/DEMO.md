@@ -40,6 +40,6 @@ pytest -q
 Live PostgREST (uses `.env`, prints no secrets):
 
 ```bat
-python test_db.py
+python scripts/test_db.py
 python demo/reconcile.py
 ```

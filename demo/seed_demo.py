@@ -1,11 +1,8 @@
-import os
 import sys
-import time
 import asyncio
-from datetime import datetime, timedelta, date
+from datetime import timedelta, date
 from supabase import create_client
 from app.config import get_settings
-from forecasting.engine import ForecastEngine
 from notifications.alert_checker import AlertChecker
 
 settings = get_settings()
@@ -87,7 +84,6 @@ async def run_demo():
     
     import httpx
     # Mint admin token
-    import sys
     from pathlib import Path
     sys.path.append(str(Path(__file__).resolve().parent.parent))
     from demo.mint_admin_token import mint_admin_token

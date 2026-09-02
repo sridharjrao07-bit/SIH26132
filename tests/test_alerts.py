@@ -11,12 +11,10 @@ Covers:
   - Gateway: mock logs correctly, msg91 fails loudly on missing template
 """
 import os
-import pytest
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 
 from tests.conftest import (
-    FakeSupabase, MARKET_ID_LASALGAON, MARKET_ID_PIMPALGAON,
-    COMMODITY_ID_ONION, COMMODITY_ID_TOMATO
+    MARKET_ID_LASALGAON, COMMODITY_ID_ONION
 )
 
 USER_A = "user-a-0000-0000-0000"
@@ -170,7 +168,7 @@ def test_expired_alert_deactivated(fake_supabase):
     assert result["fired"] == 0
     # Check that alert was deactivated in DB
     alert = fake_supabase._data["alerts"][0]
-    assert alert["active"] == False
+    assert not alert["active"]
 
 
 # ─── Location Resolution ──────────────────────────────────────────────────────

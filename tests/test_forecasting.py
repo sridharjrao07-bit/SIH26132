@@ -1,6 +1,4 @@
-import pytest
 from datetime import date, timedelta
-from typing import List, Tuple
 
 from forecasting.engine import (
     MovingAverageModel,

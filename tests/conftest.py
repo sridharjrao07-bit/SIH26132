@@ -8,20 +8,19 @@ import pytest
 import time
 from datetime import date, datetime, timezone
 from typing import Any, List, Optional
-from unittest.mock import MagicMock
 
 # Set required env vars so pydantic-settings doesn't crash on import during test collection
 os.environ.setdefault("SUPABASE_URL", "https://placeholder.supabase.co")
 os.environ.setdefault("SUPABASE_ANON_KEY", "placeholder")
 os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "placeholder")
-os.environ.setdefault("SUPABASE_JWT_SECRET", "placeholder")
+os.environ.setdefault("SUPABASE_JWT_SECRET", "ci-placeholder-jwt-secret-32b-min")
 os.environ.setdefault("SUPABASE_DB_URL", "postgresql://p@db.placeholder.supabase.co:5432/postgres")
 os.environ.setdefault("DATA_GOV_IN_API_KEY", "placeholder")
 os.environ.setdefault("RUN_SCHEDULER", "0")
 os.environ.setdefault("RATE_LIMIT_ENABLED", "0")
 os.environ.setdefault("APP_ENV", "development")
 
-from ingestion.base import RawPriceRecord, SourceFetchError
+from ingestion.base import RawPriceRecord
 from ingestion.validator import PriceValidator
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -314,7 +313,7 @@ def mint_jwt(user_id: str) -> str:
     token — that's the whole point of the 003 security patch.
     """
     import jwt as pyjwt
-    secret = os.environ.get("SUPABASE_JWT_SECRET", "placeholder")
+    secret = os.environ.get("SUPABASE_JWT_SECRET", "ci-placeholder-jwt-secret-32b-min")
     return pyjwt.encode(
         {
             "sub":  user_id,

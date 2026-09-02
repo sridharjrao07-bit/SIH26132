@@ -9,7 +9,6 @@ Contract under test:
   - sanity band violation → reject
 """
 import pytest
-from datetime import date
 
 from tests.conftest import make_record, COMMODITY_ID_ONION
 

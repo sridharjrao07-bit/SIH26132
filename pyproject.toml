@@ -1,0 +1,39 @@
+[project]
+name = "krishi-bazaar"
+version = "2.0.0"
+description = "SIH26132 market linkage and price discovery API (backend only)"
+readme = "README.md"
+requires-python = ">=3.14"
+license = { text = "MIT" }
+
+[tool.ruff]
+# Runtime is Python 3.14 (Dockerfile / CI). Ruff's py314 target is still preview.
+target-version = "py313"
+line-length = 100
+src = ["app", "ingestion", "forecasting", "notifications", "tests", "demo", "scripts"]
+exclude = [".venv", "venv", "build", "dist", "docs/archive"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = [
+    "E501",  # existing modules exceed 100 cols; do not churn them for style
+    "E702",  # FakeSupabase fluent one-liners in tests/conftest.py
+    "E741",  # loop variable `l` in a few test helpers
+    "W291",
+    "W293",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["E402"]  # env vars must be set before app imports
+"demo/**" = ["E402"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+source = ["app", "ingestion", "forecasting", "notifications"]
+omit = ["tests/*", "demo/*", "scripts/*"]

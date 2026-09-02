@@ -17,7 +17,6 @@ Set DATA_GOV_IN_API_KEY in your .env before running.
 """
 
 import sys
-import os
 import json
 import urllib.request
 import urllib.parse

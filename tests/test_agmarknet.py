@@ -1,6 +1,6 @@
 import pytest
 import sys
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import patch, MagicMock
 from ingestion.base import SourceFetchError
 from ingestion.agmarknet import AgmarknetAdapter
 

@@ -2,7 +2,7 @@
 
 Market linkage and price discovery API for farmers (Government of Maharashtra / MSInS).
 
-This repository is the **FastAPI + Supabase backend**. The farmer/buyer web or mobile UI lives in a separate frontend repo. Contract: [`docs/API.md`](docs/API.md).
+This repository is the **FastAPI + Supabase backend**. Farmer/buyer UI lives in a **separate frontend repo**. HTTP contract: [`docs/API.md`](docs/API.md). Layout: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). How to contribute: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Problem → API
 
@@ -17,16 +17,22 @@ This repository is the **FastAPI + Supabase backend**. The farmer/buyer web or m
 
 Demo seed: 5 Nashik APMCs × Onion, Tomato, Soybean, Maize. Expand via [`docs/ONBOARDING.md`](docs/ONBOARDING.md).
 
-## Run (Python 3.14)
+## Prerequisites
+
+- **Python 3.14** (this repo does not support 3.12)
+- A Supabase project (SQL applied per [`docs/SQL_APPLY.md`](docs/SQL_APPLY.md))
+- Optional: Docker + Compose for a one-command API
+
+## Local setup (Windows)
 
 ```bat
 py -3.14 -m venv .venv
 .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 copy .env.example .env
 ```
 
-Fill `.env` (Supabase URL, anon, service role, JWT secret, `DATA_GOV_IN_API_KEY`). Apply SQL `001`–`011` once — [`docs/SQL_APPLY.md`](docs/SQL_APPLY.md).
+Fill `.env` (never commit it). Apply SQL `001`–`011` once.
 
 ```bat
 set RUN_SCHEDULER=0
@@ -35,35 +41,77 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 - Health: `http://127.0.0.1:8000/health`
-- OpenAPI: `http://127.0.0.1:8000/docs` (disabled when `APP_ENV=production`)
-- Frontend origin: set `CORS_ORIGIN` (comma-separated). Default includes `http://localhost:3000` and `http://localhost:5173`.
+- OpenAPI (non-production): `http://127.0.0.1:8000/docs`
+- Frontend origin: `CORS_ORIGIN` (comma-separated). Default includes `http://localhost:3000` and `http://localhost:5173`.
 
-Docker (single worker — required for in-process scheduler):
+Unix / Make:
 
 ```bash
-docker build -t krishi-bazaar .
-docker run --env-file .env -p 8000:8000 krishi-bazaar
+make install-dev
+RUN_SCHEDULER=0 RATE_LIMIT_ENABLED=0 make run
 ```
+
+## Environment variables
+
+All keys are listed with comments in [`.env.example`](.env.example). Required to boot:
+
+| Variable | Purpose |
+|---|---|
+| `SUPABASE_URL` | Project URL |
+| `SUPABASE_ANON_KEY` | Public reads (RLS) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Jobs + authenticated handlers (never expose) |
+| `SUPABASE_JWT_SECRET` | FastAPI HS256 verify |
+| `DATA_GOV_IN_API_KEY` | Mandi ingest |
+
+Important knobs: `CORS_ORIGIN`, `RUN_SCHEDULER`, `RATE_LIMIT_ENABLED`, `APP_ENV`, `INBOUND_HMAC_SECRET`, `TARGET_DISTRICT`.
+
+The API **verifies** JWTs itself. It does **not** forward minted HS256 tokens to PostgREST.
 
 ## Tests
 
 ```bat
 set RUN_SCHEDULER=0
 set RATE_LIMIT_ENABLED=0
+ruff check app ingestion forecasting notifications tests demo scripts
 pytest -q
 ```
 
-Offline: FakeSupabase, no network. Live checks: `python test_db.py`, `python demo/reconcile.py`, `python demo/live_smoke.py` (uvicorn must be up). Judge script: [`docs/DEMO.md`](docs/DEMO.md).
+Offline: FakeSupabase, no network. Live checks (uvicorn + real `.env`):
 
-## Auth (for the frontend)
+```bat
+python scripts/test_db.py
+python demo/reconcile.py
+python demo/live_smoke.py
+```
 
-`Authorization: Bearer <jwt>`. Role comes from `user_profiles`, not the token. Demo mint:
+Judge path: [`docs/DEMO.md`](docs/DEMO.md).
+
+## Docker
+
+Single worker is required (in-process scheduler + job locks).
+
+```bash
+docker compose up --build
+```
+
+Or:
+
+```bash
+docker build -t krishi-bazaar .
+docker run --env-file .env -p 8000:8000 krishi-bazaar
+```
+
+Production image installs **only** `requirements.txt` (no pytest/ruff) and runs as uid 10001. Set `APP_ENV=production` to disable `/docs`.
+
+## Auth (frontend)
+
+`Authorization: Bearer <jwt>`. Role comes from `user_profiles`, not the token.
 
 ```bat
 python demo/mint_admin_token.py --sub <auth.users uuid> --hours 2
 ```
 
-Farmer vs admin is the DB row. Elevate only in SQL:
+Elevate only in SQL:
 
 ```sql
 select public.admin_set_role('<uuid>'::uuid, 'admin');
@@ -83,4 +131,24 @@ select public.admin_set_role('<uuid>'::uuid, 'admin');
 
 SMS: registered number texts `PYAJ` / `कांदा` → modal + sale-window + buyer. Unknown MSISDNs are ignored.
 
-Admin JWT (DB role `admin`): forecast/alert jobs, buyer verify, `/dashboard`.
+Admin JWT (DB role `admin`): forecast/alert jobs, buyer verify, `/dashboard` (ops HTML only).
+
+## Layout
+
+```
+app/              HTTP app (routers, schemas, auth, errors)
+ingestion/        mandi adapters
+forecasting/      7-day forecast engine
+notifications/    sale-window + SMS
+db/migrations/    Postgres / RLS
+tests/            pytest + FakeSupabase
+docs/             API, SQL, demo, architecture
+demo/             live smoke / token mint
+scripts/          operator helpers
+```
+
+Runtime config is environment variables, not a `config/` directory.
+
+## CI
+
+Every push/PR: Ruff, pytest (Python 3.14), `pip-audit` on production deps, secret-pattern grep. See `.github/workflows/ci.yml`.
