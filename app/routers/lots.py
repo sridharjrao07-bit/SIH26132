@@ -48,12 +48,15 @@ def aggregate_lots(
     if not profile or profile[0].get("role") != "fpo":
         raise HTTPException(403, "requires fpo role")
 
+    rows = (
+        supabase.table("lots").select("*").in_("id", body.lot_ids).execute().data or []
+    )
+    by_id = {r.get("id"): r for r in rows}
     members = []
     for lid in body.lot_ids:
-        rows = supabase.table("lots").select("*").eq("id", lid).execute().data or []
-        if not rows:
+        lot = by_id.get(lid)
+        if not lot:
             raise HTTPException(404, f"lot not found: {lid}")
-        lot = rows[0]
         if lot.get("status") != "open":
             raise HTTPException(409, f"lot {lid} is not open")
         members.append(lot)
