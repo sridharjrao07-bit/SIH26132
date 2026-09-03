@@ -6,7 +6,6 @@ from app.deps import get_supabase_as_user
 from app.auth import get_current_user
 from app.schemas.marketplace import OfferCreate, OfferUpdate
 from app.marketplace import (
-    expire_stale_offers,
     offer_is_stale,
     with_expiry,
     _reopen_lot_if_idle,
@@ -21,7 +20,8 @@ def create_offer(
     user_id: str = Depends(get_current_user),
     supabase: Client = Depends(get_supabase_as_user),
 ):
-    expire_stale_offers(supabase)
+    # Farmer (lot owner) creates a digital offer *to* a verified buyer.
+    # Buyers do not POST here; matching is local-first then the farmer confirms.
     lot = supabase.table("lots").select("id,user_id,status,quantity_qtl").eq("id", body.lot_id).execute().data
     if not lot or lot[0]["user_id"] != user_id:
         raise HTTPException(404, "lot not found")
@@ -54,7 +54,6 @@ def list_offers(
     user_id: str = Depends(get_current_user),
     supabase: Client = Depends(get_supabase_as_user),
 ):
-    expire_stale_offers(supabase)
     res = (
         supabase.table("offers")
         .select("*")
