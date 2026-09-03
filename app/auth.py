@@ -53,10 +53,7 @@ def get_current_user(
 
 def require_role(*roles: str):
     """Dependency that checks the authenticated user has one of the given roles."""
-    if len(roles) == 1 and isinstance(roles[0], str):
-        allowed = roles
-    else:
-        allowed = roles
+    allowed = tuple(roles)
 
     def dep(supabase=Depends(get_supabase_service_role), user_id=Depends(get_current_user)):
         row = (supabase.table("user_profiles").select("role")
