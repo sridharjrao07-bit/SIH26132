@@ -46,6 +46,24 @@ def create_payment(
     if offer[0]["status"] != "accepted":
         raise HTTPException(409, "payments require an accepted offer")
 
+    existing = (
+        supabase.table("payments")
+        .select("*")
+        .eq("offer_id", body.offer_id)
+        .eq("user_id", user_id)
+        .execute()
+        .data
+        or []
+    )
+    for row in existing:
+        if row.get("status") not in ("pending", "paid"):
+            continue
+        if body.reference and row.get("reference") == body.reference:
+            return row
+        if row.get("status") == "paid":
+            raise HTTPException(409, "offer already has a paid payment")
+        return row
+
     row = {
         "id": str(uuid.uuid4()),
         "offer_id": body.offer_id,
@@ -101,7 +119,14 @@ def mark_paid(
     payment = res.data[0]
     offer = supabase.table("offers").select("lot_id").eq("id", payment["offer_id"]).execute().data
     if offer:
-        supabase.table("lots").update({"status": "sold"}).eq("id", offer[0]["lot_id"]).execute()
+        lot_id = offer[0]["lot_id"]
+        lot_res = supabase.table("lots").update({"status": "sold"}).eq("id", lot_id).execute()
+        if not lot_res.data:
+            supabase.table("payments").update({
+                "status": current.get("status") or "pending",
+                "paid_at": current.get("paid_at"),
+            }).eq("id", payment_id).eq("user_id", user_id).execute()
+            raise HTTPException(503, "could not close lot; payment not marked paid")
     _rescore_offer_buyer(supabase, service, payment["offer_id"])
     return payment
 
