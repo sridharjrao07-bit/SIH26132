@@ -95,7 +95,7 @@ async def main():
                     
                 valid_dict["market_id"] = market_id
                 valid_records.append(valid_dict)
-            except Exception as e:
+            except Exception:
                 rejected_count += 1
 
     print(f"Parsed {len(valid_records)} valid records. Rejected {rejected_count} records.")
