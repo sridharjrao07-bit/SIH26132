@@ -6,6 +6,7 @@ Paste **one file at a time**, run, confirm success, then the next.
 If this is a **new** project, start at `001`.  
 If you already applied a senior-review pass through `007`, start at `008` and continue through `011`.  
 If `008`–`010` are already applied, run only `011`.
+If 008–011 are already applied, run only 012.
 
 **Do not re-run a file that already succeeded.** `create table if not exists` is safe; `create trigger` / `create policy` used to fail with `42710 already exists`. Current `001`/`008`/`009` drop-then-create those objects, but the right move on an existing project is to **skip** what is already there.
 
@@ -22,7 +23,7 @@ order by 1;
 |---|---|---|
 | `prices` (and no `buyers`) | `001`–`007` | `008` |
 | `buyers` but no `logistics_bookings` | `001`–`008` | `009` |
-| `logistics_bookings` | `001`–`009` | `010` then `011` |
+| `logistics_bookings` | `001`–`009` | `010` then `011` then `012` |
 
 | # | File | What it does |
 |---|---|---|
@@ -38,6 +39,7 @@ order by 1;
 | 10 | `db/migrations/009_logistics_bookings.sql` | Book a godown/truck against a lot |
 | 11 | `db/migrations/010_lot_grade_check.sql` | `lots.grade` must be FAQ / General / Special |
 | 12 | `db/migrations/011_ops_hardening.sql` | Phone/lots RPCs, markets lat/lng CHECK, alert indexes, `admin_set_role` service_role-only |
+| 13 | `db/migrations/012_payment_atomicity.sql` | `payments.amount > 0`, `lots.quantity_qtl > 0`, one pending/paid payment per offer |
 
 After `008`, seed includes Nashik buyers (traders, processor, institutional, eNAM) and MSWC godowns / truck unions.
 
