@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Force all authors and committers to be the user
 export FILTER_BRANCH_SQUELCH_WARNING=1
 
 git filter-branch -f --env-filter '
@@ -11,5 +10,5 @@ git filter-branch -f --env-filter '
         export GIT_COMMITTER_EMAIL="sridharjrao07@gmail.com"
     fi
 ' --msg-filter '
-    sed -e "s/from sridharjrao07-bit\/arena\/[a-zA-Z0-9-]*$/from sridharjrao07-bit\/feature\/sih26132/g" -e "s/arena/core/g"
+    sed -e "s/from sridharjrao07-bit\/arena\/[a-zA-Z0-9-]*$/from sridharjrao07-bit\/feature\/sih26132/g" -e "/Co-authored-by: arena-agent/d"
 ' -- --all
