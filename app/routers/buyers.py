@@ -3,7 +3,7 @@ from typing import List, Optional
 from supabase import Client
 from app.deps import get_supabase, get_supabase_service_role
 from app.schemas.marketplace import BuyerResponse
-from app.matching_engine import rank_lots_for_buyer
+from app.services.matching_engine import rank_lots_for_buyer
 
 router = APIRouter(prefix="/api/v1/buyers", tags=["Buyers"])
 

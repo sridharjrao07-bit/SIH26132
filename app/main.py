@@ -62,7 +62,7 @@ async def lifespan(app: FastAPI):
     warmup_verifier()
     scheduler = None
     if settings.run_scheduler:
-        from app.jobs import setup_scheduler, schedule_startup_catchup
+        from app.services.jobs import setup_scheduler, schedule_startup_catchup
         scheduler = setup_scheduler()
         if scheduler:
             scheduler.start()

@@ -1,5 +1,7 @@
 # Krishi Bazaar — SIH26132 (backend)
 
+[![Run in Postman](https://run.pstmn.io/button.svg)](krishi_bazaar_sih.postman_collection.json)
+
 Market linkage and price discovery API for farmers (Government of Maharashtra / MSInS).
 
 This repository is the **FastAPI + Supabase backend**. Farmer/buyer UI lives in a **separate frontend repo**. HTTP contract: [`docs/API.md`](docs/API.md). Layout: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). How to contribute: [`CONTRIBUTING.md`](CONTRIBUTING.md).
@@ -14,6 +16,21 @@ This repository is the **FastAPI + Supabase backend**. Farmer/buyer UI lives in 
 | Lots, grading, digital offers, payments | `/lots/` `/offers/` `/payments/` |
 | Logistics + disputes | `/logistics/bookings` `/grievances/` |
 | Transparent record | `GET /lots/{id}/ledger` |
+
+### Architecture
+```mermaid
+graph TD
+    Client[Farmer / Buyer UI] -->|HTTP / JSON| FastAPI[FastAPI Backend]
+    FastAPI --> Services[Business Services]
+    Services --> DB[(Supabase PostgreSQL)]
+    Services --> Match[Matching Engine]
+    Services --> Forecast[Forecasting Engine]
+```
+
+### Tech Stack Justification
+- **FastAPI**: Chosen for its high-performance async capabilities and automatic OpenAPI (Swagger) documentation, ensuring rapid API development.
+- **Supabase (PostgreSQL)**: Selected over NoSQL to ensure strict relational integrity (ACID) for financial transactions, lots, and ledgers. Row Level Security (RLS) handles data isolation.
+- **Pydantic**: Guarantees pre-route validation so the API never processes malformed data.
 
 Demo seed: 5 Nashik APMCs × Onion, Tomato, Soybean, Maize. Expand via [`docs/ONBOARDING.md`](docs/ONBOARDING.md).
 
@@ -33,6 +50,11 @@ copy .env.example .env
 ```
 
 Fill `.env` (never commit it). Apply SQL `001`–`011` once.
+
+**Seed the database**:
+```bat
+python seed.py
+```
 
 ```bat
 set RUN_SCHEDULER=0
@@ -137,6 +159,7 @@ Admin JWT (DB role `admin`): forecast/alert jobs, buyer verify, `/dashboard` (op
 
 ```
 app/              HTTP app (routers, schemas, auth, errors)
+app/services/     Core business logic and engines
 ingestion/        mandi adapters
 forecasting/      7-day forecast engine
 notifications/    sale-window + SMS

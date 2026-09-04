@@ -5,7 +5,7 @@ from supabase import Client
 from app.deps import get_supabase_as_user
 from app.auth import get_current_user
 from app.schemas.marketplace import OfferCreate, OfferUpdate
-from app.marketplace import (
+from app.services.marketplace import (
     offer_is_stale,
     with_expiry,
     _reopen_lot_if_idle,

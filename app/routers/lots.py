@@ -5,7 +5,7 @@ from supabase import Client
 from app.deps import get_supabase_as_user
 from app.auth import get_current_user
 from app.schemas.marketplace import LotCreate, LotAggregate, LotGradeUpdate
-from app.marketplace import lot_ledger
+from app.services.marketplace import lot_ledger
 
 router = APIRouter(prefix="/api/v1/lots", tags=["Lots"])
 

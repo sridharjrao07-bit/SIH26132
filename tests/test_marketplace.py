@@ -521,7 +521,7 @@ def test_sale_window_marathi_and_hindi(override_supabase, fake_supabase):
 
 
 def test_reliability_scoring_unit():
-    from app.marketplace import score_payment_reliability
+    from app.services.marketplace import score_payment_reliability
     assert score_payment_reliability(0, 0, 0, 0) is None
     assert score_payment_reliability(2, 0, 0, 0) == "high"
     assert score_payment_reliability(1, 0, 0, 0) == "medium"

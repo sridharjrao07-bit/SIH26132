@@ -9,7 +9,7 @@ from datetime import date, timedelta
 from statistics import median
 from typing import Optional
 
-from app.matching_engine import haversine_km
+from app.services.matching_engine import haversine_km
 
 NEARBY_STORAGE_KM = 40.0
 HIGH_ARRIVAL_QTL = 1000.0

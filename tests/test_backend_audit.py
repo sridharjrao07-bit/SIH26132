@@ -490,7 +490,7 @@ def test_data_gov_in_adapter_parses_arrival_qty():
 
 
 def test_ingestion_job_takes_distributed_lock():
-    from app.jobs import run_ingestion_job, run_alert_job, _claim
+    from app.services.jobs import run_ingestion_job, run_alert_job, _claim
     assert "_claim" in inspect.getsource(run_ingestion_job)
     assert "_claim" in inspect.getsource(run_alert_job)
     assert "claim_job_lock" in inspect.getsource(_claim)

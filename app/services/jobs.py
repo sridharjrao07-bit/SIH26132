@@ -6,7 +6,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from supabase import create_client
 
-from .config import get_settings
+from app.config import get_settings
 from ingestion.runner import IngestionRunner
 from ingestion.data_gov_in import DataGovInAdapter
 from forecasting.runner import run_forecast_job
@@ -71,7 +71,7 @@ async def run_stale_forecasts_job():
 
 async def run_expire_offers_job():
     """Hourly: pending digital offers older than 48h become expired."""
-    from app.marketplace import expire_stale_offers
+    from app.services.marketplace import expire_stale_offers
 
     supabase = get_supabase_client()
     lock_res = _claim(supabase, "expire_offers")

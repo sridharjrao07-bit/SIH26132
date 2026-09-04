@@ -12,7 +12,7 @@ from notifications.sms_gateway import get_sms_gateway, resolve_template
 from notifications.prices import latest_price_for_user
 from notifications.sale_window import compute_sale_window, format_sale_sms
 from app.deps import get_supabase_service_role
-from app.matching_engine import rank_buyers
+from app.services.matching_engine import rank_buyers
 from app.rate_limit import limiter, webhook_limit
 
 logger = structlog.get_logger()

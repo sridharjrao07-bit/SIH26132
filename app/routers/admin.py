@@ -7,7 +7,7 @@ import uuid
 from app.auth import require_role
 from app.deps import get_supabase_service_role
 from app.schemas.marketplace import BuyerCreate, GrievanceUpdate
-from app.marketplace import expire_stale_offers, recompute_buyer_reliability
+from app.services.marketplace import expire_stale_offers, recompute_buyer_reliability
 
 from forecasting.engine import ForecastEngine
 from notifications.alert_checker import AlertChecker

@@ -6,7 +6,7 @@ from supabase import Client
 from app.deps import get_supabase, get_supabase_as_user
 from app.auth import get_current_user
 from app.schemas.marketplace import LogisticsBookCreate, LogisticsBookUpdate
-from app.marketplace import booked_quantity, ACTIVE_BOOKING_STATUSES
+from app.services.marketplace import booked_quantity, ACTIVE_BOOKING_STATUSES
 
 router = APIRouter(prefix="/api/v1/logistics", tags=["Logistics"])
 

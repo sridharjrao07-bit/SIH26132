@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from supabase import Client
 from app.deps import get_supabase, get_supabase_as_user
 from app.auth import get_current_user
-from app.matching_engine import rank_buyers
-from app.marketplace import logistics_next_step
+from app.services.matching_engine import rank_buyers
+from app.services.marketplace import logistics_next_step
 from notifications.sale_window import compute_sale_window, apply_sale_language
 
 router = APIRouter(prefix="/api/v1/lots", tags=["Matching"])
