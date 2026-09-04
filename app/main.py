@@ -110,6 +110,17 @@ def create_app() -> FastAPI:
     def health_check():
         return {"status": "ok"}
 
+    @app.get("/metrics", tags=["System"])
+    def metrics():
+        """Process liveness in Prometheus text. No secrets. Does not probe Supabase."""
+        from fastapi.responses import PlainTextResponse
+        body = (
+            "# HELP kb_up 1 if this process is serving HTTP\n"
+            "# TYPE kb_up gauge\n"
+            "kb_up 1\n"
+        )
+        return PlainTextResponse(body, media_type="text/plain; version=0.0.4")
+
     @app.exception_handler(APIError)
     async def postgrest_exception_handler(request: Request, exc: APIError):
         logger.warning(
