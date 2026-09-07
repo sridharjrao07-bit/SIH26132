@@ -44,10 +44,11 @@ This document maps the specific findings from the recent hackathon judge review 
 
 | Sprint Goal | Commit Hash |
 |---|---|
-| B1. Lint Fixes | |
-| B2. Config Constants | |
-| B3. Security Model Docs | |
-| B4. Remediation Cleanup | |
+| Hygiene & Setup | 5123f00 |
+| Phase 2 (Zero-Trust RLS) | 3da7647 → 8788fcb |
+| Phase 3 (Onboarding & Storage) | c1c5473, eadaf9c, 566b40b |
+| Phase 4 (Scaling & Docs) | 1fb8161, 78ccc4f |
+| Post-Review Corrections (B1-B5) | 516f232 |
 
 ## 6. Deferred
 

@@ -18,7 +18,7 @@ Krishi Bazaar enforces a strict 4-layer security model to prevent cross-tenant d
    - **Test Emulation:** Offline tests use `RlsFakeSupabase`, which mimics this by applying an ownership post-filter to all queries before returning results.
 
 4. **Belt-and-Braces Application Logic & RPCs**
-   - **RPC State Machines:** Critical state transitions (like `mark_paid` or `transition_grievance`) are handled by `SECURITY DEFINER` RPCs (e.g., `transition_payment_status`).
+   - **RPC State Machines:** Critical state transitions (like `mark_paid`) are handled by `SECURITY DEFINER` RPCs (e.g., `transition_payment_status`).
    - These RPCs bypass RLS internally but assert ownership via `IF auth.uid() IS NOT NULL AND auth.uid() <> p_user_id THEN RAISE`. This centralizes the state-machine rules and guarantees that no external router can force an invalid transition.
    - **Fail-Closed Guard:** The application verifies RLS enforcement on startup via `startup_checks.py`. If `AUTH_DB_ENFORCEMENT=app` is detected in a non-dev environment, the backend refuses to start.
 
