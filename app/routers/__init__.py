@@ -32,6 +32,7 @@ __all__ = [
     "payments_router",
     "grievances_router",
     "logistics_router",
+    "storage_router",
     "matching_router",
     "profile_router",
     "intelligence_router",

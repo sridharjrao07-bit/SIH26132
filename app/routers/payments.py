@@ -1,5 +1,4 @@
 import uuid
-from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from supabase import Client
 from app.deps import get_supabase_as_user, get_supabase_service_role

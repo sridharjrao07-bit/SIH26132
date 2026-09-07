@@ -1,7 +1,7 @@
-import pytest
 from datetime import date
 from ingestion.base import RawPriceRecord
-from ingestion.validator import PriceValidator, MAX_ARRIVAL_QTY_QTL
+from ingestion.validator import PriceValidator
+from app.config import get_settings
 from fastapi.testclient import TestClient
 from app.main import app
 
@@ -45,10 +45,11 @@ def test_arrival_qty_validation(validator: PriceValidator):
     assert "invalid_quantity:arrival_qty(-10.0) < 0" in err
 
     # 4. Overflow arrival_qty
-    base_record.arrival_qty = MAX_ARRIVAL_QTY_QTL + 1
+    max_qty = get_settings().max_arrival_qty_qtl
+    base_record.arrival_qty = max_qty + 1
     res, err = validator.validate_and_normalize(base_record)
     assert res is None
-    assert f"invalid_quantity:arrival_qty({MAX_ARRIVAL_QTY_QTL + 1}) > MAX" in err
+    assert f"invalid_quantity:arrival_qty({max_qty + 1.0}) > MAX" in err
 
 def test_arrival_qty_api_surfacing(override_supabase, fake_supabase):
     """

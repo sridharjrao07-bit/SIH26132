@@ -519,10 +519,14 @@ class RlsFakeSupabase(FakeSupabase):
         def owns(r):
             if self._uid == ADMIN_USER_ID:
                 return True
-            if table == "user_profiles" and r.get("id") == self._uid: return True
-            if r.get("user_id") == self._uid: return True
-            if r.get("buyer_id") == self._uid: return True
-            if r.get("fpo_id") == self._uid: return True
+            if table == "user_profiles" and r.get("id") == self._uid:
+                return True
+            if r.get("user_id") == self._uid:
+                return True
+            if r.get("buyer_id") == self._uid:
+                return True
+            if r.get("fpo_id") == self._uid:
+                return True
             return False
 
         if op == "select" or op is None:

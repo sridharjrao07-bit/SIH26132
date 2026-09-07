@@ -7,10 +7,12 @@ This document maps the specific findings from the recent hackathon judge review 
 **Finding**: While authentication was present, authorization lacked a mode ladder (e.g., distinguishing between a farmer and an admin context). This posed a risk if an admin endpoint was accidentally exposed or if a compromised token tried to escalate privileges.
 
 **Remediation**:
-- **Zero-Trust RLS Engine**: We migrated all role-based authorization from the API layer to PostgreSQL Row Level Security (RLS).
-- **Service Role Constraints**: We removed the `get_supabase_service_role` dependency from all standard API endpoints. Service roles are now strictly gated to background jobs (ingestion, forecasting).
-- **Admin Elevation Path**: Implemented `admin_set_role` RPC that verifies caller's `has_role('admin')` before changing a user's role in `user_profiles`. The application role is never blindly trusted from the JWT `sub` claim.
-- **Documentation**: We authored `SECURITY_MODEL.md` detailing the 4-layer security posture (Ingest, Database RLS, API Gateway, Client).
+- **Zero-Trust RLS Engine (Phase 2)**: We implemented PostgreSQL Row Level Security (RLS) for tenant isolation on core tables. The `get_supabase_as_user` dependency mints a fresh, per-request client where PostgREST executes as the `authenticated` role.
+- **Fail-Closed Guard**: `AUTH_DB_ENFORCEMENT=app` is blocked from starting in production by `app/startup_checks.py` (unless explicitly overridden), preventing accidental deployment of the mock layer.
+- **Ownership Asserting RPCs**: All state-machine transitions (e.g. `transition_payment_status`) are executed via `SECURITY DEFINER` RPCs that perform an explicit ownership check (`p_user_id = auth.uid()`). These RPCs are explicitly granted to `authenticated` and `service_role`.
+- **RlsFakeSupabase Canary**: Our test harness uses `RlsFakeSupabase` globally as the default `fake_supabase`, ensuring all local tests simulate RLS constraints (owner-only visibility). Tests like `test_rls_guard.py` explicitly verify this cross-tenant isolation and the fail-closed guard.
+- **Service Role Audit**: We audited the `get_supabase_service_role` dependency. Service roles are now correctly scoped (e.g. `require_role('admin')`, buyer-supply verification, and background ingestion), while standard endpoints use `get_supabase_as_user` (which is explicitly **NOT** `@lru_cache`'d).
+- **Documentation**: We authored `SECURITY_MODEL.md` detailing the 4-layer security posture (Ingest, Database RLS, API Gateway, Client), and updated line 32 of `README.md` to document the auth mode.
 
 ## 2. Scope Gaps (Onboarding, Storage, Supply Volumes)
 
@@ -18,7 +20,7 @@ This document maps the specific findings from the recent hackathon judge review 
 
 **Remediation**:
 - **Buyer Onboarding**: Added `POST /buyers/register` enabling self-service registration. Added an admin workflow (`GET /admin/buyers` and `PATCH /admin/buyers/{id}/verify`) to vet and approve buyers. Added an explicit RLS policy `USING (auth.uid() = owner_user_id OR verified = true)` to ensure unverified buyers cannot participate in the marketplace.
-- **Warehousing Integration**: Introduced `storage_facilities` and `storage_bookings` tables. The `storage` router mirrors the logistics flow, enforcing physical capacity constraints (`quantity_qtl` sum against `capacity_qtl`) in real-time. Added full state machine (requested -> confirmed -> completed/cancelled).
+- **Warehousing Integration**: Introduced `storage_facilities` and `storage_bookings` tables. The `storage` router mirrors the logistics flow, enforcing physical capacity constraints (`quantity_qtl` sum against `capacity_qtl`). Added full state machine (requested -> confirmed -> completed/cancelled).
 - **Arrival Volumes**: Added `arrival_qty` tracking to the `prices` API and `ingestion_log`. Implemented `MAX_ARRIVAL_QTY_QTL` in `PriceValidator` to prevent bad unit conversions (e.g., kilograms parsed as tonnes) from polluting the dataset.
 
 ## 3. Generalization Risk
@@ -37,3 +39,18 @@ This document maps the specific findings from the recent hackathon judge review 
 **Remediation**:
 - **Honest Limitations**: Added explicit "What Does Not Yet Generalize" sections to `SCALING.md`.
 - **Anticipated Q&A**: Authored `JUDGE_QA.md` directly addressing the hard questions around vendor lock-in (Supabase), mock testing vs. live testing, and data provenance.
+
+## 5. Commit Hash Table
+
+| Sprint Goal | Commit Hash |
+|---|---|
+| B1. Lint Fixes | |
+| B2. Config Constants | |
+| B3. Security Model Docs | |
+| B4. Remediation Cleanup | |
+
+## 6. Deferred
+
+| Item | Reason |
+|---|---|
+| Live PGRST301 Validation | Deferred. We lack live credentials in the current environment to execute `tests/test_rls_live.py`. **Risk Accepted**: If the hosted project rejects the tokens (due to JWT issuer/secret mismatch), every authenticated endpoint will return 500 in `rls` mode while all offline tests stay green. |

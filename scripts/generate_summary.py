@@ -32,7 +32,7 @@ def generate_summary(output_file):
                                 out.write(f.read())
                         except Exception as e:
                             out.write(f"Error reading file: {e}")
-                        out.write(f"\n```\n\n")
+                        out.write("\n```\n\n")
         
         for file in root_files:
             if os.path.exists(file):
@@ -45,7 +45,7 @@ def generate_summary(output_file):
                         out.write(f.read())
                 except Exception as e:
                     out.write(f"Error reading file: {e}")
-                out.write(f"\n```\n\n")
+                out.write("\n```\n\n")
 
 if __name__ == "__main__":
     generate_summary('project_summary_with_code.md')

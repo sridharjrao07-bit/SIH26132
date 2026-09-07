@@ -1,9 +1,7 @@
 import os
 import pytest
 import requests
-from fastapi.testclient import TestClient
-from app.main import app
-from tests.conftest import mint_jwt, FARMER_USER_ID, FPO_USER_ID
+from tests.conftest import mint_jwt, FARMER_USER_ID
 
 # Run only if the developer explicitly allows live tests
 pytestmark = pytest.mark.skipif(
@@ -47,7 +45,6 @@ def test_live_cross_tenant_isolation():
         pytest.skip("SUPABASE_URL or SUPABASE_KEY not configured")
 
     farmer_token = mint_jwt(FARMER_USER_ID)
-    fpo_token = mint_jwt(FPO_USER_ID)
     
     # 1. Farmer writes a lot using real API
     # Since we don't want to actually spam a live DB with random data in CI, 

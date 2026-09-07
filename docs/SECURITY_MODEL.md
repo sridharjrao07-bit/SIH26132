@@ -28,15 +28,15 @@ Krishi Bazaar enforces a strict 4-layer security model to prevent cross-tenant d
 |---|---|---|---|---|
 | `admin.py` | `ingestion_log` | SELECT | "Admins read ingestion log" | Uses `service_role` but gated by HTTP middleware. |
 | `alerts.py` | `alerts` | SELECT/INSERT/UPDATE | "Farmers read/create/update own alerts" | Handled natively by RLS. |
-| `grievances.py` | `grievances` | SELECT / RPC | "Owners read grievances" | Write mutations use `transition_grievance_status` RPC. |
+| `grievances.py` | `grievances` | SELECT/INSERT | "Owners read grievances" | Admin updates status directly, users only create/read. |
 | `logistics.py` | `logistics_bookings` | SELECT/INSERT/UPDATE | "Owners read/create/update bookings" | Capacity checks done in Python, but row visibility enforced by RLS. |
 | `markets.py` | `markets`, `prices` | SELECT | "Public can read markets/prices" | Public read tables. |
 | `matching.py` | `buyers` | SELECT | "Public can read verified buyers" | Uses `public` client. |
-| `matching.py` | `open_lots_for_user` | RPC | N/A (Security Definer) | Enforces visibility logic internally. |
+| `sms.py` | `open_lots_for_user` | RPC | N/A (Security Definer) | Enforces visibility logic internally. |
 | `offers.py` | `offers` | SELECT/INSERT | "Owners read/create offers" | **Note:** SELECT policy is extended in migration 014 to allow buyers to see offers they made. |
 | `payments.py` | `payments` | SELECT / RPC | "Owners read payments" | Write mutations use `transition_payment_status` RPC. |
-| `users.py` | `user_profiles` | SELECT/UPDATE | "Users read/update own profile" | |
-| `users.py` | `buyers` | INSERT | "Buyers insert own profile" | **Note:** Added in migration 014 for self-service buyer onboarding. |
+| `profile.py` | `user_profiles` | SELECT/UPDATE | "Users read/update own profile" | |
+| `profile.py` | `buyers` | INSERT | "Buyers insert own profile" | **Note:** Added in migration 014 for self-service buyer onboarding. |
 
 ## Mode Ladder
 

@@ -85,9 +85,10 @@ All keys are listed with comments in [`.env.example`](.env.example). Required to
 | `SUPABASE_JWT_SECRET` | FastAPI HS256 verify |
 | `SUPABASE_JWT_ISSUER` | Set to `https://<ref>.supabase.co/auth/v1` in production |
 | `DATA_GOV_IN_API_KEY` | Mandi ingest |
-| `AUTH_DB_ENFORCEMENT` | `rls` (DB boundary) or `app` (app-layer only — dev default) |
+| `AUTH_DB_ENFORCEMENT` | `rls` (DB boundary, default) or `app` (app-layer only, dev only) |
 | `KB_ALLOW_APP_MODE` | Set `1` to allow app-mode in production (not recommended) |
 | `KB_LIVE_SUPABASE` | Set `1` to enable `tests/test_rls_live.py` against a real project |
+| `MAX_ARRIVAL_QTY_QTL` | Float limit for ingestion quantity sanity checks (default `1000000.0`) |
 
 Important knobs: `CORS_ORIGIN`, `RUN_SCHEDULER`, `RATE_LIMIT_ENABLED`, `APP_ENV`, `INBOUND_HMAC_SECRET`, `TARGET_DISTRICT`.
 
@@ -111,6 +112,10 @@ python demo/live_smoke.py
 ```
 
 Judge path: [`docs/DEMO.md`](docs/DEMO.md).
+
+## Known Limitations
+
+We explicitly document what this prototype does *not* yet do to demonstrate our understanding of real-world generalization constraints (e.g. multi-lingual crop aliasing, complex transport models). See the "What Does Not Yet Generalize" section in [`docs/SCALING.md`](docs/SCALING.md).
 
 ## Docker
 

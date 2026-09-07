@@ -2,6 +2,7 @@ import math
 import structlog
 from typing import Optional, Tuple, Dict
 from .base import RawPriceRecord
+from app.config import get_settings
 
 logger = structlog.get_logger()
 
@@ -20,9 +21,7 @@ UNIT_CONVERSIONS: Dict[str, float] = {
     "mt":       0.1,
 }
 
-# Extremely wide sanity bound to prevent database overflow from bad units.
-# A 1M quintal arrival is 100,000 metric tons — far larger than any single mandi's daily capacity.
-MAX_ARRIVAL_QTY_QTL = 1_000_000.0
+# Max quantity is now loaded dynamically from config to handle mixed-unit sources.
 
 
 class PriceValidator:
@@ -155,10 +154,14 @@ class PriceValidator:
         if arrival_qty is not None:
             if arrival_qty < 0:
                 reason = f"invalid_quantity:arrival_qty({arrival_qty}) < 0"
+                # Reject is logged and observable in the ingestion_log table under records_rejected
                 log.warning("rejected", reason=reason)
                 return None, reason
-            if arrival_qty > MAX_ARRIVAL_QTY_QTL:
-                reason = f"invalid_quantity:arrival_qty({arrival_qty}) > MAX({MAX_ARRIVAL_QTY_QTL})"
+                
+            max_qty = get_settings().max_arrival_qty_qtl
+            if arrival_qty > max_qty:
+                reason = f"invalid_quantity:arrival_qty({arrival_qty}) > MAX({max_qty})"
+                # Reject is logged and observable in the ingestion_log table under records_rejected
                 log.warning("rejected", reason=reason)
                 return None, reason
 

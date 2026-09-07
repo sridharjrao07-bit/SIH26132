@@ -1,4 +1,3 @@
-import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from tests.conftest import mint_jwt, FARMER_USER_ID, ADMIN_USER_ID

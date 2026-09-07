@@ -19,13 +19,13 @@ def generate_sql_artifact():
         for file in files:
             basename = os.path.basename(file)
             out.write(f"## {basename}\n\n")
-            out.write(f"```sql\n")
+            out.write("```sql\n")
             try:
                 with open(file, 'r', encoding='utf-8') as f:
                     out.write(f.read().strip())
             except Exception as e:
                 out.write(f"-- Error reading file: {e}")
-            out.write(f"\n```\n\n")
+            out.write("\n```\n\n")
 
 if __name__ == "__main__":
     generate_sql_artifact()

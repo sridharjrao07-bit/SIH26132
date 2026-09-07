@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     # Scope
     target_district: str = Field(default="Nashik")
     target_state: str = Field(default="Maharashtra")
+    
+    # Ingestion constraints
+    max_arrival_qty_qtl: float = Field(default=1_000_000.0)
 
     # CORS — comma-separated origins
     cors_origin: str = Field(default="http://localhost:3000,http://localhost:5173")
@@ -62,7 +65,7 @@ class Settings(BaseSettings):
     # "app"  — service-role client (current legacy behaviour); application-level
     #          .eq("user_id", ...) filters are the sole isolation layer.
     #          Startup rejects this in production unless kb_allow_app_mode=True.
-    auth_db_enforcement: str = Field(default="rls")  # flip to "rls" after live validation
+    auth_db_enforcement: str = Field(default="rls")
 
     # Emergency override: allow app-mode in production (must be explicit).
     kb_allow_app_mode: bool = Field(default=False)

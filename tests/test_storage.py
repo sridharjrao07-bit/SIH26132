@@ -1,8 +1,7 @@
-import pytest
 from fastapi.testclient import TestClient
 from datetime import date
 from app.main import app
-from tests.conftest import mint_jwt, FARMER_USER_ID, ADMIN_USER_ID
+from tests.conftest import mint_jwt, FARMER_USER_ID
 
 OTHER_FARMER_USER_ID = "farmer-uuid-0002-0000-000000000000"
 
