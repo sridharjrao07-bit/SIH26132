@@ -34,13 +34,17 @@ jobs:
         run: ruff check app ingestion forecasting notifications tests demo scripts
 
   test:
-    name: test
+    name: test (py ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.14"
+          python-version: ${{ matrix.python-version }}
           allow-prereleases: true
       - name: Install dev deps
         run: pip install -r requirements-dev.txt

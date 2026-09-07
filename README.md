@@ -36,7 +36,7 @@ Demo seed: 5 Nashik APMCs × Onion, Tomato, Soybean, Maize. Expand via [`docs/ON
 
 ## Prerequisites
 
-- **Python 3.14** (this repo does not support 3.12)
+- **Python 3.12, 3.13, or 3.14** (verified in CI matrix)
 - A Supabase project (SQL applied per [`docs/SQL_APPLY.md`](docs/SQL_APPLY.md))
 - Optional: Docker + Compose for a one-command API
 
@@ -178,4 +178,4 @@ Runtime config is environment variables, not a `config/` directory.
 
 ## CI
 
-Every push/PR: Ruff, pytest (Python 3.14), `pip-audit` on production deps, secret-pattern grep. See `.github/workflows/ci.yml`.
+Every push/PR: Ruff, pytest (Python 3.12-3.14), `pip-audit` on production deps, secret-pattern grep. See `.github/workflows/ci.yml`.
