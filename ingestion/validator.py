@@ -20,6 +20,10 @@ UNIT_CONVERSIONS: Dict[str, float] = {
     "mt":       0.1,
 }
 
+# Extremely wide sanity bound to prevent database overflow from bad units.
+# A 1M quintal arrival is 100,000 metric tons — far larger than any single mandi's daily capacity.
+MAX_ARRIVAL_QTY_QTL = 1_000_000.0
+
 
 class PriceValidator:
     """
@@ -147,6 +151,17 @@ class PriceValidator:
             f"|{record.arrival_date}|{record.variety or 'General'}"
         )
 
+        arrival_qty = record.arrival_qty
+        if arrival_qty is not None:
+            if arrival_qty < 0:
+                reason = f"invalid_quantity:arrival_qty({arrival_qty}) < 0"
+                log.warning("rejected", reason=reason)
+                return None, reason
+            if arrival_qty > MAX_ARRIVAL_QTY_QTL:
+                reason = f"invalid_quantity:arrival_qty({arrival_qty}) > MAX({MAX_ARRIVAL_QTY_QTL})"
+                log.warning("rejected", reason=reason)
+                return None, reason
+
         return {
             "commodity_id": commodity_id,
             "arrival_date": str(record.arrival_date),
@@ -154,7 +169,7 @@ class PriceValidator:
             "max_price":    norm_max,
             "modal_price":  norm_modal,
             "unit":         "quintal",   # always canonical — raw unit is in raw_payload
-            "arrival_qty":  record.arrival_qty,
+            "arrival_qty":  arrival_qty,
             "variety":      record.variety or "General",
             "grade":        record.grade or "General",
             "source":       record.source,
