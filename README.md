@@ -83,11 +83,15 @@ All keys are listed with comments in [`.env.example`](.env.example). Required to
 | `SUPABASE_ANON_KEY` | Public reads (RLS) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Jobs + authenticated handlers (never expose) |
 | `SUPABASE_JWT_SECRET` | FastAPI HS256 verify |
+| `SUPABASE_JWT_ISSUER` | Set to `https://<ref>.supabase.co/auth/v1` in production |
 | `DATA_GOV_IN_API_KEY` | Mandi ingest |
+| `AUTH_DB_ENFORCEMENT` | `rls` (DB boundary) or `app` (app-layer only — dev default) |
+| `KB_ALLOW_APP_MODE` | Set `1` to allow app-mode in production (not recommended) |
+| `KB_LIVE_SUPABASE` | Set `1` to enable `tests/test_rls_live.py` against a real project |
 
 Important knobs: `CORS_ORIGIN`, `RUN_SCHEDULER`, `RATE_LIMIT_ENABLED`, `APP_ENV`, `INBOUND_HMAC_SECRET`, `TARGET_DISTRICT`.
 
-The API **verifies** JWTs itself. It does **not** forward minted HS256 tokens to PostgREST.
+See [`docs/SECURITY_MODEL.md`](docs/SECURITY_MODEL.md) for a full description of the four-layer security model, `AUTH_DB_ENFORCEMENT` modes, and the fail-closed production guard.
 
 ## Tests
 

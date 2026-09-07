@@ -56,6 +56,20 @@ class Settings(BaseSettings):
     run_scheduler: bool = Field(default=True)
     rate_limit_enabled: bool = Field(default=True)
 
+    # ── Auth DB enforcement ───────────────────────────────────────────────────
+    # "rls"  — per-request user-scoped Supabase client; RLS policies enforce
+    #          at the DB boundary.  Requires token-claims alignment (iss, role).
+    # "app"  — service-role client (current legacy behaviour); application-level
+    #          .eq("user_id", ...) filters are the sole isolation layer.
+    #          Startup rejects this in production unless kb_allow_app_mode=True.
+    auth_db_enforcement: str = Field(default="app")  # flip to "rls" after live validation
+
+    # Emergency override: allow app-mode in production (must be explicit).
+    kb_allow_app_mode: bool = Field(default=False)
+
+    # Live RLS probe flag (tests/test_rls_live.py).
+    kb_live_supabase: bool = Field(default=False)
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

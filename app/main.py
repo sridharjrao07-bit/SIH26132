@@ -58,6 +58,8 @@ def _configure_logging(log_level: str) -> None:
 async def lifespan(app: FastAPI):
     settings = get_settings()
     _configure_logging(settings.log_level)
+    from app.startup_checks import run_startup_checks
+    run_startup_checks(settings)
     from app.routers.sms import warmup_verifier
     warmup_verifier()
     scheduler = None
