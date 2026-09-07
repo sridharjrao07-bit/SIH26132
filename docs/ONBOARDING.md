@@ -42,3 +42,25 @@ Verified buyers and godowns/trucks are rows in `buyers` / `logistics_options` (s
 ## 5. Apply SQL
 
 `docs/SQL_APPLY.md` — run `001` … `011` in order on a new project.
+
+## 6. Token-claims alignment (for AUTH_DB_ENFORCEMENT=rls)
+
+When `AUTH_DB_ENFORCEMENT=rls`, minted tokens are forwarded to PostgREST as the
+user credential.  Three things must match the hosted project:
+
+1. **Legacy JWT secret enabled**: Supabase Dashboard → Settings → API → JWT Settings
+   → enable "Use legacy JWT secret". This lets PostgREST verify HS256 tokens signed
+   with `SUPABASE_JWT_SECRET`.
+
+2. **`SUPABASE_JWT_ISSUER`** set in `.env`:
+   ```
+   SUPABASE_JWT_ISSUER=https://<your-ref>.supabase.co/auth/v1
+   ```
+   `mint_admin_token.py` reads this and adds `iss` to the payload.
+   Without `iss`, PostgREST returns `PGRST301` (403 from the app).
+
+3. **`SUPABASE_JWT_SECRET`** must match the project secret exactly (same settings page).
+
+For development/CI the `SUPABASE_JWT_ISSUER` env var is left empty intentionally:
+tokens omit `iss` and work with `AUTH_DB_ENFORCEMENT=app` (service-role client).
+FakeSupabase in tests is unaffected by either mode.

@@ -7,9 +7,29 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def mint_admin_token(hours: int = 24, sub: str = "admin-demo-user") -> str:
+    """Mint an HS256 JWT that FastAPI and PostgREST will both accept.
+
+    Requirements for PostgREST (hosted Supabase, AUTH_DB_ENFORCEMENT=rls):
+      - SUPABASE_JWT_SECRET must equal the project's JWT secret (Settings → API → JWT Settings).
+      - Legacy JWT secret must be **enabled** on the project (same settings page).
+      - SUPABASE_JWT_ISSUER must be set to https://<ref>.supabase.co/auth/v1.
+      - This token carries iss so PostgREST's issuer check passes.
+
+    For demo/dev only: sub must be a real auth.users UUID in user_profiles.
+    """
     secret = os.getenv("SUPABASE_JWT_SECRET")
     if not secret:
         raise ValueError("SUPABASE_JWT_SECRET not set in environment")
+
+    issuer = os.getenv("SUPABASE_JWT_ISSUER", "")
+    if not issuer:
+        import warnings
+        warnings.warn(
+            "SUPABASE_JWT_ISSUER is not set. "
+            "Minted token omits 'iss' and will be rejected by PostgREST on hosted Supabase "
+            "(AUTH_DB_ENFORCEMENT=rls). Set SUPABASE_JWT_ISSUER=https://<ref>.supabase.co/auth/v1.",
+            stacklevel=2,
+        )
 
     now = datetime.now(timezone.utc)
     payload = {
@@ -20,6 +40,9 @@ def mint_admin_token(hours: int = 24, sub: str = "admin-demo-user") -> str:
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(hours=hours)).timestamp()),
     }
+    if issuer:
+        payload["iss"] = issuer
+
     return jwt.encode(payload, secret, algorithm="HS256")
 
 if __name__ == "__main__":
