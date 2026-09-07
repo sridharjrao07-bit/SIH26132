@@ -12,6 +12,7 @@ from .offers import router as offers_router
 from .payments import router as payments_router
 from .grievances import router as grievances_router
 from .logistics import router as logistics_router
+from .storage import router as storage_router
 from .matching import router as matching_router
 from .profile import router as profile_router
 from .intelligence import router as intelligence_router

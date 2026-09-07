@@ -506,7 +506,7 @@ class RlsFakeSupabase(FakeSupabase):
 
         public_tables = {
             "markets", "commodities", "commodity_alias", "prices",
-            "forecasts", "buyers", "logistics_options"
+            "forecasts", "buyers", "logistics_options", "storage_facilities"
         }
         if (op == "select" or op is None) and table in public_tables:
             return res

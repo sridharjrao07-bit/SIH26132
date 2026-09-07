@@ -32,6 +32,7 @@ from app.routers import (
     payments_router,
     grievances_router,
     logistics_router,
+    storage_router,
     matching_router,
     profile_router,
     intelligence_router,
@@ -167,6 +168,7 @@ def create_app() -> FastAPI:
     app.include_router(payments_router)
     app.include_router(grievances_router)
     app.include_router(logistics_router)
+    app.include_router(storage_router)
     app.include_router(matching_router)
     app.include_router(profile_router)
     app.include_router(intelligence_router)

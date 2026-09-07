@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List, Literal
-from datetime import date
+from datetime import date, datetime
 
 
 class BuyerResponse(BaseModel):
@@ -149,7 +149,8 @@ class LogisticsBookCreate(BaseModel):
 
 
 class LogisticsBookUpdate(BaseModel):
-    status: Literal["requested", "confirmed", "cancelled", "completed"]
+    status: Literal["confirmed", "cancelled", "completed"]
+    notes: Optional[str] = None
 
 
 class SaleWindowResponse(BaseModel):
@@ -170,3 +171,44 @@ class SaleWindowResponse(BaseModel):
     storage: Optional[list] = None
     storage_available: Optional[bool] = None
     better_market: Optional[dict] = None
+
+
+class StorageFacilityResponse(BaseModel):
+    id: str
+    district: str
+    name: str
+    capacity_qtl: float
+    rate_per_qtl: float
+    contact: Optional[str] = None
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    is_active: bool
+    created_at: datetime
+
+
+class StorageBookCreate(BaseModel):
+    lot_id: str
+    facility_id: str
+    quantity_qtl: float = Field(gt=0)
+    storage_start_date: Optional[date] = None
+    storage_end_date: Optional[date] = None
+    notes: Optional[str] = None
+
+
+class StorageBookUpdate(BaseModel):
+    status: Literal["confirmed", "cancelled", "completed"]
+    notes: Optional[str] = None
+
+
+class StorageBookingResponse(BaseModel):
+    id: str
+    user_id: str
+    lot_id: str
+    facility_id: str
+    quantity_qtl: float
+    status: str
+    storage_start_date: Optional[date] = None
+    storage_end_date: Optional[date] = None
+    notes: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
