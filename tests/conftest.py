@@ -141,6 +141,10 @@ class FakeSupabase:
                     return _ExecuteResult(data=rows)
                 if fn_name in ("claim_job_lock", "release_job_lock"):
                     return _ExecuteResult(data=True)
+                if fn_name == "transition_payment_status":
+                    return _ExecuteResult(data=store._rpc_transition_payment(params))
+                if fn_name == "transition_grievance_status":
+                    return _ExecuteResult(data=store._rpc_transition_grievance(params))
                 return _ExecuteResult(data=True)
 
         return _RpcQuery()
@@ -176,6 +180,52 @@ class FakeSupabase:
     def set_rpc(self, fn_name: str, result):
         """Pre-configure what an rpc() call returns."""
         self._rpc_handlers[fn_name] = result
+
+    # ── RPC emulators ─────────────────────────────────────────────────────────
+
+    def _rpc_transition_payment(self, params: dict):
+        """Emulate transition_payment_status SECURITY DEFINER: assert ownership + state machine."""
+        from fastapi import HTTPException
+        p_user_id = params.get("p_user_id")
+        p_payment_id = params.get("p_payment_id")
+        p_new_status = params.get("p_new_status")
+        rows = [r for r in self._data.get("payments", [])
+                if r.get("id") == p_payment_id and r.get("user_id") == p_user_id]
+        if not rows:
+            raise HTTPException(404, "payment not found or not owned by user")
+        payment = rows[0]
+        cur = payment.get("status")
+        if p_new_status == "paid" and cur in ("failed", "disputed"):
+            raise HTTPException(409, f"cannot mark a {cur} payment as paid")
+        if p_new_status == "failed" and cur == "paid":
+            raise HTTPException(409, "cannot fail a paid payment")
+        if p_new_status not in ("paid", "failed", "disputed"):
+            raise HTTPException(400, f"unknown target status: {p_new_status}")
+        payment["status"] = p_new_status
+        if p_new_status == "paid":
+            from datetime import datetime, timezone
+            payment["paid_at"] = datetime.now(timezone.utc).isoformat()
+        return dict(payment)
+
+    def _rpc_transition_grievance(self, params: dict):
+        """Emulate transition_grievance_status SECURITY DEFINER: assert ownership + state machine."""
+        from fastapi import HTTPException
+        p_user_id = params.get("p_user_id")
+        p_grievance_id = params.get("p_grievance_id")
+        p_new_status = params.get("p_new_status")
+        rows = [r for r in self._data.get("grievances", [])
+                if r.get("id") == p_grievance_id and r.get("user_id") == p_user_id]
+        if not rows:
+            raise HTTPException(404, "grievance not found or not owned by user")
+        grievance = rows[0]
+        cur = grievance.get("status")
+        valid = ("open", "in_progress", "resolved", "rejected")
+        if p_new_status not in valid:
+            raise HTTPException(400, f"unknown target status: {p_new_status}")
+        if cur in ("resolved", "rejected"):
+            raise HTTPException(409, f"grievance is already {cur}")
+        grievance["status"] = p_new_status
+        return dict(grievance)
 
     def _dispatch(self, *, table, op, payload, conflict, filters, select_cols):
         self.calls.append(dict(
