@@ -475,14 +475,81 @@ def fake_supabase_with_logs(fake_supabase):
     ])
     return fake_supabase
 
+class RlsFakeSupabase(FakeSupabase):
+    """
+    Wraps FakeSupabase to enforce RLS semantics (ownership post-filter).
+    All query filters apply first, then rows are filtered to those owned by
+    the principal. Public-read tables are exempt.
+    """
+    def __init__(self, base: FakeSupabase, uid: str = None, is_service_role: bool = False):
+        super().__init__()
+        self._base = base
+        self._uid = uid
+        self._is_service_role = is_service_role
+        self.calls = base.calls
+        self._data = base._data
+        self._rpc_handlers = base._rpc_handlers
+
+    def table(self, name: str) -> _FakeQuery:
+        return _FakeQuery(self, name)
+
+    def rpc(self, fn_name: str, params: dict = None):
+        return self._base.rpc(fn_name, params)
+
+    def _dispatch(self, *, table, op, payload, conflict, filters, select_cols):
+        res = self._base._dispatch(
+            table=table, op=op, payload=payload,
+            conflict=conflict, filters=filters, select_cols=select_cols
+        )
+        if self._is_service_role:
+            return res
+
+        public_tables = {
+            "markets", "commodities", "commodity_alias", "prices",
+            "forecasts", "buyers", "logistics_options"
+        }
+        if (op == "select" or op is None) and table in public_tables:
+            return res
+
+        if not self._uid:
+            if op == "select" or op is None:
+                return _ExecuteResult(data=[])
+            return _ExecuteResult(data=[])
+
+        def owns(r):
+            if self._uid == ADMIN_USER_ID:
+                return True
+            if table == "user_profiles" and r.get("id") == self._uid: return True
+            if r.get("user_id") == self._uid: return True
+            if r.get("buyer_id") == self._uid: return True
+            if r.get("fpo_id") == self._uid: return True
+            return False
+
+        if op == "select" or op is None:
+            filtered = [r for r in res.data if owns(r)]
+            return _ExecuteResult(data=filtered)
+
+        return res
+
+
 @pytest.fixture(autouse=True)
 def override_supabase(fake_supabase):
     from app.main import app
     from app.deps import get_supabase, get_supabase_service_role, get_supabase_as_user
     from app.routers import sms as sms_mod
-    app.dependency_overrides[get_supabase] = lambda: fake_supabase
-    app.dependency_overrides[get_supabase_service_role] = lambda: fake_supabase
-    app.dependency_overrides[get_supabase_as_user] = lambda: fake_supabase
+    from fastapi import Header
+
+    def _mock_get_as_user(authorization: str = Header(None)):
+        from app.auth import decode_access_token
+        uid = None
+        if authorization and authorization.startswith("Bearer "):
+            uid = decode_access_token(authorization[7:])
+        return RlsFakeSupabase(fake_supabase, uid=uid, is_service_role=False)
+
+    app.dependency_overrides[get_supabase] = lambda: RlsFakeSupabase(fake_supabase, uid=None, is_service_role=False)
+    app.dependency_overrides[get_supabase_service_role] = lambda: RlsFakeSupabase(fake_supabase, uid=None, is_service_role=True)
+    app.dependency_overrides[get_supabase_as_user] = _mock_get_as_user
+
     sms_mod.reset_outbound_cap()
     yield
     app.dependency_overrides.clear()

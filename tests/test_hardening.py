@@ -54,14 +54,26 @@ def test_api_error_unknown_is_503():
     assert "password" not in resp.body.decode()
 
 
-def test_postgrest_error_on_markets_is_not_500(override_supabase, fake_supabase):
+def test_postgrest_error_on_markets_is_not_500(override_supabase):
     def boom(*a, **k):
         raise APIError({"code": "22P02", "message": "invalid input syntax for type uuid"})
-
-    fake_supabase.table = boom
-    resp = client.get("/api/v1/markets/")
-    assert resp.status_code == 422
-    assert resp.json()["detail"] == "invalid id"
+    
+    from app.main import app
+    from app.deps import get_supabase
+    
+    class BoomSupabase:
+        def table(self, *a, **k):
+            return boom()
+            
+    app.dependency_overrides[get_supabase] = lambda: BoomSupabase()
+    
+    try:
+        resp = client.get("/api/v1/markets/")
+        assert resp.status_code == 422
+        assert resp.json()["detail"] == "invalid id"
+    finally:
+        # restore the previous override by re-running override_supabase? No, dependency_overrides will be cleared.
+        pass
 
 
 def test_lot_qty_too_large_is_422(override_supabase, fake_supabase):
