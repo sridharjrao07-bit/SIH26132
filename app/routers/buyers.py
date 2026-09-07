@@ -1,11 +1,41 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
 from supabase import Client
-from app.deps import get_supabase, get_supabase_service_role
-from app.schemas.marketplace import BuyerResponse
+from app.deps import get_supabase, get_supabase_service_role, get_supabase_as_user
+from app.auth import get_current_user
+from app.schemas.marketplace import BuyerResponse, BuyerRegisterRequest
 from app.services.matching_engine import rank_lots_for_buyer
 
 router = APIRouter(prefix="/api/v1/buyers", tags=["Buyers"])
+
+
+@router.post("/register", response_model=BuyerResponse, status_code=201)
+def register_buyer(
+    req: BuyerRegisterRequest,
+    uid: str = Depends(get_current_user),
+    user_client: Client = Depends(get_supabase_as_user),
+):
+    """
+    Self-service registration for a buyer profile.
+    Tied to the authenticated user's ID via RLS (owner_user_id = auth.uid()).
+    Duplicates per user are rejected by a unique constraint, but we also check here.
+    """
+    existing = user_client.table("buyers").select("id").eq("owner_user_id", uid).execute()
+    if existing.data:
+        raise HTTPException(409, "User already has a registered buyer profile")
+        
+    import uuid
+    payload = req.model_dump(exclude_unset=True)
+    payload["id"] = str(uuid.uuid4())
+    payload["owner_user_id"] = uid
+    payload["verification_state"] = "pending"
+    payload["verified"] = False
+    
+    res = user_client.table("buyers").insert(payload).execute()
+    if not res.data:
+        raise HTTPException(500, "Failed to create buyer profile")
+    return res.data[0]
+
 
 
 @router.get("/", response_model=List[BuyerResponse])

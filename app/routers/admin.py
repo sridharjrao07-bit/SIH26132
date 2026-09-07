@@ -6,7 +6,7 @@ import uuid
 
 from app.auth import require_role
 from app.deps import get_supabase_service_role
-from app.schemas.marketplace import BuyerCreate, GrievanceUpdate
+from app.schemas.marketplace import BuyerCreate, GrievanceUpdate, BuyerVerificationUpdate
 from app.services.marketplace import expire_stale_offers, recompute_buyer_reliability
 
 from forecasting.engine import ForecastEngine
@@ -83,12 +83,32 @@ def admin_create_buyer(
     return res.data[0]
 
 
+@router.get("/buyers", dependencies=[Depends(require_role("admin"))])
+def admin_list_buyers(
+    status: str = "pending",
+    supabase: Client = Depends(get_supabase_service_role),
+):
+    query = supabase.table("buyers").select("*")
+    if status:
+        query = query.eq("verification_state", status)
+    res = query.order("created_at", desc=True).limit(100).execute()
+    return res.data or []
+
+
 @router.patch("/buyers/{buyer_id}/verify", dependencies=[Depends(require_role("admin"))])
 def admin_verify_buyer(
     buyer_id: str,
+    body: BuyerVerificationUpdate,
     supabase: Client = Depends(get_supabase_service_role),
 ):
-    res = supabase.table("buyers").update({"verified": True}).eq("id", buyer_id).execute()
+    payload = {
+        "verification_state": body.verification_state,
+        "verified": body.verification_state == "approved"
+    }
+    if body.review_notes:
+        payload["review_notes"] = body.review_notes
+        
+    res = supabase.table("buyers").update(payload).eq("id", buyer_id).execute()
     if not res.data:
         raise HTTPException(404, "buyer not found")
     return res.data[0]

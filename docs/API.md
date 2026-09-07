@@ -65,6 +65,7 @@ The API verifies that JWT itself. It does **not** forward it to PostgREST (hoste
 | POST/GET | `/api/v1/grievances/` |
 | POST/GET/PATCH | `/api/v1/logistics/bookings` |
 | CRUD | `/api/v1/alerts/` |
+| POST | `/api/v1/buyers/register` |
 
 ### Lot create body
 
@@ -98,7 +99,7 @@ Phone is normalised to E.164 (`+91…`). Role is not client-writable.
 
 `POST /api/v1/admin/forecast/run`  
 `POST /api/v1/admin/alert-check/run`  
-`POST /api/v1/admin/buyers` · `PATCH /api/v1/admin/buyers/{id}/verify`  
+`POST /api/v1/admin/buyers` · `GET /api/v1/admin/buyers?status=pending` · `PATCH /api/v1/admin/buyers/{id}/verify`  
 `GET/PATCH /api/v1/admin/grievances`  
 `POST /api/v1/admin/offers/expire`  
 `POST /api/v1/admin/buyers/rescore`  

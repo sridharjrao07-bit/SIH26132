@@ -351,7 +351,7 @@ def test_admin_verify_buyer_and_resolve_grievance(override_supabase, fake_supaba
         "created_at": date.today().isoformat(),
     }])
     headers = {"Authorization": f"Bearer {mint_jwt(ADMIN_USER_ID)}"}
-    v = client.patch("/api/v1/admin/buyers/buyer-new/verify", headers=headers)
+    v = client.patch("/api/v1/admin/buyers/buyer-new/verify", headers=headers, json={"verification_state": "approved"})
     assert v.status_code == 200, v.text
     assert v.json()["verified"] is True
     listed = client.get("/api/v1/admin/grievances", headers=headers)

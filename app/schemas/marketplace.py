@@ -41,6 +41,25 @@ class LotAggregate(BaseModel):
     market_id: Optional[str] = None
 
 
+class BuyerRegisterRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=200)
+    type: Literal["trader", "processor", "institutional", "fpo", "digital"]
+    district: str
+    phone: str
+    commodity_id: Optional[str] = None
+    demand_qty_qtl: Optional[float] = Field(default=None, gt=0)
+    max_price: Optional[float] = Field(default=None, gt=0)
+    quality_requirements: Optional[str] = None
+    payment_reliability: Optional[Literal["high", "medium", "low"]] = "medium"
+    lat: Optional[float] = Field(default=None, ge=-90, le=90)
+    lng: Optional[float] = Field(default=None, ge=-180, le=180)
+
+
+class BuyerVerificationUpdate(BaseModel):
+    verification_state: Literal["approved", "rejected"]
+    review_notes: Optional[str] = None
+
+
 class BuyerCreate(BaseModel):
     name: str = Field(min_length=2, max_length=200)
     type: Literal["trader", "processor", "institutional", "fpo", "digital"]
