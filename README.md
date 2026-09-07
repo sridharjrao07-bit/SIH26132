@@ -29,7 +29,7 @@ graph TD
 
 ### Tech Stack Justification
 - **FastAPI**: Chosen for its high-performance async capabilities and automatic OpenAPI (Swagger) documentation, ensuring rapid API development.
-- **Supabase (PostgreSQL)**: Selected over NoSQL to ensure strict relational integrity (ACID) for financial transactions, lots, and ledgers. Row Level Security (RLS) handles data isolation.
+- **Supabase (PostgreSQL)**: Selected over NoSQL to ensure strict relational integrity (ACID) for financial transactions, lots, and ledgers. See [docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md) for our 4-layer RLS and state-machine architecture.
 - **Pydantic**: Guarantees pre-route validation so the API never processes malformed data.
 
 Demo seed: 5 Nashik APMCs × Onion, Tomato, Soybean, Maize. Expand via [`docs/ONBOARDING.md`](docs/ONBOARDING.md).

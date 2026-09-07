@@ -38,7 +38,7 @@ Optional: `pre-commit install` then `pre-commit run --all-files`.
 
 ## Architecture rules (do not break)
 
-1. FastAPI verifies JWTs. **Never** attach a minted HS256 token to PostgREST (`client.postgrest.auth`). Hosted signing keys reject it (`PGRST301` → 500). Authenticated handlers use the service-role client and **must** filter by `user_id`.
+1. FastAPI verifies JWTs. **Never** cache a user-scoped Supabase client (e.g. via `@lru_cache`). Authenticated handlers use `get_supabase_as_user()` which mints a new client per request. State mutations bypass RLS via `SECURITY DEFINER` RPCs to enforce rules, but queries rely strictly on Postgres RLS. See [`docs/SECURITY_MODEL.md`](docs/SECURITY_MODEL.md) for details.
 2. Role lives in `user_profiles`, not in the JWT.
 3. Secrets only via environment variables (see `.env.example`).
 4. Public errors are boring JSON (`detail`). No stack traces, no SQL, no PostgREST codes.

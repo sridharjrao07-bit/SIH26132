@@ -24,14 +24,13 @@ HTTP  app/routers/*          FastAPI routes, auth deps, HTTPException
 
 `app/` is the application package (equivalent to `src/`). Domain packages stay at the repo root so ingest/forecast/SMS jobs can run without the HTTP stack.
 
-## Auth path (do not invert)
+## Security Model (4-Layer)
 
-1. Client sends `Authorization: Bearer <jwt>`.
-2. `decode_access_token` checks HS256, `aud=authenticated`, `exp`, `sub`.
-3. Handlers that need a user use `get_supabase_as_user` → **service-role** client after that verify.
-4. Every query is scoped by `user_id` (or FPO id). RLS is not the only control here.
-
-Minted tokens must never be passed to PostgREST (`PGRST301` on hosted JWT signing keys).
+Please see [`SECURITY_MODEL.md`](SECURITY_MODEL.md) for the exhaustive design. Key points:
+1. **Authentication**: `decode_access_token` checks HS256, `aud=authenticated`, `exp`, `sub`, and `iss`.
+2. **Per-Request User Client**: `get_supabase_as_user` creates an un-cached, user-scoped client per request.
+3. **RLS Enforcement**: The user client passes the JWT to Supabase. Postgres RLS acts as a hard boundary.
+4. **Belt-and-Braces RPCs**: State mutations are routed through `SECURITY DEFINER` RPCs to enforce ownership and valid state transitions before applying updates.
 
 ## Errors
 
