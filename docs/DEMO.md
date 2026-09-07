@@ -15,6 +15,7 @@ curl -sS http://127.0.0.1:8000/health
 curl -sS http://127.0.0.1:8000/api/v1/markets/
 curl -sS http://127.0.0.1:8000/api/v1/buyers/
 curl -sS "http://127.0.0.1:8000/api/v1/logistics/?district=Nashik"
+curl -sS "http://127.0.0.1:8000/api/v1/storage/?district=Nashik"
 curl -sS "http://127.0.0.1:8000/api/v1/sale-window/?commodity_id=<onion-uuid>&market_id=<lasalgaon-uuid>&lang=mr"
 ```
 
