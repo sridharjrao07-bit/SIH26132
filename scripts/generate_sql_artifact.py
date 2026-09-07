@@ -1,3 +1,4 @@
+"""Concatenates db/migrations/*.sql into a single artifact markdown file for offline review."""
 import os
 import glob
 

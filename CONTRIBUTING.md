@@ -14,10 +14,10 @@ This repository is the **FastAPI + Supabase API** for SIH26132. The farmer/buyer
 
 ## Python
 
-**3.14 only.** Do not introduce 3.12 pins or Windows MSVC workarounds.
+**3.12+ supported.** The full suite is CI-tested on Python 3.12 and 3.14. Use whichever is available:
 
 ```bat
-py -3.14 -m venv .venv
+py -3.14 -m venv .venv   # or py -3.12
 .venv\Scripts\activate
 pip install -r requirements-dev.txt
 copy .env.example .env
@@ -57,3 +57,11 @@ Optional: `pre-commit install` then `pre-commit run --all-files`.
 ## Review bar
 
 A PR is not ready if tests were not run, if a JWT is pasted in the description, or if it adds farmer UI to this repo.
+
+## Repo hygiene policy
+
+Scratch files, curl transcripts, and batch runner scripts **must never be committed at the repo root**. Use `scripts/` for reusable helpers, `demo/` for live-demo utilities.
+
+Patterns enforced by `.gitignore`: `out*.txt`, `curl_out*.txt`, `scratch_*.py`, `run_*.bat`, `rewrite_*.sh`.
+
+Git history is **forward-only**. No force-push, no `git rebase -i` over pushed commits, no filter-branch. If a secret or scratch file slips in, address it with a forward commit (remove the file, add it to `.gitignore`, rotate the secret). `rewrite_git.sh` has been deleted; the history scrub it was written for already ran; do not recreate it.

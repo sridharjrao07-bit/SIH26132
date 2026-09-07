@@ -1,3 +1,4 @@
+"""Generates a markdown project summary (out2.txt style) for offline documentation or judge handout."""
 import os
 
 def generate_summary(output_file):

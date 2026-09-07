@@ -60,3 +60,10 @@ Thumbs.db
 *.log
 sms_out.log
 docker-compose.override.yml
+
+# Dev artifacts — never commit at root (see CONTRIBUTING.md hygiene policy)
+out*.txt
+curl_out*.txt
+scratch_*.py
+run_*.bat
+rewrite_*.sh

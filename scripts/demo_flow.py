@@ -1,3 +1,4 @@
+"""End-to-end demo flow: mints a farmer token then exercises the full lot→offer→payment API sequence against a live server."""
 import json
 import urllib.request
 import urllib.parse
