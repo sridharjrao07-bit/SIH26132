@@ -46,7 +46,7 @@ async def dashboard_session(
         key=ADMIN_COOKIE,
         value=token,
         httponly=True,
-        samesite="lax",
+        samesite="strict",
         secure=request.url.scheme == "https",
         max_age=3600,
         path="/",
