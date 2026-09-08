@@ -13,7 +13,7 @@ IMPORTANT: ``get_supabase_as_user`` is **never** @lru_cached — caching a
 user-scoped client is a cross-user data-leak vector.
 """
 from fastapi import Header, HTTPException
-from supabase import create_client, Client
+from supabase import create_client, Client, ClientOptions
 from functools import lru_cache
 from .config import get_settings
 import structlog
@@ -43,7 +43,8 @@ def get_supabase_as_user(authorization: str = Header(None)) -> Client:
         # Per-request user-scoped client: PostgREST runs as `authenticated`
         # role and RLS policies enforce at the DB boundary.
         # Requires SUPABASE_JWT_ISSUER + legacy JWT secret aligned with project.
-        return create_client(settings.supabase_url, authorization[7:])
+        options = ClientOptions(headers={"Authorization": authorization})
+        return create_client(settings.supabase_url, settings.supabase_anon_key, options=options)
 
     # "app" mode — service-role client; app-level filters are the sole guard.
     _log.warning(
