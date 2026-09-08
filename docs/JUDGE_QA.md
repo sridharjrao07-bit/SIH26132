@@ -21,3 +21,7 @@ This document contains candid answers to the hardest questions we anticipate fro
 ### 5. "What stops a bad actor from scraping the entire farmer database?"
 
 **Answer**: We employ a multi-layered defense. First, our PostgreSQL RLS policies strictly isolate `user_profiles`, ensuring that a farmer can only ever query their own profile; even authenticated peers cannot see each other's phone numbers or locations. Second, the API is rate-limited at the Gateway layer to prevent brute-force enumeration. Third, our integration tests explicitly contain cross-tenant canary assertions that deliberately attempt to read another user's data, ensuring that any accidental regression in our RLS policies causes an immediate CI failure.
+
+### 6. "Your app runs everything in-process. How does this scale if you get thousands of concurrent users?"
+
+**Answer**: For this hackathon, we accepted a hard architectural limitation: our system uses an in-memory rate limiter and an in-process APScheduler, which forces us into a single-worker/single-replica deployment model. This ensures our background tasks (like outbound SMS capping) and rate limiting function correctly without complex distributed state. To scale horizontally in production, we would need to introduce Redis or a similar external store for job locking and distributed rate limiting to safely run multiple replicas.
