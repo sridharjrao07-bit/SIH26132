@@ -44,11 +44,11 @@ This document maps the specific findings from the recent hackathon judge review 
 
 | Sprint Goal | Commit Hash |
 |---|---|
-| Hygiene & Setup | 5123f00 |
-| Phase 2 (Zero-Trust RLS) | 3da7647 → 8788fcb |
-| Phase 3 (Onboarding & Storage) | c1c5473, eadaf9c, 566b40b |
-| Phase 4 (Scaling & Docs) | 1fb8161, 78ccc4f |
-| Post-Review Corrections (B1-B5) | 516f232 |
+| Hygiene & Setup | 61875e7 |
+| Phase 2 (Zero-Trust RLS) | e7f5205 → 71b17e3 |
+| Phase 3 (Onboarding & Storage) | ed3656a, 2651fcb, fb37d36 |
+| Phase 4 (Scaling & Docs) | 3eecfcf, 6d85356 |
+| Post-Review Corrections (B1-B5) | cbc4f71, 128fc4b |
 
 ## 6. Deferred
 
