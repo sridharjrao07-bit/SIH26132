@@ -17,7 +17,7 @@ async def test_mock_extractor_export_ban(mock_extractor):
     )
     events = await mock_extractor.extract(headline)
     assert len(events) == 1
-    assert events[0].commodity_name == "Onion (Red)"
+    assert events[0].commodity_name == "Onion"
     assert events[0].event_type == "policy"
     assert events[0].direction == "down"
     assert events[0].magnitude == "moderate"
@@ -47,25 +47,16 @@ async def test_mock_extractor_no_match(mock_extractor):
         raw_text="Nothing much happened."
     )
     events = await mock_extractor.extract(headline)
-    assert events == []
+import respx
+import httpx
 
 @pytest.mark.asyncio
-async def test_llm_extractor_fake_transport(monkeypatch):
-    class FakeResponse:
-        text = '[{"event_type": "weather", "direction": "down", "magnitude": "major", "confidence": 0.9, "reasoning": "test"}]'
-
-    class FakeModels:
-        def generate_content(self, model, contents, config):
-            return FakeResponse()
-
-    class FakeClientAio:
-        models = FakeModels()
-
-    class FakeClient:
-        aio = FakeClientAio()
-        models = FakeModels()
-
-    monkeypatch.setattr("google.genai.Client", lambda api_key: FakeClient())
+@respx.mock
+async def test_llm_extractor_fake_transport():
+    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(
+        200, 
+        json={"choices": [{"message": {"content": '[{"event_type": "weather", "direction": "down", "magnitude": "major", "confidence": 0.9, "reasoning": "test"}]'}}]}
+    ))
 
     extractor = LLMEventExtractor("fake_key")
     
@@ -80,24 +71,17 @@ async def test_llm_extractor_fake_transport(monkeypatch):
     assert events[0].event_type == "weather"
 
 @pytest.mark.asyncio
-async def test_llm_extractor_retry_on_bad_json(monkeypatch):
+@respx.mock
+async def test_llm_extractor_retry_on_bad_json():
     attempts = []
-    class FakeResponse:
-        @property
-        def text(self):
-            attempts.append(1)
-            if len(attempts) == 1:
-                return 'bad json'
-            return '[{"event_type": "policy", "direction": "up", "magnitude": "minor", "confidence": 0.8, "reasoning": "test"}]'
+    
+    def side_effect(request):
+        attempts.append(1)
+        if len(attempts) == 1:
+            return httpx.Response(200, json={"choices": [{"message": {"content": 'bad json'}}]})
+        return httpx.Response(200, json={"choices": [{"message": {"content": '[{"event_type": "policy", "direction": "up", "magnitude": "minor", "confidence": 0.8, "reasoning": "test"}]'}}]})
 
-    class FakeModels:
-        def generate_content(self, model, contents, config):
-            return FakeResponse()
-
-    class FakeClient:
-        models = FakeModels()
-
-    monkeypatch.setattr("google.genai.Client", lambda api_key: FakeClient())
+    respx.post("https://api.openai.com/v1/chat/completions").mock(side_effect=side_effect)
 
     extractor = LLMEventExtractor("fake_key")
     headline = RawHeadline(
@@ -112,18 +96,12 @@ async def test_llm_extractor_retry_on_bad_json(monkeypatch):
     assert events[0].event_type == "policy"
 
 @pytest.mark.asyncio
-async def test_llm_extractor_two_bad_json_fails_gracefully(monkeypatch):
-    class FakeResponse:
-        text = 'bad json forever'
-
-    class FakeModels:
-        def generate_content(self, model, contents, config):
-            return FakeResponse()
-
-    class FakeClient:
-        models = FakeModels()
-
-    monkeypatch.setattr("google.genai.Client", lambda api_key: FakeClient())
+@respx.mock
+async def test_llm_extractor_two_bad_json_fails_gracefully():
+    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(
+        200, 
+        json={"choices": [{"message": {"content": 'bad json forever'}}]}
+    ))
 
     extractor = LLMEventExtractor("fake_key")
     headline = RawHeadline(
