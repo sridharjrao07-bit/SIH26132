@@ -33,7 +33,6 @@ venv.bak/
 !.env.example
 *.pem
 *.key
-!.env.example
 
 # Test / lint caches
 .pytest_cache/

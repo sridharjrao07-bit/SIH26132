@@ -14,7 +14,7 @@ lint:
 	ruff check app ingestion forecasting notifications tests demo scripts
 
 test:
-	pytest -q
+	RUN_SCHEDULER=0 RATE_LIMIT_ENABLED=0 pytest -q
 
 audit:
 	pip-audit -r requirements.txt

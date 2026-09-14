@@ -20,7 +20,34 @@ def run_startup_checks(settings: Settings) -> None:
     - Production + app-mode enforcement without explicit override flag.
     """
     _check_auth_enforcement(settings)
+    _check_jwt_issuer(settings)
+    _check_concurrency()
     _log.info("startup_checks_passed", auth_db_enforcement=settings.auth_db_enforcement)
+
+def _check_jwt_issuer(settings: Settings) -> None:
+    is_production = settings.app_env.lower() == "production"
+    if is_production and not settings.supabase_jwt_issuer:
+        raise RuntimeError("STARTUP REJECTED: SUPABASE_JWT_ISSUER is missing in production environment.")
+
+def _check_concurrency() -> None:
+    import sys
+    import os
+    workers_str = os.environ.get("WEB_CONCURRENCY", "1")
+    try:
+        workers = int(workers_str)
+    except ValueError:
+        workers = 1
+    
+    argv_workers = 1
+    if "--workers" in sys.argv:
+        try:
+            idx = sys.argv.index("--workers")
+            argv_workers = int(sys.argv[idx + 1])
+        except (ValueError, IndexError):
+            pass
+            
+    if workers > 1 or argv_workers > 1:
+        _log.warning("concurrency_warning", msg="Running with --workers > 1 detected. This breaks the single-worker scheduler assumption.")
 
 
 def _check_auth_enforcement(settings: Settings) -> None:
