@@ -16,9 +16,9 @@ def test_live_supabase_pgrst301_guard():
     We test this by querying the live DB directly.
     """
     url = os.environ.get("SUPABASE_URL")
-    key = os.environ.get("SUPABASE_KEY")
+    key = os.environ.get("SUPABASE_ANON_KEY")
     if not url or not key:
-        pytest.skip("SUPABASE_URL or SUPABASE_KEY not configured")
+        pytest.skip("SUPABASE_URL or SUPABASE_ANON_KEY not configured")
 
     token = mint_jwt(FARMER_USER_ID)
     
@@ -40,9 +40,9 @@ def test_live_cross_tenant_isolation():
     Test that the Postgres RLS actually drops cross-tenant rows.
     """
     url = os.environ.get("SUPABASE_URL")
-    key = os.environ.get("SUPABASE_KEY")
+    key = os.environ.get("SUPABASE_ANON_KEY")
     if not url or not key:
-        pytest.skip("SUPABASE_URL or SUPABASE_KEY not configured")
+        pytest.skip("SUPABASE_URL or SUPABASE_ANON_KEY not configured")
 
     farmer_token = mint_jwt(FARMER_USER_ID)
     
@@ -59,3 +59,23 @@ def test_live_cross_tenant_isolation():
         }
     )
     assert res_f.status_code == 200, res_f.text
+
+    # 2. Farmer checks events
+    res_e = requests.get(
+        f"{url}/rest/v1/events?select=*",
+        headers={
+            "apikey": key,
+            "Authorization": f"Bearer {farmer_token}"
+        }
+    )
+    assert res_e.status_code == 200, res_e.text
+
+    # 3. Farmer checks weather_daily
+    res_w = requests.get(
+        f"{url}/rest/v1/weather_daily?select=*",
+        headers={
+            "apikey": key,
+            "Authorization": f"Bearer {farmer_token}"
+        }
+    )
+    assert res_w.status_code == 200, res_w.text
