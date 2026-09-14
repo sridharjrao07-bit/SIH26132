@@ -161,6 +161,12 @@ def test_production_mode_missing_secret_raises_runtime_error(monkeypatch):
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.delenv("INBOUND_HMAC_SECRET", raising=False)
 
+    # get_settings() is @lru_cache'd — clear it so the reload picks up the
+    # monkeypatched APP_ENV rather than a stale cached Settings object from
+    # a prior test that may have left a different env value in cache.
+    from app.config import get_settings
+    get_settings.cache_clear()
+
     from importlib import reload
     import notifications.inbound_verifier as iv_mod
     reload(iv_mod)
@@ -170,6 +176,7 @@ def test_production_mode_missing_secret_raises_runtime_error(monkeypatch):
 
     # Cleanup
     monkeypatch.setenv("APP_ENV", "development")
+    get_settings.cache_clear()
 
 
 def test_production_mode_demo_secret_raises_runtime_error(monkeypatch):
@@ -197,6 +204,11 @@ async def test_ephemeral_keys_are_per_instance(monkeypatch):
     """
     monkeypatch.setenv("APP_ENV", "development")
     monkeypatch.delenv("INBOUND_HMAC_SECRET", raising=False)
+
+    # Clear lru_cache so get_settings() reads the monkeypatched env, not a
+    # stale Settings object left by a prior production-mode test.
+    from app.config import get_settings
+    get_settings.cache_clear()
 
     from importlib import reload
     import notifications.inbound_verifier as iv_mod
@@ -250,7 +262,7 @@ def test_msg91_gateway_sends_correct_flow_api_payload():
 
     with respx.mock:
         # Happy path: 200 response
-        mock_route = respx.post("https://api.msg91.com/api/v5/flow/").mock(
+        mock_route = respx.post(url__startswith="https://api.msg91.com/api/v5/flow/").mock(
             return_value=httpx.Response(200, json={"type": "success"})
         )
         status, success = gateway.send_sms(
@@ -282,7 +294,7 @@ def test_msg91_gateway_sends_correct_flow_api_payload():
         assert "message" not in body
 
         # Non-2xx path: must return ("failed", False)
-        respx.post("https://api.msg91.com/api/v5/flow/").mock(
+        respx.post(url__startswith="https://api.msg91.com/api/v5/flow/").mock(
             return_value=httpx.Response(401, json={"message": "Unauthorized"})
         )
         status_fail, success_fail = gateway.send_sms(
