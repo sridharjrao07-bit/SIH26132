@@ -23,8 +23,8 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+      - uses: actions/setup-python@337b0725b8770380d7cde73cfef696f1295727eb
         with:
           python-version: "3.14"
           allow-prereleases: true
@@ -41,8 +41,8 @@ jobs:
       matrix:
         python-version: ["3.12", "3.13", "3.14"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+      - uses: actions/setup-python@337b0725b8770380d7cde73cfef696f1295727eb
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
@@ -55,8 +55,8 @@ jobs:
     name: audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+      - uses: actions/setup-python@337b0725b8770380d7cde73cfef696f1295727eb
         with:
           python-version: "3.14"
           allow-prereleases: true
@@ -73,3 +73,7 @@ jobs:
             exit 1
           fi
           echo "no obvious secrets"
+      - name: Gitleaks history scan (mirror)
+        run: |
+          git clone --mirror https://github.com/${{ github.repository }}.git repo-mirror
+          docker run -v $(pwd)/repo-mirror:/repo ghcr.io/gitleaks/gitleaks:latest detect --source="/repo" --verbose

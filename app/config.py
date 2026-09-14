@@ -58,6 +58,18 @@ class Settings(BaseSettings):
 
     run_scheduler: bool = Field(default=True)
     rate_limit_enabled: bool = Field(default=True)
+    
+    # ── Forecasting & Events ──────────────────────────────────────────────────
+    forecast_model: str = Field(default="auto")
+    
+    event_job_enabled: bool = Field(default=False)
+    event_llm: str = Field(default="off")
+    event_llm_provider: str = Field(default="openai")
+    event_llm_model: str = Field(default="gpt-4o-mini")
+    event_llm_api_key: str = Field(default="")
+    event_llm_base_url: str = Field(default="")
+    event_sources: str = Field(default="pib,news,bulletin")
+    backfill_days: int = Field(default=730)
 
     # ── Auth DB enforcement ───────────────────────────────────────────────────
     # "rls"  — per-request user-scoped Supabase client; RLS policies enforce
