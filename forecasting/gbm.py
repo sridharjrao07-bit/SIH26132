@@ -11,54 +11,35 @@ class ForecastModelError(Exception):
 
 class GlobalGBM:
     name = "gbm"
-    _global_model = None
-    _global_sigma = None
 
-    def __init__(self):
+    def __init__(self, all_market_data: Optional[List[dict]] = None):
         try:
             import lightgbm
-            import statsmodels
         except ImportError:
             raise ForecastModelError("Optional ML dependencies not installed")
             
-        if GlobalGBM._global_model is None:
-            self._train_global()
+        self.model = None
+        self.sigma = None
+        if all_market_data is not None:
+            self._train(all_market_data)
 
-    @classmethod
-    def _train_global(cls):
-        from app.services.jobs import get_supabase_client
+    def _train(self, all_rows: List[dict]):
         from forecasting.features import build_feature_matrix
         import lightgbm as lgb
         
-        supabase = get_supabase_client()
-        cutoff = (date.today() - timedelta(days=150)).isoformat()
+        # We need weather and events if we're training, but we'll assume they're attached or we fetch them here
+        # Actually since we want to avoid side effects in init, let's just train on raw features if possible.
+        # But for now, we'll implement a clean zip by date
+        from forecasting.engine import build_daily_series
         
-        # Paginated fetch for prices
-        offset = 0
-        all_rows = []
-        while True:
-            resp = supabase.table("prices").select("*").gte("arrival_date", cutoff).range(offset, offset + 1000).execute()
-            if not resp.data:
-                break
-            all_rows.extend(resp.data)
-            if len(resp.data) < 1000:
-                break
-            offset += 1000
-            
-        # Group by pair
         pairs = {}
         for r in all_rows:
             key = (r["market_id"], r["commodity_id"])
             pairs.setdefault(key, []).append(r)
             
-        # Fetch weather and events
-        weather = supabase.table("weather_daily").select("*").gte("observation_date", cutoff).execute().data or []
-        events = supabase.table("events").select("*").gte("event_date", cutoff).execute().data or []
-        
         X_train, y_train = [], []
         X_val, y_val = [], []
         
-        # Determine cutoff based on max date in data
         max_d = None
         for (m, c), rows in pairs.items():
             for r in rows:
@@ -73,19 +54,24 @@ class GlobalGBM:
             
         val_cutoff = max_d - timedelta(days=30)
         
-        from forecasting.engine import build_daily_series
-        
         for (m, c), rows in pairs.items():
             series = build_daily_series(rows)
             if len(series) < 40:
                 continue
                 
-            history_dicts = [{"arrival_date": d.isoformat(), "modal_price": p, "arrival_qty": r.get("arrival_qty", 0.0)} for (d, p), r in zip(series, rows)]
-            features = build_feature_matrix(history_dicts, weather=weather, events=events, target_commodity_id=c)
+            # Align rows with series by date
+            rows_by_date = {}
+            for r in rows:
+                d_str = r["arrival_date"]
+                d = date.fromisoformat(d_str) if isinstance(d_str, str) else d_str
+                # Pick the max arrival_qty for that day or sum them
+                rows_by_date.setdefault(d, []).append(r.get("arrival_qty", 0.0))
+                
+            history_dicts = [{"arrival_date": d.isoformat(), "modal_price": p, "arrival_qty": sum(rows_by_date.get(d, [0.0]))} for (d, p) in series]
+            features = build_feature_matrix(history_dicts, target_commodity_id=c)
             
             for (d, price), feat in zip(series, features):
                 feat_vec = [
-                    feat.day_offset,
                     feat.dow,
                     feat.lag_1 if feat.lag_1 is not None else float('nan'),
                     feat.lag_7 if feat.lag_7 is not None else float('nan'),
@@ -107,7 +93,7 @@ class GlobalGBM:
         if not X_train or not X_val:
             raise ForecastModelError("Degenerate matrix: not enough data to train global GBM")
             
-        model = lgb.LGBMRegressor(
+        self.model = lgb.LGBMRegressor(
             n_estimators=300,
             learning_rate=0.05,
             num_leaves=31,
@@ -115,25 +101,21 @@ class GlobalGBM:
             subsample=0.9,
             random_state=42
         )
-        model.fit(X_train, y_train)
+        self.model.fit(X_train, y_train)
         
-        val_preds = model.predict(X_val)
+        val_preds = self.model.predict(X_val)
         residuals = [a - p for a, p in zip(y_val, val_preds)]
-        sigma = pstdev(residuals) if len(residuals) > 1 else 0.0
-        
-        cls._global_model = model
-        cls._global_sigma = sigma
+        self.sigma = pstdev(residuals) if len(residuals) > 1 else 0.0
 
-    @classmethod
-    def get_feature_importances(cls) -> List[Dict[str, Any]]:
-        if cls._global_model is None:
+    def get_feature_importances(self) -> List[Dict[str, Any]]:
+        if self.model is None:
             return []
         feature_names = [
-            "day_offset", "dow", "lag_1", "lag_7", "lag_14", 
+            "dow", "lag_1", "lag_7", "lag_14", 
             "arrivals_7d_avg", "momentum_14d", "rain_7d_cum_mm", 
             "district_mean_price", "event_pressure"
         ]
-        importances = cls._global_model.feature_importances_
+        importances = self.model.feature_importances_
         pairs = sorted(zip(feature_names, importances), key=lambda x: x[1], reverse=True)
         return [{"feature": f, "gain": round(float(g), 4)} for f, g in pairs[:10]]
 
@@ -169,7 +151,6 @@ class GlobalGBM:
             evt = last_feat.event_pressure
             
             feat_vec = [[
-                day_offset,
                 dow,
                 lag_1,
                 lag_7,
@@ -181,13 +162,14 @@ class GlobalGBM:
                 evt
             ]]
             
-            p = GlobalGBM._global_model.predict(feat_vec)[0]
-            if math.isnan(p):
-                print("LGBM returned NaN for:", feat_vec)
+            if self.model is None:
+                raise ForecastModelError("Model not trained")
+                
+            p = self.model.predict(feat_vec)[0]
             
             sim_prices.append(p)
             
-            margin = 1.96 * GlobalGBM._global_sigma * math.sqrt(i)
+            margin = 1.96 * self.sigma * math.sqrt(i)
             lo = max(0.0, p - margin)
             hi = p + margin
             results.append((round(p, 2), round(lo, 2), round(hi, 2)))

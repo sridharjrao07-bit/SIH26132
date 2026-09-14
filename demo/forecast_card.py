@@ -75,7 +75,7 @@ def main():
     print("= Krishi Bazaar Forecast Accuracy Card                   =")
     print("==========================================================")
     print(f"Protocol: {report.protocol}")
-    print(f"Target:   Lasalgaon Onions")
+    print("Target:   Lasalgaon Onions")
     print("==========================================================")
     print(f"{'Model':<15} | {'MAE (₹)':<10} | {'MAPE':<8} | {'DirAcc':<8} | {'Coverage':<8}")
     print("-" * 58)

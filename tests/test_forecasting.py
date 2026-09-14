@@ -367,3 +367,115 @@ def test_engine_run_feature_ols_fallback(fake_supabase, monkeypatch):
     for row in rows:
         assert row["method"] == "blend"
 
+def test_engine_global_features(fake_supabase, monkeypatch):
+    """Regression test for P1: Engine must fetch weather and events once, and pass them."""
+    import app.config
+    
+    # Mock settings to use feature_ols
+    old_settings = app.config.get_settings()
+    class MockSettings:
+        def __getattr__(self, name):
+            if name == "forecast_model":
+                return "feature_ols"
+            return getattr(old_settings, name)
+            
+    monkeypatch.setattr("forecasting.engine.get_settings", MockSettings)
+    
+    from datetime import date, timedelta
+    today = date.today()
+    
+    prices_seed = []
+    for i in range(100):
+        prices_seed.append({
+            "market_id": "m1",
+            "commodity_id": "c1",
+            "arrival_date": (today - timedelta(days=100 - i)).isoformat(),
+            "modal_price": 2000.0 + i*10,
+            "arrival_qty": 100.0,
+            "source": "data_gov_in",
+            "variety": "General",
+        })
+    fake_supabase.seed("prices", prices_seed)
+    weather_seed = []
+    for i in range(120):
+        weather_seed.append({"market_id": "m1", "observation_date": (today - timedelta(days=120 - i)).isoformat(), "precipitation_sum_mm": float(i % 10)})
+    fake_supabase.seed("weather_daily", weather_seed)
+    fake_supabase.seed("events", [{"event_date": (today - timedelta(days=5)).isoformat(), "event_type": "weather", "direction": "down", "magnitude": "major", "confidence": 1.0}])
+    fake_supabase.seed("markets", [{"id": "m1", "district": "Nashik"}])
+    
+    from forecasting.engine import ForecastEngine
+    engine = ForecastEngine(fake_supabase)
+    
+    # We spy on build_feature_matrix
+    original_build = None
+    captured_kwargs = {}
+    
+    def mock_build_feature_matrix(*args, **kwargs):
+        captured_kwargs.update(kwargs)
+        import forecasting.features
+        return original_build(*args, **kwargs)
+        
+    import forecasting.features
+    original_build = forecasting.features.build_feature_matrix
+    monkeypatch.setattr("forecasting.features.build_feature_matrix", mock_build_feature_matrix)
+    
+    engine.run()
+    
+    assert "weather" in captured_kwargs
+    assert "events" in captured_kwargs
+    assert len(captured_kwargs["weather"]) > 0
+    assert len(captured_kwargs["events"]) > 0
+    
+    upserts = fake_supabase.upsert_calls()
+    rows = upserts[0]["payload"]
+    features_used = rows[0]["features_used"]
+    assert "rain_7d_cum_mm" in features_used
+    assert "event_pressure" in features_used
+
+def test_backtest_arrival_qty_winner(fake_supabase, monkeypatch):
+    """Regression test for P1: Backtest must assign the winner row's arrival_qty."""
+    from datetime import date, timedelta
+    today = date.today()
+    
+    # We want to test that build_feature_matrix receives the correct arrival_qty
+    # We need to spy on build_feature_matrix called inside run_backtest
+    prices_seed = []
+    
+    # Let's add 60 rows so run_backtest actually processes it
+    for i in range(60):
+        d = (today - timedelta(days=60-i)).isoformat()
+        if i == 59:
+            # For the last day, two rows, one wins (data_gov_in > agmarknet)
+            prices_seed.append({
+                "market_id": "m1", "commodity_id": "c1", "arrival_date": d,
+                "modal_price": 2000, "arrival_qty": 5.0, "source": "agmarknet", "variety": "General"
+            })
+            prices_seed.append({
+                "market_id": "m1", "commodity_id": "c1", "arrival_date": d,
+                "modal_price": 2000, "arrival_qty": 99.0, "source": "data_gov_in", "variety": "General"
+            })
+        else:
+            prices_seed.append({
+                "market_id": "m1", "commodity_id": "c1", "arrival_date": d,
+                "modal_price": 2000, "arrival_qty": 10.0, "source": "data_gov_in", "variety": "General"
+            })
+            
+    fake_supabase.seed("prices", prices_seed)
+    
+    captured_history = []
+    
+    import forecasting.features
+    original_build = forecasting.features.build_feature_matrix
+    def mock_build_feature_matrix(history_dicts, **kwargs):
+        captured_history.extend(history_dicts)
+        return original_build(history_dicts, **kwargs)
+        
+    monkeypatch.setattr("forecasting.features.build_feature_matrix", mock_build_feature_matrix)
+    
+    from forecasting.backtest import run_backtest
+    run_backtest(fake_supabase, pairs=[("m1", "c1")], history_days=100, model_names=["ma"])
+    
+    assert len(captured_history) > 0
+    # The last element should have arrival_qty = 99.0, not 5.0
+    last_qty = captured_history[-1]["arrival_qty"]
+    assert last_qty == 99.0

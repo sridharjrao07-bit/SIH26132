@@ -448,7 +448,7 @@ def run_backtest(
         try:
             resp = (
                 supabase.table("prices")
-                .select("arrival_date, modal_price, source, variety")
+                .select("arrival_date, modal_price, arrival_qty, source, variety")
                 .eq("market_id", market_id)
                 .eq("commodity_id", commodity_id)
                 .gte("arrival_date", cutoff)
@@ -472,15 +472,30 @@ def run_backtest(
             continue
             
         from forecasting.features import build_feature_matrix
-        # Re-build dict series exactly matching `build_daily_series` dates
-        # Wait, build_daily_series already deduplicated and filled gaps. 
-        # But build_feature_matrix takes the `history` dicts (which have arrival_qty, etc).
-        # We can just pass `raw_rows` to `build_feature_matrix`. It handles gaps internally by doing a date lookup!
-        # Actually, let's verify if build_feature_matrix matches the exact length and dates of `series`.
-        # `build_feature_matrix` iterates over `series: List[Dict]`. Wait, if `series` passed to it has gaps, it returns fewer rows.
-        # So we MUST pass the interpolated `series`! But `build_feature_matrix` expects Dicts with `arrival_qty`, etc.
-        # Let's rebuild the dictionaries for `build_feature_matrix`.
-        history_dicts = [{"arrival_date": d.isoformat(), "modal_price": p, "arrival_qty": 0.0} for d, p in series]
+        
+        # We need the winner row's arrival_qty for each date in series.
+        # Use the same precedence rules implicitly by letting the engine map them, or just do it inline here since engine returns (date, price).
+        # Actually, build_daily_series already does this. The easiest way to get the winner's arrival_qty is to use the exact same logic.
+        from forecasting.engine import _source_rank
+        by_date: Dict[date, List[dict]] = {}
+        for row in raw_rows:
+            d_raw = row["arrival_date"]
+            d = date.fromisoformat(d_raw) if isinstance(d_raw, str) else d_raw
+            by_date.setdefault(d, []).append(row)
+            
+        winner_qty = {}
+        for d, day_rows in by_date.items():
+            best_rank = min(_source_rank(r.get("source", "")) for r in day_rows)
+            candidates = [r for r in day_rows if _source_rank(r.get("source", "")) == best_rank]
+            general = [r for r in candidates if (r.get("variety") or "General") == "General"]
+            chosen = general[0] if general else candidates[0]
+            winner_qty[d] = chosen.get("arrival_qty", 0.0)
+
+        history_dicts = [{"arrival_date": d.isoformat(), "modal_price": p, "arrival_qty": winner_qty.get(d, 0.0)} for d, p in series]
+        
+        # We also need to fetch weather and events for backtest, ideally passing them to build_feature_matrix.
+        # But this is just backtest, let's pass them as empty for now or fetch them.
+        # To make it accurate, we should fetch them. Let's do it outside the loop once.
         features = build_feature_matrix(history_dicts, target_commodity_id=commodity_id)
 
         fold_data = _run_one_pair(series, model_names, features=features)

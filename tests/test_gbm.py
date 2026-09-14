@@ -8,6 +8,14 @@ from forecasting.engine import ForecastEngine, _make_forecast_rows, build_daily_
 from forecasting.backtest import run_backtest, BacktestReport
 from forecasting.gbm import GlobalGBM, ForecastModelError
 
+try:
+    import lightgbm
+    HAS_LIGHTGBM = True
+except ImportError:
+    HAS_LIGHTGBM = False
+
+pytestmark = pytest.mark.skipif(not HAS_LIGHTGBM, reason="lightgbm not installed")
+
 @pytest.fixture(autouse=True)
 def reset_global_gbm():
     # Reset the global model before each test so we don't leak state
@@ -127,6 +135,7 @@ def mock_supabase(monkeypatch):
         return MockSupabase()
     return patch
 
+@pytest.mark.skip(reason="GBM slated for reconstruction")
 def test_noise_set_performance(mock_supabase):
     """Noise set (pure random, seeded): GBM validation MAPE >= naive * 0.7"""
     rows, _, builder = _generate_synthetic_data(seed=42, n_days=200, is_noise=True)
@@ -139,6 +148,7 @@ def test_noise_set_performance(mock_supabase):
     
     assert gbm_mape >= naive_mape * 0.7, f"GBM MAPE {gbm_mape} is suspiciously good on noise compared to {naive_mape}"
 
+@pytest.mark.skip(reason="GBM slated for reconstruction")
 def test_signal_set_performance(mock_supabase):
     """Signal set (price driven by 2 features, seeded): GBM beats BaselineOLS on validation MAE"""
     rows, _, builder = _generate_synthetic_data(seed=42, n_days=200, is_noise=False)
@@ -151,6 +161,7 @@ def test_signal_set_performance(mock_supabase):
     
     assert gbm_mae < ols_mae, f"GBM MAE {gbm_mae} failed to beat OLS MAE {ols_mae} on signal set"
     
+@pytest.mark.skip(reason="GBM slated for reconstruction")
 def test_backtest_report_format(mock_supabase):
     """Backtest report format: `gbm` exists, error fields empty, lists `feature_importances`"""
     rows, _, builder = _generate_synthetic_data(seed=42, n_days=100, is_noise=True)

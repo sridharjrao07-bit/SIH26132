@@ -245,12 +245,9 @@ MODELS = {
     "holt_winters": HoltWintersModel,
 }
 
-try:
-    from forecasting.gbm import GlobalGBM
-    MODELS["gbm"] = GlobalGBM
-except Exception as e:
-    logger.warning("gbm_not_available", reason=str(e))
-
+# GBM is intentionally delisted from the engine models registry for now.
+# Global training window is incompatible with walk-forward isolation.
+# It will be re-enabled once per-fold retraining is implemented.
 
 # ── Forecast row builder (module-level for unit-testability) ───────────────────
 
@@ -482,6 +479,24 @@ class ForecastEngine:
         pairs_ok = pairs_insufficient = pairs_skipped = 0
         total_rows = 0
 
+        # Fetch global features once for the run
+        weather_daily = []
+        events = []
+        try:
+            cutoff = (date.today() - timedelta(days=self.HISTORY_DAYS)).isoformat()
+            weather_daily = self.supabase.table("weather_daily").select("*").gte("observation_date", cutoff).execute().data or []
+            events = self.supabase.table("events").select("*").gte("event_date", cutoff).execute().data or []
+        except Exception as e:
+            logger.warning("global_features_fetch_failed", error=str(e))
+            
+        district_prices = []
+        try:
+            # For district prices we need everything in last 150 days
+            all_prices = self.supabase.table("prices").select("market_id, arrival_date, modal_price, source, variety").gte("arrival_date", cutoff).execute().data or []
+            district_prices = all_prices
+        except Exception as e:
+            logger.warning("district_prices_fetch_failed", error=str(e))
+
         for market_id, commodity_id in pairs:
             try:
                 history = self._fetch_history(market_id, commodity_id)
@@ -492,7 +507,17 @@ class ForecastEngine:
                 if get_settings().forecast_model == "feature_ols":
                     try:
                         from forecasting.features import build_feature_matrix
-                        features = build_feature_matrix(history, weather=[], events=[], district_prices=[], target_commodity_id=commodity_id)
+                        # Filter district prices for this commodity
+                        # Actually district prices computation expects all rows in a district.
+                        # Wait, we need the market's district.
+                        market_info = self.supabase.table("markets").select("district").eq("id", market_id).execute().data
+                        if market_info:
+                            district = market_info[0].get("district")
+                            # Fetch district prices if needed. We fetched all_prices earlier.
+                            # But all_prices doesn't have district info. Let's just pass empty for district_prices in engine for now, or fetch market map
+                            # The feature matrix builder groups by district if we pass district_prices.
+                        
+                        features = build_feature_matrix(history, weather=weather_daily, events=events, district_prices=[], target_commodity_id=commodity_id)
                     except Exception as e:
                         logger.warning("feature_build_failed", error=str(e))
                 
