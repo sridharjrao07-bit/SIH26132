@@ -43,7 +43,7 @@ Demo seed: 5 Nashik APMCs × Onion, Tomato, Soybean, Maize. Expand via [`docs/ON
 ## Local setup (Windows)
 
 ```bat
-py -3.12 -m venv .venv
+py -3.14 -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements-dev.txt
 copy .env.example .env
@@ -52,7 +52,7 @@ copy .env.example .env
 ## Local setup (Unix / macOS)
 
 ```bash
-python3.12 -m venv .venv
+python3.14 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-dev.txt
 cp .env.example .env
@@ -128,7 +128,10 @@ We explicitly document what this prototype does *not* yet do to demonstrate our 
 
 - **Single-Worker**: Rate limiting and the APScheduler run in-process, requiring a single worker in production.
 - **eNAM Payment Path**: External payment settlement flows (e.g. eNAM gateways) are mocked and lack full API integration.
-- **Forecast Seasonality**: The upgraded forecasting engine uses a LightGBM Global model (`gbm`) and feature-rich OLS (`feature_ols`), along with LLM-extracted market events, to capture seasonality and market sentiment.
+
+## Forecasting Engine
+
+The upgraded forecasting engine captures seasonality and market sentiment using an ensemble approach. For baseline stability, it uses a moving average (`ma`), while a feature-rich Ordinary Least Squares (`feature_ols`) model incorporates cumulative weather data and LLM-extracted structured intelligence (`event_pressure`). A gradient boosting model (`gbm`) using LightGBM is also available for complex non-linear relationships. Every model is continuously graded by our walk-forward backtesting harness to provide an honest accuracy card.
 
 ## Docker
 

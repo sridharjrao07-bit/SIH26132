@@ -27,6 +27,8 @@ Krishi Bazaar enforces a strict 4-layer security model to prevent cross-tenant d
 | Router | Table / RPC | Query Op | RLS Policy Enforced | Notes |
 |---|---|---|---|---|
 | `admin.py` | `ingestion_log` | SELECT | "Admins read ingestion log" | Uses `service_role` but gated by HTTP middleware. |
+| `admin.py`, `intelligence.py` | `events` | SELECT | "Admins can view events" | Read-only for admins (Migration 018). |
+| `forecasting/` | `weather_daily` | SELECT | "weather_admin_read" | Read-only for admins (Migration 017). |
 | `alerts.py` | `alerts` | SELECT/INSERT/UPDATE | "Farmers read/create/update own alerts" | Handled natively by RLS. |
 | `grievances.py` | `grievances` | SELECT/INSERT | "Owners read grievances" | Admin updates status directly, users only create/read. |
 | `logistics.py` | `logistics_bookings` | SELECT/INSERT/UPDATE | "Owners read/create/update bookings" | Capacity checks done in Python, but row visibility enforced by RLS. |
@@ -37,6 +39,7 @@ Krishi Bazaar enforces a strict 4-layer security model to prevent cross-tenant d
 | `payments.py` | `payments` | SELECT / RPC | "Owners read payments" | Write mutations use `transition_payment_status` RPC. |
 | `profile.py` | `user_profiles` | SELECT/UPDATE | "Users read/update own profile" | |
 | `profile.py` | `buyers` | INSERT | "Buyers insert own profile" | **Note:** Added in migration 014 for self-service buyer onboarding. |
+| `forecasting/` | `forecasts` | SELECT | "Public can read forecasts" | Columns `model_version` and `features_used` added in Migration 019 for ML auditability. |
 
 ## Mode Ladder
 
