@@ -29,9 +29,11 @@ import structlog
 import time
 from datetime import date, datetime, timedelta, timezone
 from statistics import pstdev
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 
 from supabase import Client
+from app.config import get_settings
+from forecasting.models import FeatureOLSModel, HoltWintersModel
 
 logger = structlog.get_logger()
 
@@ -119,7 +121,19 @@ def build_district_daily_series(rows: List[dict]) -> List[Tuple[date, float]]:
     return sorted((d, sum(vals) / len(vals)) for d, vals in by_date.items())
 
 
+def get_daily_series(rows: List[dict]) -> List[Tuple[date, float]]:
+    """
+    Public alias for build_daily_series.
+
+    Use this in backtest / feature / model code so the public API name is
+    stable even if the internal implementation is refactored.
+    """
+    return build_daily_series(rows)
+
+
 # ── Models ─────────────────────────────────────────────────────────────────────
+
+MODELS = {} # Populated below after class definitions
 
 class MovingAverageModel:
     """
@@ -223,6 +237,21 @@ def _blend_predictions(
     return results
 
 
+# We can import models safely here to avoid circular imports if they import from engine
+MODELS = {
+    "ma": MovingAverageModel,
+    "ols": LinearRegressionModel,
+    "feature_ols": FeatureOLSModel,
+    "holt_winters": HoltWintersModel,
+}
+
+try:
+    from forecasting.gbm import GlobalGBM
+    MODELS["gbm"] = GlobalGBM
+except Exception as e:
+    logger.warning("gbm_not_available", reason=str(e))
+
+
 # ── Forecast row builder (module-level for unit-testability) ───────────────────
 
 def _clamp(value: float, lo: float, hi: float) -> float:
@@ -238,6 +267,7 @@ def _make_forecast_rows(
     series:       List[Tuple[date, float]],
     sanity:       Optional[Tuple[float, float]],
     as_of:        Optional[date] = None,
+    features:     Optional[List[Any]] = None,
 ) -> List[dict]:
     """
     Build forecast dicts for one (market, commodity) pair.
@@ -275,20 +305,48 @@ def _make_forecast_rows(
         }]
 
     prices = [p for _, p in series]
-
-    # Choose tier
-    if n >= BLEND_THRESHOLD:
-        ma_model   = MovingAverageModel(prices)
-        lr_model   = LinearRegressionModel(prices)
-        preds      = _blend_predictions(ma_model, lr_model)
-        method     = "blend"
-        confidence = "high" if n >= HIGH_CONFIDENCE_THRESHOLD else "medium"
-    else:
-        # 10 ≤ n ≤ 14 — MA only
-        ma_model   = MovingAverageModel(prices)
-        preds      = ma_model.predict()
-        method     = "moving_avg"
-        confidence = "medium"
+    
+    settings = get_settings()
+    requested_model = settings.forecast_model
+    
+    preds = None
+    method = "none"
+    confidence = "none"
+    
+    # Try the requested model if it's not "auto"
+    if requested_model != "auto" and requested_model in MODELS:
+        model_cls = MODELS[requested_model]
+        try:
+            if requested_model == "feature_ols":
+                if features is None:
+                    raise ValueError("Features required for feature_ols")
+                model_inst = model_cls(prices, features)
+            else:
+                model_inst = model_cls(prices)
+                
+            if getattr(model_inst, 'fallback', False):
+                logger.warning("forecast_model_fallback", market_id=market_id, commodity_id=commodity_id, model=requested_model)
+            else:
+                preds = model_inst.predict()
+                method = requested_model
+                confidence = "high" if n >= HIGH_CONFIDENCE_THRESHOLD else "medium"
+        except Exception as e:
+            logger.warning("forecast_model_failed", market_id=market_id, commodity_id=commodity_id, model=requested_model, error=str(e))
+            
+    # Fallback / Auto Tier Logic
+    if preds is None:
+        if n >= BLEND_THRESHOLD:
+            ma_model   = MovingAverageModel(prices)
+            lr_model   = LinearRegressionModel(prices)
+            preds      = _blend_predictions(ma_model, lr_model)
+            method     = "blend"
+            confidence = "high" if n >= HIGH_CONFIDENCE_THRESHOLD else "medium"
+        else:
+            # 10 ≤ n ≤ 14 — MA only
+            ma_model   = MovingAverageModel(prices)
+            preds      = ma_model.predict()
+            method     = "moving_avg"
+            confidence = "medium"
 
     rows = []
     for i, (predicted, lower, upper) in enumerate(preds):
@@ -308,6 +366,14 @@ def _make_forecast_rows(
                 upper = predicted
         lower = round(max(0.0, lower), 2)
         upper = round(upper, 2)
+        
+        features_used = []
+        if method == "feature_ols":
+            names = ["bias", "lag_1", "lag_7", "lag_14", "arrivals_7d_avg", "momentum_14d", "rain_7d_cum_mm", "district_mean_price", "event_pressure"]
+            features_used = [names[c] for c in getattr(model_inst, "keep_cols", [])]
+        elif method == "gbm":
+            features_used = [f["feature"] for f in getattr(model_cls, "get_feature_importances", lambda: [])()]
+            
         rows.append({
             "market_id":       market_id,
             "commodity_id":    commodity_id,
@@ -319,6 +385,8 @@ def _make_forecast_rows(
             "method":          method,
             "observations":    n,
             "status":          "ok",
+            "model_version":   "1.0",
+            "features_used":   features_used,
             "generated_at":    datetime.now(timezone.utc).isoformat(),
         })
     return rows
@@ -340,7 +408,7 @@ class ForecastEngine:
     """
 
     PAGE_SIZE    = 500
-    HISTORY_DAYS = 60
+    HISTORY_DAYS = 150
 
     def __init__(self, supabase: Client):
         self.supabase = supabase
@@ -419,7 +487,16 @@ class ForecastEngine:
                 history = self._fetch_history(market_id, commodity_id)
                 series  = build_daily_series(history)
                 sanity  = sanity_bands.get(commodity_id)
-                rows    = _make_forecast_rows(market_id, commodity_id, series, sanity)
+                
+                features = None
+                if get_settings().forecast_model == "feature_ols":
+                    try:
+                        from forecasting.features import build_feature_matrix
+                        features = build_feature_matrix(history, weather=[], events=[], district_prices=[], target_commodity_id=commodity_id)
+                    except Exception as e:
+                        logger.warning("feature_build_failed", error=str(e))
+                
+                rows    = _make_forecast_rows(market_id, commodity_id, series, sanity, features=features)
 
                 if not rows:
                     pairs_skipped += 1

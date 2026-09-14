@@ -71,10 +71,18 @@ def create_payment(
         "status": "pending",
         "reference": body.reference,
     }
-    res = supabase.table("payments").insert(row).execute()
-    if not res.data:
-        raise HTTPException(400, "could not create payment")
-    return res.data[0]
+    try:
+        res = supabase.table("payments").insert(row).execute()
+        if not res.data:
+            raise HTTPException(400, "could not create payment")
+        return res.data[0]
+    except Exception as e:
+        if "23505" in str(e) or "duplicate key" in str(e).lower():
+            re_existing = supabase.table("payments").select("*").eq("offer_id", body.offer_id).eq("user_id", user_id).execute()
+            for r in (re_existing.data or []):
+                if r.get("status") in ("pending", "paid"):
+                    return r
+        raise HTTPException(400, f"could not create payment: {e}")
 
 
 @router.get("/")

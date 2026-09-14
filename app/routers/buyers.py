@@ -59,7 +59,8 @@ def list_buyers(
 @router.get("/{buyer_id}/supply")
 def buyer_supply(
     buyer_id: str,
-    public: Client = Depends(get_supabase),
+    uid: str = Depends(get_current_user),
+    public: Client = Depends(get_supabase_as_user),
     db: Client = Depends(get_supabase_service_role),
 ):
     """Open lots that fit this verified buyer's demand (buyer-side aggregation)."""
@@ -75,6 +76,8 @@ def buyer_supply(
     if not rows:
         raise HTTPException(404, "buyer not found")
     buyer = rows[0]
+    if buyer.get("owner_user_id") != uid:
+        raise HTTPException(403, "Not authorized to view supply for this buyer")
     lots = (
         db.table("lots")
         .select("id,commodity_id,market_id,quantity_qtl,grade,asking_price,status,harvest_date,fpo_id")

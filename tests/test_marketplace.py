@@ -746,6 +746,7 @@ def test_buyer_supply_lists_fitting_open_lots(override_supabase, fake_supabase):
         "demand_qty_qtl": 80,
         "max_price": 2200,
         "quality_requirements": "FAQ / General",
+        "owner_user_id": FARMER_USER_ID,
     }])
     fake_supabase.seed("lots", [
         {
@@ -764,12 +765,12 @@ def test_buyer_supply_lists_fitting_open_lots(override_supabase, fake_supabase):
             "asking_price": 2000, "status": "sold",
         },
     ])
-    resp = client.get("/api/v1/buyers/buyer-1/supply")
+    resp = client.get("/api/v1/buyers/buyer-1/supply", headers=farmer_headers())
     assert resp.status_code == 200, resp.text
     ids = [l["id"] for l in resp.json()["lots"]]
     assert ids == ["fit"]
     assert "same_district" in resp.json()["lots"][0]["reasons"]
-    missing = client.get("/api/v1/buyers/nope/supply")
+    missing = client.get("/api/v1/buyers/nope/supply", headers=farmer_headers())
     assert missing.status_code == 404
 
 

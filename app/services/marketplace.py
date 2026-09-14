@@ -74,20 +74,27 @@ def expire_stale_offers(supabase, ttl_hours: int = OFFER_TTL_HOURS, now: Optiona
         supabase.table("offers")
         .select("*")
         .eq("status", "pending")
+        .order("created_at")
         .limit(500)
         .execute()
         .data
         or []
     )
     expired_ids = []
-    lots_reopened = 0
+    lot_ids_to_check = set()
     for offer in pending:
-        if not offer_is_stale(offer, now=now, ttl_hours=ttl_hours):
-            continue
-        supabase.table("offers").update({"status": "expired"}).eq("id", offer["id"]).execute()
-        expired_ids.append(offer["id"])
-        if _reopen_lot_if_idle(supabase, offer.get("lot_id")):
-            lots_reopened += 1
+        if offer_is_stale(offer, now=now, ttl_hours=ttl_hours):
+            expired_ids.append(offer["id"])
+            if offer.get("lot_id"):
+                lot_ids_to_check.add(offer.get("lot_id"))
+                
+    lots_reopened = 0
+    if expired_ids:
+        supabase.table("offers").update({"status": "expired"}).in_("id", expired_ids).execute()
+        for lot_id in lot_ids_to_check:
+            if _reopen_lot_if_idle(supabase, lot_id):
+                lots_reopened += 1
+                
     return {"expired": len(expired_ids), "lots_reopened": lots_reopened, "offer_ids": expired_ids}
 
 
