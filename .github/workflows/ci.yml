@@ -56,6 +56,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@337b0725b8770380d7cde73cfef696f1295727eb
         with:
           python-version: "3.14"
@@ -73,7 +75,7 @@ jobs:
             exit 1
           fi
           echo "no obvious secrets"
-      - name: Gitleaks history scan (mirror)
-        run: |
-          git clone --mirror https://github.com/${{ github.repository }}.git repo-mirror
-          docker run -v $(pwd)/repo-mirror:/repo ghcr.io/gitleaks/gitleaks:latest detect --source="/repo" --verbose
+      - name: Gitleaks history scan
+        uses: gitleaks/gitleaks-action@e6dab246340401bf53eec993b8f05aebe80ac636
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

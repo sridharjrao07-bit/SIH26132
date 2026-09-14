@@ -82,7 +82,7 @@ def create_payment(
             for r in (re_existing.data or []):
                 if r.get("status") in ("pending", "paid"):
                     return r
-        raise HTTPException(400, f"could not create payment: {e}")
+        raise HTTPException(400, "could not create payment")
 
 
 @router.get("/")
