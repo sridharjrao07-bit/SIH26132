@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from supabase import Client
 import structlog
 import asyncio
 import uuid
+from typing import List, Optional
 
 from app.auth import require_role
 from app.deps import get_supabase_service_role
@@ -40,6 +42,66 @@ async def trigger_forecast(supabase: Client = Depends(get_supabase_service_role)
             supabase.rpc("release_job_lock", {"p_job_key": "forecast", "p_holder": "admin_trigger"}).execute()
         except Exception:
             logger.warning("forecast_lock_release_failed")
+
+
+class _BacktestBody(BaseModel):
+    history_days: int = 365
+    models: Optional[List[str]] = None
+
+
+@router.post("/forecast/backtest", dependencies=[Depends(require_role("admin"))])
+async def trigger_forecast_backtest(
+    body: _BacktestBody = _BacktestBody(),
+    supabase: Client = Depends(get_supabase_service_role),
+):
+    """
+    Run the walk-forward backtest harness for all active pairs and return
+    the full BacktestReport as JSON.
+
+    Body (all optional):
+      history_days : int   — how far back to pull price history (default 365)
+      models       : list  — model names to evaluate; unknown name → 422
+    """
+    from forecasting.backtest import run_backtest, MODEL_REGISTRY
+
+    model_names = body.models or ["ma", "ols", "naive"]
+    unknown = [m for m in model_names if m not in MODEL_REGISTRY]
+    if unknown:
+        raise HTTPException(
+            422,
+            f"Unknown model name(s): {unknown}. "
+            f"Available: {sorted(MODEL_REGISTRY.keys())}",
+        )
+
+    # Resolve all active pairs from the last history_days window
+    from datetime import date, timedelta
+    cutoff = (date.today() - timedelta(days=body.history_days)).isoformat()
+    try:
+        resp = (
+            supabase.table("prices")
+            .select("market_id, commodity_id")
+            .gte("arrival_date", cutoff)
+            .execute()
+        )
+        raw_pairs = resp.data or []
+    except Exception:
+        logger.exception("backtest_pairs_fetch_failed")
+        raise HTTPException(503, "failed to fetch pairs for backtest")
+
+    # Deduplicate pairs
+    pairs = list({(r["market_id"], r["commodity_id"]) for r in raw_pairs})
+
+    try:
+        report = await asyncio.to_thread(
+            run_backtest, supabase, pairs, body.history_days, model_names
+        )
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
+    except Exception:
+        logger.exception("admin_backtest_failed")
+        raise HTTPException(503, "backtest job failed")
+
+    return report.to_json()
 
 
 @router.post("/alert-check/run", dependencies=[Depends(require_role("admin"))])
@@ -163,3 +225,29 @@ def admin_rescore_buyers(supabase: Client = Depends(get_supabase_service_role)):
         if grade is not None:
             updated[b["id"]] = grade
     return {"status": "success", "updated": updated}
+
+
+@router.post("/events/ingest", dependencies=[Depends(require_role("admin"))])
+async def admin_events_ingest(supabase: Client = Depends(get_supabase_service_role)):
+    """Run event runner to fetch news/bulletins and extract events."""
+    from events.runner import run as run_events
+    try:
+        report = await run_events(supabase, since_days=2)
+        return {"status": "success", "report": report}
+    except Exception:
+        logger.exception("admin_events_ingest_failed")
+        raise HTTPException(503, "Event ingestion failed")
+
+
+@router.get("/events", dependencies=[Depends(require_role("admin"))])
+def admin_list_events(
+    needs_review: bool = False,
+    limit: int = 50,
+    supabase: Client = Depends(get_supabase_service_role),
+):
+    """List extracted events. Pass needs_review=true for low-confidence or unreviewed."""
+    query = supabase.table("events").select("*")
+    if needs_review:
+        query = query.or_("confidence.lt.0.5,reviewed_by.is.null")
+    res = query.order("created_at", desc=True).limit(limit).execute()
+    return res.data or []
