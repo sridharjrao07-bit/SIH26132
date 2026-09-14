@@ -44,3 +44,9 @@ Live PostgREST (uses `.env`, prints no secrets):
 python scripts/test_db.py
 python demo/reconcile.py
 ```
+
+Forecast Accuracy Card (backtest harness with LLM events and GBM models):
+
+```bat
+python demo/forecast_card.py
+```

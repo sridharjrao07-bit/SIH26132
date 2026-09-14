@@ -43,10 +43,19 @@ Demo seed: 5 Nashik APMCs × Onion, Tomato, Soybean, Maize. Expand via [`docs/ON
 ## Local setup (Windows)
 
 ```bat
-py -3.14 -m venv .venv
+py -3.12 -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements-dev.txt
 copy .env.example .env
+```
+
+## Local setup (Unix / macOS)
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-dev.txt
+cp .env.example .env
 ```
 
 Fill `.env` (never commit it). Apply SQL `001`–`011` once.
@@ -116,6 +125,10 @@ Judge path: [`docs/DEMO.md`](docs/DEMO.md).
 ## Known Limitations
 
 We explicitly document what this prototype does *not* yet do to demonstrate our understanding of real-world generalization constraints (e.g. multi-lingual crop aliasing, complex transport models). See the "What Does Not Yet Generalize" section in [`docs/SCALING.md`](docs/SCALING.md).
+
+- **Single-Worker**: Rate limiting and the APScheduler run in-process, requiring a single worker in production.
+- **eNAM Payment Path**: External payment settlement flows (e.g. eNAM gateways) are mocked and lack full API integration.
+- **Forecast Seasonality**: The upgraded forecasting engine uses a LightGBM Global model (`gbm`) and feature-rich OLS (`feature_ols`), along with LLM-extracted market events, to capture seasonality and market sentiment.
 
 ## Docker
 
