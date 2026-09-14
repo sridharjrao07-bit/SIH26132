@@ -348,9 +348,9 @@ COMMODITY_ID_TOMATO  = "dddd-0000-0000-0000"
 # Seeded user IDs — role comes from the DB (user_profiles), NOT from the JWT.
 # This mirrors what 003_security_patch.sql enforces: roles are only elevated
 # via admin_set_role; the JWT sub claim is just a user identifier.
-FARMER_USER_ID = "farmer-uuid-0001-0000-000000000000"
-ADMIN_USER_ID  = "admin-uuid-0001-0000-000000000000"
-FPO_USER_ID    = "fpo-uuid-0001-0000-000000000000"
+FARMER_USER_ID = "11111111-1111-1111-1111-111111111111"
+ADMIN_USER_ID  = "22222222-2222-2222-2222-222222222222"
+FPO_USER_ID    = "33333333-3333-3333-3333-333333333333"
 
 
 def mint_jwt(user_id: str) -> str:

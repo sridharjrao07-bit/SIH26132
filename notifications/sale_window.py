@@ -58,6 +58,17 @@ def compute_sale_window(
     today = date.today()
     cutoff = (today - timedelta(days=15)).isoformat()
 
+    evt_resp = (
+        supabase.table("events")
+        .select("headline, event_date, commodity_id, district")
+        .gte("confidence", 0.5)
+        .gte("event_date", (today - timedelta(days=7)).isoformat())
+        .order("event_date", desc=True)
+        .limit(20)
+        .execute()
+    )
+    all_recent_events = evt_resp.data or []
+
     price_q = (
         supabase.table("prices")
         .select("modal_price, arrival_qty, arrival_date, market_id, markets(name, district, lat, lng)")
@@ -263,6 +274,19 @@ def compute_sale_window(
             + f" Nearby {better_market['market']} is ₹{better_market['modal_price']:.0f} "
             f"(₹{better_market['premium_rs']:.0f} above here)."
         )
+
+    # Append events
+    relevant_events = []
+    for e in all_recent_events:
+        c_id = e.get("commodity_id")
+        d = e.get("district")
+        if c_id == commodity_id or (not c_id and d == district):
+            relevant_events.append(e)
+            if len(relevant_events) >= 2:
+                break
+    
+    for e in relevant_events:
+        reason += f" Recent events: {e['headline']} ({e['event_date']})."
 
     action = {"sell": "SELL_NOW", "hold": "HOLD", "wait": "WAIT"}[recommendation]
     return {
