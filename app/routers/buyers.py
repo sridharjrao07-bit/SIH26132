@@ -59,13 +59,12 @@ def list_buyers(
 @router.get("/{buyer_id}/supply")
 def buyer_supply(
     buyer_id: str,
-    uid: str = Depends(get_current_user),
-    public: Client = Depends(get_supabase_as_user),
+    supabase: Client = Depends(get_supabase),
     db: Client = Depends(get_supabase_service_role),
 ):
     """Open lots that fit this verified buyer's demand (buyer-side aggregation)."""
     rows = (
-        public.table("buyers")
+        supabase.table("buyers")
         .select("*")
         .eq("id", buyer_id)
         .eq("verified", True)
@@ -76,8 +75,6 @@ def buyer_supply(
     if not rows:
         raise HTTPException(404, "buyer not found")
     buyer = rows[0]
-    if buyer.get("owner_user_id") != uid:
-        raise HTTPException(403, "Not authorized to view supply for this buyer")
     lots = (
         db.table("lots")
         .select("id,commodity_id,market_id,quantity_qtl,grade,asking_price,status,harvest_date,fpo_id")
@@ -91,7 +88,7 @@ def buyer_supply(
         lots = [l for l in lots if l.get("commodity_id") == buyer["commodity_id"]]
     markets = {
         m["id"]: m
-        for m in (public.table("markets").select("id,name,district").execute().data or [])
+        for m in (supabase.table("markets").select("id,name,district").execute().data or [])
         if m.get("id")
     }
     ranked = rank_lots_for_buyer(buyer, lots, markets)
