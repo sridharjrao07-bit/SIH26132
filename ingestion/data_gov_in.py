@@ -1,8 +1,8 @@
 import httpx
 import logging
 import structlog
-from typing import List
-from datetime import datetime
+from typing import List, Optional
+from datetime import datetime, date
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception, before_sleep_log
 
 from .base import IngestionSourceAdapter, RawPriceRecord, SourceFetchError
@@ -71,7 +71,7 @@ class DataGovInAdapter(IngestionSourceAdapter):
         return "data_gov_in"
 
     async def fetch_prices(
-        self, district: str, commodity: str, state: str = "Maharashtra"
+        self, district: str, commodity: str, state: str = "Maharashtra", date: Optional[date] = None
     ) -> List[RawPriceRecord]:
         """
         Fetches all pages of price records for a given district/commodity.
@@ -97,6 +97,10 @@ class DataGovInAdapter(IngestionSourceAdapter):
                     "limit":              PAGE_SIZE,
                     "offset":             0,
                 }
+                if date is not None:
+                    # e.g., 01/09/2024
+                    params["filters[arrival_date]"] = date.strftime("%d/%m/%Y")
+                
                 log.info("fetching_page_1", district_spelling=spelling)
                 try:
                     first_data = await self._get_json(client, params)
@@ -135,6 +139,9 @@ class DataGovInAdapter(IngestionSourceAdapter):
                     "limit":              PAGE_SIZE,
                     "offset":             offset,
                 }
+                if date is not None:
+                    page_params["filters[arrival_date]"] = date.strftime("%d/%m/%Y")
+                
                 try:
                     page_data = await self._get_json(client, page_params)
                     page_records = page_data.get("records", [])
