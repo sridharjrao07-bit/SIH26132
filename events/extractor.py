@@ -75,7 +75,6 @@ class LLMEventExtractor(EventExtractor):
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.model = model
-        self.client = httpx.AsyncClient(timeout=30.0)
 
     @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=5, min=5, max=10),
            retry=retry_if_exception(_is_llm_transient), reraise=True)
@@ -100,10 +99,11 @@ class LLMEventExtractor(EventExtractor):
             # But the prompt tells it to output JSON anyway.
             pass
             
-        resp = await self.client.post(url, headers=headers, json=payload)
-        resp.raise_for_status()
-        data = resp.json()
-        return data["choices"][0]["message"]["content"]
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(url, headers=headers, json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+            return data["choices"][0]["message"]["content"]
 
     async def extract(self, headline: RawHeadline) -> List[ExtractedEvent]:
         text = f"Headline: {headline.headline}\nContent: {headline.raw_text}"
