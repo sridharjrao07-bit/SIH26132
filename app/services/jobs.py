@@ -10,6 +10,7 @@ from app.config import get_settings
 from ingestion.runner import IngestionRunner
 from ingestion.data_gov_in import DataGovInAdapter
 from forecasting.runner import run_forecast_job
+from events.runner import run as run_events
 
 logger = structlog.get_logger()
 settings = get_settings()
@@ -84,6 +85,28 @@ async def run_expire_offers_job():
         return summary
     finally:
         _release(supabase, "expire_offers")
+
+
+async def run_events_job():
+    """Daily: Fetches market news/events and extracts intel via LLM/mock."""
+    if not settings.event_job_enabled:
+        return {"status": "disabled"}
+
+    supabase = get_supabase_client()
+    lock_res = _claim(supabase, "events_ingestion", ttl_minutes=60)
+    if not lock_res.data:
+        logger.info("events_job_locked")
+        return {"status": "locked"}
+    
+    try:
+        summary = await run_events(supabase, since_days=2)
+        logger.info("events_job_done", **summary)
+        return summary
+    except Exception as e:
+        logger.exception("events_job_failed", error=str(e))
+        return {"status": "error", "error": str(e)}
+    finally:
+        _release(supabase, "events_ingestion")
 
 
 async def run_ingestion_job():
@@ -219,5 +242,14 @@ def setup_scheduler() -> Optional[AsyncIOScheduler]:
         name="Expire Stale Offers",
         replace_existing=True,
     )
+
+    if settings.event_job_enabled:
+        scheduler.add_job(
+            run_events_job,
+            IntervalTrigger(hours=24, start_date=now + timedelta(minutes=2)),
+            id="events",
+            name="Event Intelligence",
+            replace_existing=True,
+        )
 
     return scheduler
