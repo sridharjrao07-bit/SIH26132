@@ -270,3 +270,100 @@ def test_forecast_engine_upsert_payload_contains_generated_at(fake_supabase):
         for row in rows:
             assert "generated_at" in row, f"upserted row missing generated_at: {row}"
             assert row["generated_at"] is not None
+
+# ── Phase 3: feature_ols and registry ────────────────────────────────────────
+
+def test_engine_run_with_feature_ols(fake_supabase, monkeypatch):
+    """FORECAST_MODEL=feature_ols with n≥20 + built feature matrix → rows have method='feature_ols'."""
+    import app.config
+    
+    # Mock settings to use feature_ols
+    old_settings = app.config.get_settings()
+    class MockSettings:
+        def __getattr__(self, name):
+            if name == "forecast_model":
+                return "feature_ols"
+            return getattr(old_settings, name)
+            
+    monkeypatch.setattr("forecasting.engine.get_settings", MockSettings)
+    
+    from datetime import date, timedelta
+    today = date.today()
+    
+    prices_seed = []
+    # 100 rows, strong signal to ensure it does not fallback due to insufficient rank
+    for i in range(100):
+        prices_seed.append({
+            "market_id": "m1",
+            "commodity_id": "c1",
+            "arrival_date": (today - timedelta(days=100 - i)).isoformat(),
+            "modal_price": 2000.0 + i*10,
+            "arrival_qty": 100.0,
+            "source": "data_gov_in",
+            "variety": "General",
+        })
+    fake_supabase.seed("prices", prices_seed)
+    
+    # Need to also seed weather so it doesn't fail entirely, though empty is fine if it handles it
+    
+    from forecasting.engine import ForecastEngine
+    engine = ForecastEngine(fake_supabase)
+    summary = engine.run()
+    
+    assert summary["pairs_ok"] == 1
+    
+    upserts = fake_supabase.upsert_calls()
+    assert len(upserts) == 1
+    
+    rows = upserts[0]["payload"]
+    for row in rows:
+        assert row["method"] == "feature_ols"
+        assert row["confidence"] == "high"
+
+def test_engine_run_feature_ols_fallback(fake_supabase, monkeypatch):
+    """Feature build failure or rank deficient -> existing blend method (assert fallback, not crash)"""
+    import app.config
+    
+    # Mock settings
+    old_settings = app.config.get_settings()
+    class MockSettings:
+        def __getattr__(self, name):
+            if name == "forecast_model":
+                return "feature_ols"
+            return getattr(old_settings, name)
+            
+    monkeypatch.setattr("forecasting.engine.get_settings", MockSettings)
+    
+    # To force a fallback, we can provide <10 observations (actually n<20 for blend, but say n=15)
+    # wait, if n < 10*p it falls back. If p=8, 10*8 = 80. n=25 < 80!
+    # Wait, in the previous test we got feature_ols, how?
+    # keep_cols in FeatureOLSModel depends on how many columns are not all None.
+    # If weather/events/district aren't there, they drop!
+    # If lag1, lag7, lag14, arrival are kept, p=4. 10*4=40. Still n=25 < 40!
+    # Let's adjust test_engine_run_with_feature_ols to provide 50 rows.
+    # But for this test, we can just provide exactly 25 rows and it WILL fallback!
+    from datetime import date, timedelta
+    today = date.today()
+    
+    prices_seed = []
+    for i in range(25):
+        prices_seed.append({
+            "market_id": "m1",
+            "commodity_id": "c1",
+            "arrival_date": (today - timedelta(days=25 - i)).isoformat(),
+            "modal_price": 2000.0 + i * 10, # varies so lag features are kept, raising p
+            "source": "data_gov_in"
+        })
+    fake_supabase.seed("prices", prices_seed)
+    
+    from forecasting.engine import ForecastEngine
+    engine = ForecastEngine(fake_supabase)
+    summary = engine.run()
+    
+    assert summary["pairs_ok"] == 1
+    upserts = fake_supabase.upsert_calls()
+    rows = upserts[0]["payload"]
+    # Should fallback to blend because 25 >= 15
+    for row in rows:
+        assert row["method"] == "blend"
+
