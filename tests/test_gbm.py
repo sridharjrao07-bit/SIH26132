@@ -1,15 +1,12 @@
 import pytest
-import math
 import random
 from datetime import date, timedelta
-from typing import List, Tuple
 
-from forecasting.engine import ForecastEngine, _make_forecast_rows, build_daily_series
-from forecasting.backtest import run_backtest, BacktestReport
+from forecasting.backtest import run_backtest
 from forecasting.gbm import GlobalGBM, ForecastModelError
 
 try:
-    import lightgbm
+    import lightgbm  # noqa: F401  # availability check
     HAS_LIGHTGBM = True
 except ImportError:
     HAS_LIGHTGBM = False
@@ -18,12 +15,8 @@ pytestmark = pytest.mark.skipif(not HAS_LIGHTGBM, reason="lightgbm not installed
 
 @pytest.fixture(autouse=True)
 def reset_global_gbm():
-    # Reset the global model before each test so we don't leak state
-    GlobalGBM._global_model = None
-    GlobalGBM._global_sigma = None
+    # Model now uses instance state; no global state to reset
     yield
-    GlobalGBM._global_model = None
-    GlobalGBM._global_sigma = None
 
 
 def test_import_failure_fallback(monkeypatch):
