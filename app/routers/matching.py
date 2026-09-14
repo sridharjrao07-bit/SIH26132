@@ -2,7 +2,7 @@
 from typing import Literal, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from supabase import Client
-from app.deps import get_supabase, get_supabase_as_user
+from app.deps import get_supabase, get_supabase_as_user, get_supabase_service_role
 from app.auth import get_current_user
 from app.services.matching_engine import rank_buyers
 from app.services.marketplace import logistics_next_step
@@ -62,16 +62,31 @@ def lot_advice(
     user_id: str = Depends(get_current_user),
     as_user: Client = Depends(get_supabase_as_user),
     public: Client = Depends(get_supabase),
+    admin: Client = Depends(get_supabase_service_role),
 ):
     """Sell Now / Hold plus the best local buyer — not a price dump."""
+    from datetime import date, timedelta
+    today = date.today()
     lot, profile = _load_lot_and_profile(as_user, lot_id, user_id)
     lang = lang or profile.get("preferred_language") or "en"
+    
+    evt_resp = (
+        admin.table("events")
+        .select("headline, event_date, commodity_id, district")
+        .gte("confidence", 0.5)
+        .gte("event_date", (today - timedelta(days=7)).isoformat())
+        .order("event_date", desc=True)
+        .limit(20)
+        .execute()
+    )
+    
     window = compute_sale_window(
         public,
         lot["commodity_id"],
         lot.get("market_id"),
         origin_lat=profile.get("lat"),
         origin_lng=profile.get("lng"),
+        recent_events=evt_resp.data or [],
     )
     if window:
         window = apply_sale_language(window, lang)

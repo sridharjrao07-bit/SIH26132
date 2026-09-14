@@ -50,6 +50,7 @@ def compute_sale_window(
     market_id: Optional[str] = None,
     origin_lat=None,
     origin_lng=None,
+    recent_events: Optional[list] = None,
 ) -> Optional[dict]:
     """
     Return a sell / hold / wait recommendation from supply + nearby storage.
@@ -58,16 +59,19 @@ def compute_sale_window(
     today = date.today()
     cutoff = (today - timedelta(days=15)).isoformat()
 
-    evt_resp = (
-        supabase.table("events")
-        .select("headline, event_date, commodity_id, district")
-        .gte("confidence", 0.5)
-        .gte("event_date", (today - timedelta(days=7)).isoformat())
-        .order("event_date", desc=True)
-        .limit(20)
-        .execute()
-    )
-    all_recent_events = evt_resp.data or []
+    if recent_events is not None:
+        all_recent_events = recent_events
+    else:
+        evt_resp = (
+            supabase.table("events")
+            .select("headline, event_date, commodity_id, district")
+            .gte("confidence", 0.5)
+            .gte("event_date", (today - timedelta(days=7)).isoformat())
+            .order("event_date", desc=True)
+            .limit(20)
+            .execute()
+        )
+        all_recent_events = evt_resp.data or []
 
     price_q = (
         supabase.table("prices")
