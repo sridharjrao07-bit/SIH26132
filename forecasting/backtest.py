@@ -30,6 +30,9 @@ from forecasting.evaluation import (
     interval_coverage,
 )
 
+import structlog
+logger = structlog.get_logger()
+
 # Verbatim protocol string — referenced in tests and FORECASTING.md
 BACKTEST_PROTOCOL = (
     "walk-forward, horizon=7, 8 folds of 7 days over the last 56 days, "
@@ -152,35 +155,32 @@ class HoltWintersAdapter:
         return self._model.predict(horizon)
 
 
-class GlobalGBMAdapter:
-    name = "gbm"
-    
-    def fit(self, series: List[Tuple[date, float]], features=None) -> None:
-        from forecasting.gbm import GlobalGBM
-        # Instantiating the global model will trigger global training if not done
-        self._model = GlobalGBM()
-        self._model.fit(series, features)
-        
-    def predict(self, horizon: int = HORIZON) -> List[Tuple[float, float, float]]:
-        return self._model.predict(horizon)
+# GlobalGBMAdapter is intentionally removed.
+# GBM is delisted from the backtest registry until per-fold bounded-window
+# reconstruction is complete. See docs/FORECASTING.md §5.
 
 
 # ---------------------------------------------------------------------------
-# Registry (extended in engine.py as models are added)
+# Registry
 # ---------------------------------------------------------------------------
 
 MODEL_REGISTRY: Dict[str, Any] = {
-    "ma":    BaselineMA,
-    "ols":   BaselineOLS,
-    "naive": NaiveLastWeekSameDay,
-    "feature_ols": FeatureOLSAdapter,
+    "ma":           BaselineMA,
+    "ols":          BaselineOLS,
+    "naive":        NaiveLastWeekSameDay,
+    "feature_ols":  FeatureOLSAdapter,
     "holt_winters": HoltWintersAdapter,
-    "gbm": GlobalGBMAdapter,
+    # "gbm" is paused — do NOT add it here; see docs/FORECASTING.md §5.
 }
 
 
 def get_model(name: str) -> ForecastModel:
     """Return a fresh model instance by name, or raise ValueError."""
+    if name == "gbm":
+        raise ValueError(
+            "model 'gbm' is temporarily paused pending per-fold bounded-window "
+            "reconstruction; available: " + str(sorted(MODEL_REGISTRY.keys()))
+        )
     cls = MODEL_REGISTRY.get(name)
     if cls is None:
         raise ValueError(
@@ -310,9 +310,12 @@ def _run_one_pair(
                 raw_preds = model.predict(horizon=len(fold_series))
             except Exception as e:
                 # Model failed this fold — record NaN for every day of the fold
-                import traceback
-                print(f"Model {name} failed fold: {e}")
-                traceback.print_exc()
+                logger.warning(
+                    "backtest_model_fold_failed",
+                    model=name,
+                    fold=fold_idx,
+                    error=str(e),
+                )
                 for _, actual in fold_series:
                     results[name]["actuals"].append(actual)
                     results[name]["preds"].append(float("nan"))
@@ -543,9 +546,7 @@ def run_backtest(
             "n_predictions":    total,
         }
         
-        if name == "gbm":
-            from forecasting.gbm import GlobalGBM
-            aggregate[name]["feature_importances"] = GlobalGBM.get_feature_importances()
+        # GBM feature importances removed — gbm is delisted from registry.
 
     return BacktestReport(
         generated_at=datetime.now(timezone.utc).isoformat(),

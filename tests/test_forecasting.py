@@ -412,7 +412,6 @@ def test_engine_global_features(fake_supabase, monkeypatch):
     
     def mock_build_feature_matrix(*args, **kwargs):
         captured_kwargs.update(kwargs)
-        import forecasting.features
         return original_build(*args, **kwargs)
         
     import forecasting.features

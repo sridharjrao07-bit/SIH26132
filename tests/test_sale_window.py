@@ -1,4 +1,3 @@
-import pytest
 from datetime import date, timedelta
 from tests.conftest import FakeSupabase
 from notifications.sale_window import compute_sale_window

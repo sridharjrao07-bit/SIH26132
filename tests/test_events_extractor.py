@@ -47,6 +47,8 @@ async def test_mock_extractor_no_match(mock_extractor):
         raw_text="Nothing much happened."
     )
     events = await mock_extractor.extract(headline)
+    assert events == []
+
 import respx
 import httpx
 

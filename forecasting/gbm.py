@@ -14,7 +14,7 @@ class GlobalGBM:
 
     def __init__(self, all_market_data: Optional[List[dict]] = None):
         try:
-            import lightgbm
+            import lightgbm  # noqa: F401  # availability check
         except ImportError:
             raise ForecastModelError("Optional ML dependencies not installed")
             
@@ -138,7 +138,6 @@ class GlobalGBM:
         sim_prices = [p for _, p in self.series]
         
         for i in range(1, horizon + 1):
-            day_offset = last_feat.day_offset + i
             dow = (last_feat.dow + i) % 7
             lag_1 = sim_prices[-1]
             lag_7 = sim_prices[-7] if len(sim_prices) >= 7 else float('nan')

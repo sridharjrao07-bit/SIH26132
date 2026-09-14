@@ -368,8 +368,6 @@ def _make_forecast_rows(
         if method == "feature_ols":
             names = ["bias", "lag_1", "lag_7", "lag_14", "arrivals_7d_avg", "momentum_14d", "rain_7d_cum_mm", "district_mean_price", "event_pressure"]
             features_used = [names[c] for c in getattr(model_inst, "keep_cols", [])]
-        elif method == "gbm":
-            features_used = [f["feature"] for f in getattr(model_cls, "get_feature_importances", lambda: [])()]
             
         rows.append({
             "market_id":       market_id,
@@ -489,13 +487,12 @@ class ForecastEngine:
         except Exception as e:
             logger.warning("global_features_fetch_failed", error=str(e))
             
-        district_prices = []
-        try:
-            # For district prices we need everything in last 150 days
-            all_prices = self.supabase.table("prices").select("market_id, arrival_date, modal_price, source, variety").gte("arrival_date", cutoff).execute().data or []
-            district_prices = all_prices
-        except Exception as e:
-            logger.warning("district_prices_fetch_failed", error=str(e))
+        # Group weather by market_id for fast lookup
+        weather_by_market = {}
+        for w in weather_daily:
+            m_id = w.get("market_id")
+            if m_id:
+                weather_by_market.setdefault(m_id, []).append(w)
 
         for market_id, commodity_id in pairs:
             try:
@@ -507,17 +504,14 @@ class ForecastEngine:
                 if get_settings().forecast_model == "feature_ols":
                     try:
                         from forecasting.features import build_feature_matrix
-                        # Filter district prices for this commodity
-                        # Actually district prices computation expects all rows in a district.
-                        # Wait, we need the market's district.
-                        market_info = self.supabase.table("markets").select("district").eq("id", market_id).execute().data
-                        if market_info:
-                            district = market_info[0].get("district")
-                            # Fetch district prices if needed. We fetched all_prices earlier.
-                            # But all_prices doesn't have district info. Let's just pass empty for district_prices in engine for now, or fetch market map
-                            # The feature matrix builder groups by district if we pass district_prices.
-                        
-                        features = build_feature_matrix(history, weather=weather_daily, events=events, district_prices=[], target_commodity_id=commodity_id)
+                        market_weather = weather_by_market.get(market_id, [])
+                        features = build_feature_matrix(
+                            history, 
+                            weather=market_weather, 
+                            events=events, 
+                            district_prices=[], 
+                            target_commodity_id=commodity_id
+                        )
                     except Exception as e:
                         logger.warning("feature_build_failed", error=str(e))
                 
