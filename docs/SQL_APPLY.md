@@ -23,7 +23,8 @@ order by 1;
 |---|---|---|
 | `prices` (and no `buyers`) | `001`–`007` | `008` |
 | `buyers` but no `logistics_bookings` | `001`–`008` | `009` |
-| `logistics_bookings` | `001`–`009` | `010` then `011` then `012` |
+| `logistics_bookings` (no `weather_daily`) | `001`–`016` | `017` then `018` then `019` |
+| `weather_daily` | `001`–`019` | Already up to date |
 
 | # | File | What it does |
 |---|---|---|
@@ -40,6 +41,13 @@ order by 1;
 | 11 | `db/migrations/010_lot_grade_check.sql` | `lots.grade` must be FAQ / General / Special |
 | 12 | `db/migrations/011_ops_hardening.sql` | Phone/lots RPCs, markets lat/lng CHECK, alert indexes, `admin_set_role` service_role-only |
 | 13 | `db/migrations/012_payment_atomicity.sql` | `payments.amount > 0`, `lots.quantity_qtl > 0`, one pending/paid payment per offer |
+| 14 | `db/migrations/013_payment_grievance_rpcs.sql` | Payment and grievance RPCs for marketplace operations |
+| 15 | `db/migrations/014_buyer_onboarding.sql` | Buyer onboarding validation and improvements |
+| 16 | `db/migrations/015_storage.sql` | `logistics_options` capacity fields and storage procedures |
+| 17 | `db/migrations/016_linter_fixes.sql` | Fixes for SQL syntax and linter warnings |
+| 18 | `db/migrations/017_weather_daily.sql` | `weather_daily` table for historical weather features |
+| 19 | `db/migrations/018_events.sql` | `events` table for structured market intelligence |
+| 20 | `db/migrations/019_forecast_audit_cols.sql` | `generated_at` and `model_used` audit columns for `forecasts` table |
 
 After `008`, seed includes Nashik buyers (traders, processor, institutional, eNAM) and MSWC godowns / truck unions.
 
