@@ -13,13 +13,27 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
     settings = get_settings()
     since_date = date.today() - timedelta(days=since_days)
     
+    # Fetch all commodities once to map names to UUIDs and configure extractors
+    try:
+        comm_resp = supabase.table("commodities").select("id, name_en").execute()
+        commodity_map = {c["name_en"].lower(): c["id"] for c in comm_resp.data if c.get("name_en")}
+    except Exception as e:
+        logger.error("event_runner_commodity_fetch_error", error=str(e))
+        commodity_map = {}
+        
+    valid_commodities = list(commodity_map.keys())
+    
     # Initialize Extractor
-    if settings.event_llm.lower() == "off" or not settings.gemini_api_key:
-        extractor = MockEventExtractor()
+    if settings.event_llm.lower() == "off" or not settings.event_llm_api_key:
+        extractor = MockEventExtractor(valid_commodities=valid_commodities)
         extractor_name = "mock"
     else:
-        extractor = LLMEventExtractor(api_key=settings.gemini_api_key)
-        extractor_name = "llm:gemini"
+        extractor = LLMEventExtractor(
+            api_key=settings.event_llm_api_key,
+            base_url=settings.event_llm_base_url,
+            model=settings.event_llm_model
+        )
+        extractor_name = f"llm:{settings.event_llm_provider}"
         
     logger.info("event_runner_starting", extractor=extractor_name, since_days=since_days)
     
@@ -74,13 +88,7 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
     new_written = 0
     quarantined = 0
     
-    # Fetch all commodities once to map names to UUIDs
-    try:
-        comm_resp = supabase.table("commodities").select("id, name").execute()
-        commodity_map = {c["name"].lower(): c["id"] for c in comm_resp.data}
-    except Exception as e:
-        logger.error("event_runner_commodity_fetch_error", error=str(e))
-        commodity_map = {}
+    # Extraction and write loop
         
     for headline in new_headlines:
         try:
