@@ -77,13 +77,22 @@ async def trigger_forecast_backtest(
     from datetime import date, timedelta
     cutoff = (date.today() - timedelta(days=body.history_days)).isoformat()
     try:
-        resp = (
-            supabase.table("prices")
-            .select("market_id, commodity_id")
-            .gte("arrival_date", cutoff)
-            .execute()
-        )
-        raw_pairs = resp.data or []
+        raw_pairs = []
+        step = 1000
+        start = 0
+        while True:
+            resp = (
+                supabase.table("prices")
+                .select("market_id, commodity_id")
+                .gte("arrival_date", cutoff)
+                .range(start, start + step - 1)
+                .execute()
+            )
+            batch = resp.data or []
+            raw_pairs.extend(batch)
+            if len(batch) < step:
+                break
+            start += step
     except Exception:
         logger.exception("backtest_pairs_fetch_failed")
         raise HTTPException(503, "failed to fetch pairs for backtest")
