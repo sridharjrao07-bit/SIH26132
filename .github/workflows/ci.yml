@@ -63,7 +63,7 @@ jobs:
       - name: Install pip-audit
         run: pip install "pip-audit==2.9.0"
       - name: pip-audit (production lock)
-        run: pip-audit -r requirements.txt
+        run: pip-audit -r requirements.txt -r requirements-forecast-ml.txt
       - name: Secret patterns
         run: |
           # Character classes so this workflow file does not match itself.

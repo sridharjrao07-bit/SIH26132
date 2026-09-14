@@ -7,3 +7,4 @@ respx==0.22.0
 ruff==0.12.12
 pip-audit==2.9.0
 pre-commit==4.2.0
+requests
