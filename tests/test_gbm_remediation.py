@@ -1,28 +1,28 @@
-from datetime import timedelta
 from unittest.mock import patch, MagicMock
 
 from tests.conftest import FakeSupabase, MARKET_ID_LASALGAON, COMMODITY_ID_ONION
 from tests.test_backtest import _make_price_rows, _trended_series
 from forecasting.backtest import run_backtest
 import sys
-
 import math
+import os
+import pytest
 
-# Create a fake lightgbm module so we can test the real train_global_gbm logic
+# Create a fake lightgbm module so we can test the real train_global_gbm logic in isolation
 mock_lgb = MagicMock()
 def _mock_predict(X):
     # X is the feature matrix, return lag_1 (index 3) to prove inputs are isolated
     return [row[3] if not math.isnan(row[3]) else 0.0 for row in X]
 mock_lgb.LGBMRegressor.return_value.predict.side_effect = _mock_predict
-sys.modules['lightgbm'] = mock_lgb
 
-from forecasting.gbm import train_global_gbm
-
+# Ensure that we only mock lightgbm during the specific mock tests
+@patch.dict(sys.modules, {"lightgbm": mock_lgb})
 def test_train_global_gbm_isolation_and_sigma():
+    from forecasting.gbm import train_global_gbm
+
     # 1. Deterministic Synthetic Dataset
     # Base series has 100 days
     base_series = _trended_series(100)
-    max_d = base_series[-1][0]
     
     # Series 2 starts late, strictly within the validation window (last 10 days)
     # This should be excluded from the categorical encoders since it's >= val_cutoff
@@ -58,7 +58,6 @@ def test_train_global_gbm_isolation_and_sigma():
     
     # 5. Verify Predict / Pair-State Isolation
     # We call fit with a specific pair and predict.
-    # We pass some features
     model.fit(base_series[-14:], features=[
         type("Feat", (), {
             "dow": 0, "lag_1": 100, "lag_7": 100, "lag_14": 100,
@@ -67,7 +66,9 @@ def test_train_global_gbm_isolation_and_sigma():
         })()
     ], pair_id=("M1", "C1"))
     
-    preds_m1 = model.predict(horizon=1)
+    # Provide explicit forecast_origin for the prediction
+    # Assuming forecast origin is max_d (base_series[-1][0])
+    preds_m1 = model.predict(horizon=1, forecast_origin=base_series[-1][0])
     assert len(preds_m1) == 1
     
     # Predict for M2 (unknown pair)
@@ -79,12 +80,13 @@ def test_train_global_gbm_isolation_and_sigma():
         })()
     ], pair_id=("M2", "C2"))
     
-    preds_m2 = model.predict(horizon=1)
+    preds_m2 = model.predict(horizon=1, forecast_origin=late_series[-1][0])
     assert len(preds_m2) == 1
     
     # They should produce different interval bounds due to isolation and different lag values
-    assert preds_m1[0][0] != preds_m2[0][0], "Pair state should be isolated"
-    
+    assert preds_m1[0] != preds_m2[0], "Pair state should be isolated"
+
+
 @patch("forecasting.gbm.train_global_gbm")
 def test_gbm_requirements(mock_train_gbm):
     # Setup global GBM mock just for the harness integration test
@@ -106,3 +108,47 @@ def test_gbm_requirements(mock_train_gbm):
     
     assert mock_train_gbm.call_count == 8, "Global pooling & Fit count: must train once per fold globally"
     assert report is not None
+
+
+def test_train_global_gbm_real():
+    # If REQUIRE_ML_DEPS is set (e.g. in ML CI), missing lightgbm should fail the test.
+    # Otherwise, in base CI, it can skip.
+    if os.environ.get("REQUIRE_ML_DEPS") == "1":
+        import lightgbm
+    else:
+        lightgbm = pytest.importorskip("lightgbm")
+        
+    # Assert it's the real module, not a MagicMock
+    assert not isinstance(lightgbm, MagicMock), "LightGBM must be the real module in this test"
+    assert hasattr(lightgbm, "LGBMRegressor"), "LightGBM must have LGBMRegressor"
+
+    from forecasting.gbm import train_global_gbm
+    
+    base_series = _trended_series(100)
+    pairs_history = {
+        ("M1", "C1"): _make_price_rows(base_series),
+    }
+    
+    # Invoke real trainer without mock
+    model = train_global_gbm(
+        pairs_history=pairs_history,
+        weather=[],
+        events=[],
+        district_prices=[],
+        strict_pit=True
+    )
+    
+    assert model.sigma > 0
+    assert "M1" in model.market_map
+    
+    model.fit(base_series[-14:], features=[
+        type("Feat", (), {
+            "dow": 0, "lag_1": 100, "lag_7": 100, "lag_14": 100,
+            "arrivals_7d_avg": 0, "momentum_14d": 0, "rain_7d_cum_mm": 0,
+            "district_mean_price": 100, "event_pressure": 0.0, "events_approximate": False
+        })()
+    ], pair_id=("M1", "C1"))
+    
+    preds_m1 = model.predict(horizon=1, forecast_origin=base_series[-1][0])
+    assert len(preds_m1) == 1
+    assert preds_m1[0] > 0
