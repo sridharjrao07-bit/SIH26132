@@ -27,10 +27,15 @@ class PIBSource:
     @_fetch_retry()
     async def fetch_headlines(self, since: date) -> List[RawHeadline]:
         # Dummy implementation that would be replaced with real PIB API
-        # To satisfy tests, we ensure defensive empty parsing returns []
         try:
-            # Simulate fetch
-            return []
+            return [
+                RawHeadline(
+                    source_url="http://pib.gov.in/demo1",
+                    headline="Export ban on onion (red)",
+                    published_date=since,
+                    raw_text="The government has decided to lift the export ban on onion (red)."
+                )
+            ]
         except Exception as e:
             if isinstance(e, httpx.HTTPError):
                 raise EventSourceError(f"PIB fetch failed: {e}") from e
@@ -41,7 +46,14 @@ class NewsFeedSource:
     @_fetch_retry()
     async def fetch_headlines(self, since: date) -> List[RawHeadline]:
         try:
-            return []
+            return [
+                RawHeadline(
+                    source_url="http://newsfeed/demo1",
+                    headline="Flood in maize fields",
+                    published_date=since,
+                    raw_text="Unseasonal rainfall has led to severe flood in maize fields."
+                )
+            ]
         except Exception as e:
             if isinstance(e, httpx.HTTPError):
                 raise EventSourceError(f"NewsFeed fetch failed: {e}") from e
@@ -52,7 +64,14 @@ class StateBulletinsSource:
     @_fetch_retry()
     async def fetch_headlines(self, since: date) -> List[RawHeadline]:
         try:
-            return []
+            return [
+                RawHeadline(
+                    source_url="http://statebulletins/demo1",
+                    headline="State subsidy announced for Potato",
+                    published_date=since,
+                    raw_text="The state agriculture department has announced a subsidy."
+                )
+            ]
         except Exception as e:
             if isinstance(e, httpx.HTTPError):
                 raise EventSourceError(f"StateBulletins fetch failed: {e}") from e

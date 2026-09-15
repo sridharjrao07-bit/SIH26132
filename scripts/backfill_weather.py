@@ -66,6 +66,7 @@ async def backfill(days: int, markets_csv: str, sleep_time: float):
     total_rejected = 0
     total_transient_skips = 0
     
+    persisted_dates = set()
     hard_failure = False
     
     async with httpx.AsyncClient() as client:
@@ -116,6 +117,7 @@ async def backfill(days: int, markets_csv: str, sleep_time: float):
                     t_mean = temp_array[i]
                     
                     if p_sum is None or t_mean is None:
+                        logger.debug("rejected_missing_value", date=dt_str, p_sum=p_sum, t_mean=t_mean)
                         rejected += 1
                         continue
                         
@@ -139,10 +141,13 @@ async def backfill(days: int, markets_csv: str, sleep_time: float):
                                 lambda c=chunk: supabase.table("weather_daily").upsert(c, on_conflict=conflict).execute()
                             )
                             total_written += len(chunk)
+                            for r in chunk:
+                                persisted_dates.add(r["observation_date"])
                     except Exception as e:
                         logger.error("hard_db_write_failed", error=type(e).__name__)
                         hard_failure = True
-                        break
+                        # Accumulate partial success before failing
+                        pass
                         
                 current_start = current_end + timedelta(days=1)
                 time.sleep(sleep_time)
@@ -153,7 +158,14 @@ async def backfill(days: int, markets_csv: str, sleep_time: float):
     if hard_failure:
         logger.error("aborting_due_to_db_failure")
         
-    logger.info("backfill_complete", dates_written=f"{start_date.isoformat()}..{end_date.isoformat()}",
+    # Print sorted persisted dates or summarize if too many
+    persisted_list = sorted(list(persisted_dates))
+    if len(persisted_list) > 5:
+        dates_out = f"{persisted_list[0]} .. {persisted_list[-1]} ({len(persisted_list)} dates)"
+    else:
+        dates_out = ",".join(persisted_list) if persisted_list else "None"
+        
+    logger.info("backfill_complete", persisted_dates=dates_out,
                 seen=total_seen, written=total_written, rejected=total_rejected, transient_skips=total_transient_skips)
     
     if hard_failure:
@@ -161,12 +173,17 @@ async def backfill(days: int, markets_csv: str, sleep_time: float):
 
 def main():
     parser = argparse.ArgumentParser(description="Backfill historical weather data")
-    parser.add_argument("--days", type=int, required=True, help="Number of days to backfill")
+    parser.add_argument("--days", type=int, default=None, help="Number of days to backfill")
     parser.add_argument("--markets", type=str, default="", help="Comma-separated market names")
     parser.add_argument("--sleep", type=float, default=1.0, help="Sleep time between API calls")
     args = parser.parse_args()
     
-    asyncio.run(backfill(args.days, args.markets, args.sleep))
+    days = args.days
+    if days is None:
+        from app.config import get_settings
+        days = get_settings().backfill_days
+        
+    asyncio.run(backfill(days, args.markets, args.sleep))
 
 if __name__ == "__main__":
     main()
