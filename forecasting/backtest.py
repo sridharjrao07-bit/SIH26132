@@ -167,14 +167,30 @@ def get_local_model(name: str) -> ForecastModel:
 # ---------------------------------------------------------------------------
 
 @dataclass
+class FoldStats:
+    requested_calendar_folds: int
+    executed_folds: int
+    skipped_insufficient_training_folds: int
+    folds_with_observed_test_data: int
+    folds_considered_for_directional_accuracy: int
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+@dataclass
 class ModelResult:
     model:               str
+    status:              str
+    reason:              Optional[str]
     mae:                 Optional[float]
     mape_winsorized:     Optional[float]
     directional_hits:    Optional[int]
     directional_folds:   Optional[int]
     interval_coverage:   Optional[float]
-    nan_rate:            float = 0.0
+    directional_accuracy:Optional[float] = None
+    n_attempted_predictions: int = 0
+    n_valid_predictions: int = 0
+    n_failed_predictions: int = 0
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -184,6 +200,7 @@ class PairResult:
     market_id:    str
     commodity_id: str
     n_obs:        int
+    fold_stats:   FoldStats
     models:       List[ModelResult] = field(default_factory=list)
 
     def to_dict(self) -> dict:
@@ -191,6 +208,7 @@ class PairResult:
             "market_id":    self.market_id,
             "commodity_id": self.commodity_id,
             "n_obs":        self.n_obs,
+            "fold_stats":   self.fold_stats.to_dict(),
             "models":       [m.to_dict() for m in self.models],
         }
 
@@ -333,6 +351,17 @@ def run_backtest(
             for name in model_names
         } for (m, c) in full_series.keys()
     }
+    
+    pair_fold_stats = {
+        (m, c): {
+            "requested_calendar_folds": N_FOLDS,
+            "executed_folds": 0,
+            "skipped_insufficient_training_folds": 0,
+            "folds_with_observed_test_data": 0,
+            "folds_considered_for_directional_accuracy": 0,
+        }
+        for (m, c) in full_series.keys()
+    }
 
     # 4. Iterate over Folds
     for fold_idx in range(N_FOLDS):
@@ -369,8 +398,13 @@ def run_backtest(
             train_s = [(d, p) for (d, p) in s if d < fold_start]
             test_s = [(d, p) for (d, p) in s if fold_start <= d <= fold_end]
             
-            if not train_s or not test_s:
+            if not train_s:
+                pair_fold_stats[(m, c)]["skipped_insufficient_training_folds"] += 1
                 continue
+            
+            pair_fold_stats[(m, c)]["executed_folds"] += 1
+            if test_s:
+                pair_fold_stats[(m, c)]["folds_with_observed_test_data"] += 1
                 
             last_train_price = train_s[-1][1]
             train_f = [f for (d, p), f in zip(s, full_features[(m, c)]) if d < fold_start]
@@ -468,14 +502,25 @@ def run_backtest(
             
             mr = ModelResult(
                 model=name,
-                mae=None if math.isnan(mae_val) else round(mae_val, 4),
-                mape_winsorized=None if math.isnan(mape_val) else round(mape_val, 4),
-                directional_hits=total_hits,
-                directional_folds=total_considered,
-                interval_coverage=None if math.isnan(cov) else round(cov, 4),
-                nan_rate=round(acc[name]["nan_count"] / len(preds), 4) if preds else 0.0
+                status="ok" if (len(preds) - acc[name]["nan_count"] > 0) else "blocked",
+                reason=None if (len(preds) - acc[name]["nan_count"] > 0) else "insufficient_training_or_calibration_history",
+                mae=None if math.isnan(mae_val) or len(preds) == acc[name]["nan_count"] else round(mae_val, 4),
+                mape_winsorized=None if math.isnan(mape_val) or len(preds) == acc[name]["nan_count"] else round(mape_val, 4),
+                directional_hits=total_hits if len(preds) > acc[name]["nan_count"] else None,
+                directional_folds=total_considered if len(preds) > acc[name]["nan_count"] else None,
+                interval_coverage=None if math.isnan(cov) or len(preds) == acc[name]["nan_count"] else round(cov, 4),
+                directional_accuracy=round((total_hits / total_considered * 100.0), 2) if total_considered > 0 and len(preds) > acc[name]["nan_count"] else None,
+                n_attempted_predictions=len(preds),
+                n_valid_predictions=len(preds) - acc[name]["nan_count"],
+                n_failed_predictions=acc[name]["nan_count"]
             )
             pair_models.append(mr)
+            
+            # Use max considered folds across models as the pair's official count
+            pair_fold_stats[(m, c)]["folds_considered_for_directional_accuracy"] = max(
+                pair_fold_stats[(m, c)]["folds_considered_for_directional_accuracy"], 
+                total_considered
+            )
             
             # Pool to global
             pool[name]["actuals"].extend(actuals)
@@ -486,7 +531,13 @@ def run_backtest(
             pool[name]["hits"] += total_hits
             pool[name]["considered"] += total_considered
             
-        per_pair.append(PairResult(market_id=m, commodity_id=c, n_obs=n_obs, models=pair_models))
+        per_pair.append(PairResult(
+            market_id=m, 
+            commodity_id=c, 
+            n_obs=n_obs, 
+            fold_stats=FoldStats(**pair_fold_stats[(m, c)]),
+            models=pair_models
+        ))
 
     # 6. Aggregate
     aggregate = {}
@@ -499,14 +550,18 @@ def run_backtest(
         agg_mape = mape_winsorized(actuals, p["preds"])
         agg_cov = interval_coverage(p["uppers"], p["lowers"], actuals)
         total = len(p["preds"])
+        valid = total - p["nan_count"]
         agg_da = (p["hits"] / p["considered"] * 100.0) if p["considered"] > 0 else 0.0
         aggregate[name] = {
-            "mae": None if math.isnan(agg_mae) else round(agg_mae, 4),
-            "mape_winsorized": None if math.isnan(agg_mape) else round(agg_mape, 4),
-            "interval_coverage": None if math.isnan(agg_cov) else round(agg_cov, 4),
-            "directional_accuracy": round(agg_da, 2),
-            "nan_rate": round(p["nan_count"] / total, 4) if total else 0.0,
-            "n_predictions": total,
+            "status": "ok" if valid > 0 else "blocked",
+            "reason": None if valid > 0 else "insufficient_training_or_calibration_history",
+            "mae": None if math.isnan(agg_mae) or valid == 0 else round(agg_mae, 4),
+            "mape_winsorized": None if math.isnan(agg_mape) or valid == 0 else round(agg_mape, 4),
+            "interval_coverage": None if math.isnan(agg_cov) or valid == 0 else round(agg_cov, 4),
+            "directional_accuracy": round(agg_da, 2) if valid > 0 else None,
+            "n_attempted_predictions": total,
+            "n_valid_predictions": valid,
+            "n_failed_predictions": p["nan_count"]
         }
         if name == "gbm" and global_gbm is not None:
             aggregate[name]["feature_importances"] = global_gbm.get_feature_importances()
