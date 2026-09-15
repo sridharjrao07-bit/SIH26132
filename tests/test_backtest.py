@@ -245,9 +245,9 @@ class TestBrokenModel:
         agg = report.aggregate
         assert "ma" in agg
         assert "broken" in agg
-        # Broken model should have a non-zero nan_rate
-        assert agg["broken"]["nan_rate"] is not None
-        assert agg["broken"]["nan_rate"] > 0.0
+        # Broken model should have a non-zero nan_rate (now n_failed_predictions)
+        assert agg["broken"]["n_failed_predictions"] > 0
+        assert agg["broken"]["status"] == "blocked"
 
 
 # ---------------------------------------------------------------------------

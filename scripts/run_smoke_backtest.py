@@ -38,7 +38,7 @@ def main():
     report = run_backtest(
         supabase=supabase,
         pairs=pairs,
-        model_names=["ma", "ols", "gbm"],
+        model_names=["naive", "ma", "ols", "gbm"],
         history_days=120,
         evaluation_scope="smoke"
     )
