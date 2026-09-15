@@ -51,7 +51,7 @@ class ForecastModel(Protocol):
         pair_id: Optional[Tuple[str, str]] = None,
     ) -> None: ...
 
-    def predict(self, horizon: int = HORIZON) -> List[Tuple[float, float, float]]: ...
+    def predict(self, horizon: int = HORIZON, forecast_origin: Optional[date] = None) -> List[Tuple[float, float, float]]: ...
 
 
 # ---------------------------------------------------------------------------
@@ -64,8 +64,11 @@ class BaselineMA:
         from forecasting.engine import MovingAverageModel
         prices = [p for _, p in series]
         self._model = MovingAverageModel(prices)
-    def predict(self, horizon: int = HORIZON) -> List[Tuple[float, float, float]]:
-        return self._model.predict(horizon)
+        self.sigma = self._model.sigma
+    def predict(self, horizon: int = HORIZON, forecast_origin: Optional[date] = None) -> List[Tuple[float, float, float]]:
+        from forecasting.engine import apply_postprocessing
+        raw = self._model.predict(horizon, forecast_origin)
+        return apply_postprocessing(raw, self.sigma, sanity=None)
 
 class BaselineOLS:
     name = "ols"
@@ -73,24 +76,44 @@ class BaselineOLS:
         from forecasting.engine import LinearRegressionModel
         prices = [p for _, p in series]
         self._model = LinearRegressionModel(prices)
-    def predict(self, horizon: int = HORIZON) -> List[Tuple[float, float, float]]:
-        return self._model.predict(horizon)
+        self.sigma = self._model.sigma
+    def predict(self, horizon: int = HORIZON, forecast_origin: Optional[date] = None) -> List[Tuple[float, float, float]]:
+        from forecasting.engine import apply_postprocessing
+        raw = self._model.predict(horizon, forecast_origin)
+        return apply_postprocessing(raw, self.sigma, sanity=None)
 
 class NaiveLastWeekSameDay:
     name = "naive"
     def fit(self, series: List[Tuple[date, float]], features=None, pair_id=None) -> None:
         self._lookup: Dict[date, float] = {d: p for d, p in series}
         self._last_date = series[-1][0] if series else None
-    def predict(self, horizon: int = HORIZON) -> List[Tuple[float, float, float]]:
+        self.sigma = 0.0
+    def predict(self, horizon: int = HORIZON, forecast_origin: Optional[date] = None) -> List[Tuple[float, float, float]]:
+        from forecasting.engine import apply_postprocessing
         if not self._last_date:
             return [(float("nan"), float("nan"), float("nan"))] * horizon
-        results = []
+            
+        origin = forecast_origin or self._last_date
+        raw = []
         for i in range(1, horizon + 1):
-            target = self._last_date + timedelta(days=i)
+            target = origin + timedelta(days=i)
             lag = target - timedelta(days=7)
-            p = self._lookup.get(lag, float("nan"))
-            results.append((p, p, p))
-        return results
+            raw.append(self._lookup.get(lag, float("nan")))
+            
+        # Naive coverage is N/A (bounds return None) since sigma = 0.0
+        # Wait, if nan, return nan bounds. apply_postprocessing handles floats, 
+        # but max() with nan might be weird. Let's handle it.
+        # It's fine, math.isnan doesn't crash on standard math except we need to be careful with clamping
+        processed = apply_postprocessing(raw, self.sigma, sanity=None)
+        # If raw is nan, bounds will be None. In backtest, we expect NaN for failure.
+        # Let's fix processed output to return NaN if raw is NaN.
+        final_processed = []
+        for r, (p, lo, hi) in zip(raw, processed):
+            if math.isnan(r):
+                final_processed.append((float('nan'), float('nan'), float('nan')))
+            else:
+                final_processed.append((p, lo if lo is not None else float('nan'), hi if hi is not None else float('nan')))
+        return final_processed
 
 class FeatureOLSAdapter:
     name = "feature_ols"
@@ -100,8 +123,11 @@ class FeatureOLSAdapter:
         if features is None:
             raise ValueError("FeatureOLS requires features")
         self._model = FeatureOLSModel(prices, features)
-    def predict(self, horizon: int = HORIZON) -> List[Tuple[float, float, float]]:
-        return self._model.predict(horizon)
+        
+    def predict(self, horizon: int = HORIZON, forecast_origin: Optional[date] = None) -> List[Tuple[float, float, float]]:
+        from forecasting.engine import apply_postprocessing
+        raw = self._model.predict(horizon, forecast_origin)
+        return apply_postprocessing(raw, self._model.sigma, sanity=None)
 
 class HoltWintersAdapter:
     name = "holt_winters"
@@ -109,8 +135,11 @@ class HoltWintersAdapter:
         from forecasting.models import HoltWintersModel
         prices = [p for _, p in series]
         self._model = HoltWintersModel(prices)
-    def predict(self, horizon: int = HORIZON) -> List[Tuple[float, float, float]]:
-        return self._model.predict(horizon)
+        
+    def predict(self, horizon: int = HORIZON, forecast_origin: Optional[date] = None) -> List[Tuple[float, float, float]]:
+        from forecasting.engine import apply_postprocessing
+        raw = self._model.predict(horizon, forecast_origin)
+        return apply_postprocessing(raw, self._model.sigma, sanity=None)
 
 # ---------------------------------------------------------------------------
 # Registry
@@ -300,7 +329,7 @@ def run_backtest(
     
     pair_accumulators = {
         (m, c): {
-            name: {"actuals": [], "preds": [], "lowers": [], "uppers": [], "last_train_prices": [], "nan_count": 0}
+            name: {"actuals": [], "preds": [], "lowers": [], "uppers": [], "folds": [], "nan_count": 0}
             for name in model_names
         } for (m, c) in full_series.keys()
     }
@@ -349,15 +378,19 @@ def run_backtest(
             for name in model_names:
                 preds = []
                 try:
+                    horizon_start = train_s[-1][0] if train_s else (fold_start - timedelta(days=1))
                     if name == "gbm":
                         if global_gbm is None:
                             raise ValueError("GBM model failed to train")
                         model = global_gbm
+                        model.fit(train_s, features=train_f, pair_id=(m, c))
+                        raw_preds = model.predict(horizon=FOLD_SIZE, forecast_origin=horizon_start)
+                        from forecasting.engine import apply_postprocessing
+                        preds = apply_postprocessing(raw_preds, model.sigma, sanity=None)
                     else:
                         model = get_local_model(name)
-                        
-                    model.fit(train_s, features=train_f, pair_id=(m, c))
-                    preds = model.predict(horizon=FOLD_SIZE)
+                        model.fit(train_s, features=train_f, pair_id=(m, c))
+                        preds = model.predict(horizon=FOLD_SIZE, forecast_origin=horizon_start)
                 except Exception as e:
                     logger.warning("fold_model_failed", model=name, fold=fold_idx, pair=(m, c), error=str(e))
                     for d, actual in test_s:
@@ -365,10 +398,16 @@ def run_backtest(
                         pair_accumulators[(m, c)][name]["preds"].append(float("nan"))
                         pair_accumulators[(m, c)][name]["lowers"].append(float("nan"))
                         pair_accumulators[(m, c)][name]["uppers"].append(float("nan"))
-                        pair_accumulators[(m, c)][name]["last_train_prices"].append(last_train_price)
                         pair_accumulators[(m, c)][name]["nan_count"] += 1
+                    pair_accumulators[(m, c)][name]["folds"].append({
+                        "last_train_price": last_train_price,
+                        "actuals": [a for _, a in test_s],
+                        "preds": [float("nan")] * len(test_s)
+                    })
                     continue
                     
+                fold_actuals = []
+                fold_preds = []
                 # Score ONLY matching calendar dates (no interpolated actuals)
                 for i in range(FOLD_SIZE):
                     pred_date = fold_start + timedelta(days=i)
@@ -391,9 +430,18 @@ def run_backtest(
                     pair_accumulators[(m, c)][name]["preds"].append(p_f if not is_nan else float("nan"))
                     pair_accumulators[(m, c)][name]["lowers"].append(lo_f if lo_f is not None else float("nan"))
                     pair_accumulators[(m, c)][name]["uppers"].append(hi_f if hi_f is not None else float("nan"))
-                    pair_accumulators[(m, c)][name]["last_train_prices"].append(last_train_price)
                     if is_nan:
                         pair_accumulators[(m, c)][name]["nan_count"] += 1
+                        
+                    fold_actuals.append(actual)
+                    fold_preds.append(p_f if not is_nan else float("nan"))
+                    
+                if fold_actuals:
+                    pair_accumulators[(m, c)][name]["folds"].append({
+                        "last_train_price": last_train_price,
+                        "actuals": fold_actuals,
+                        "preds": fold_preds
+                    })
 
     # 5. Build Result objects
     per_pair = []
@@ -406,14 +454,17 @@ def run_backtest(
                 continue
                 
             preds = acc[name]["preds"]
-            last_prices = acc[name]["last_train_prices"]
-            
             mae_val = mae(actuals, preds)
             mape_val = mape_winsorized(actuals, preds)
             cov = interval_coverage(acc[name]["uppers"], acc[name]["lowers"], actuals)
             
-            # Directional accuracy uses all paired instances (fold day 1 logic approximated by pairs scored)
-            total_hits, total_considered = directional_accuracy(last_prices, preds, actuals)
+            # Directional accuracy uses all paired instances (weekly means over actual matching dates)
+            folds = acc[name]["folds"]
+            total_hits, total_considered = directional_accuracy(
+                [f["last_train_price"] for f in folds],
+                [f["preds"] for f in folds],
+                [f["actuals"] for f in folds]
+            )
             
             mr = ModelResult(
                 model=name,
@@ -460,38 +511,22 @@ def run_backtest(
         if name == "gbm" and global_gbm is not None:
             aggregate[name]["feature_importances"] = global_gbm.get_feature_importances()
 
-    promotion_eligible = False
-    if evaluation_scope == "official":
-        if "gbm" in aggregate and "ma" in aggregate and "ols" in aggregate:
-            gbm_mape = aggregate["gbm"].get("mape_winsorized")
-            ma_mape = aggregate["ma"].get("mape_winsorized")
-            ols_mape = aggregate["ols"].get("mape_winsorized")
-            
-            if gbm_mape is not None and ma_mape is not None and ols_mape is not None:
-                # G2: Candidate must beat MA and OLS on aggregate winsorized MAPE
-                if gbm_mape < ma_mape and gbm_mape < ols_mape:
-                    # G3: GBM must beat the winner on aggregate MAPE with DA <= 2pp lower
-                    baselines = ["ma", "ols", "naive", "feature_ols", "holt_winters"]
-                    best_baseline_mape = min((aggregate[b].get("mape_winsorized") for b in baselines if b in aggregate and aggregate[b].get("mape_winsorized") is not None), default=float('inf'))
-                    
-                    # Find the baseline that got the best MAPE and compare DA
-                    best_baseline_da = 0.0
-                    for b in baselines:
-                        if b in aggregate and aggregate[b].get("mape_winsorized") == best_baseline_mape:
-                            best_baseline_da = max(best_baseline_da, aggregate[b].get("directional_accuracy", 0.0))
-                            
-                    gbm_da = aggregate["gbm"].get("directional_accuracy", 0.0)
-                    
-                    if gbm_mape < best_baseline_mape and gbm_da >= (best_baseline_da - 2.0):
-                        promotion_eligible = True
-
-    return BacktestReport(
+    report = BacktestReport(
         generated_at=datetime.now(timezone.utc).isoformat(),
         protocol=BACKTEST_PROTOCOL,
         horizon=HORIZON,
         history_days=history_days,
         evaluation_scope=evaluation_scope,
-        promotion_eligible=promotion_eligible,
+        promotion_eligible=False,
         per_pair=per_pair,
         aggregate=aggregate,
     )
+
+    if evaluation_scope == "official":
+        from forecasting.gates import evaluate_gates
+        candidate = "gbm" if "gbm" in aggregate else "feature_ols"
+        if candidate in aggregate:
+            gate_res = evaluate_gates(report, candidate, incumbent_name="blend")
+            report.promotion_eligible = gate_res.all_pass
+
+    return report

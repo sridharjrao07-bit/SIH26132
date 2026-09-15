@@ -25,24 +25,25 @@ select_model() enforces the contract:
 This contract is tested directly in test_gates.py — not via docstring.
 
 Gate definitions (per approved plan):
-  G2: Pool-aggregate winsorized MAPE ≤ 20%  (n ≥ G2_MIN_PREDICTIONS)
-  G3: Pool-aggregate directional accuracy ≥ 55%  (n ≥ G3_MIN_DIRECTIONAL)
+  G2: A candidate (feature_ols or holt_winters) must beat both MA and OLS 
+      on aggregate winsorized MAPE.
+  G3: GBM must beat the explicitly identified incumbent on aggregate 
+      winsorized MAPE, while its directional accuracy is no more than 
+      2 percentage points lower.
 """
 from __future__ import annotations
 
 import enum
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import structlog
 
 logger = structlog.get_logger()
 
-# Thresholds — tests import these constants; change only here.
-G2_MAPE_THRESHOLD    = 0.20   # 20 % winsorized MAPE (pool aggregate)
-G3_DA_THRESHOLD      = 0.55   # 55 % directional accuracy (pool aggregate)
-G2_MIN_PREDICTIONS   = 10     # minimum pool size required to evaluate G2
-G3_MIN_DIRECTIONAL   = 5      # minimum directional samples required to evaluate G3
+# Minimums — tests import these constants; change only here.
+MIN_PREDICTIONS   = 10     # minimum pool size required to evaluate MAPE
+MIN_DIRECTIONAL   = 5      # minimum directional samples required to evaluate DA
 
 # Model name used when no candidate passes gates — the safe default.
 DEFAULT_MODEL = "blend"
@@ -64,11 +65,9 @@ class SingleGateResult:
     name:      str
     outcome:   GateOutcome
     value:     Optional[float]   # actual metric value; None when skipped
-    threshold: float
+    threshold: Optional[float]
     reason:    str
 
-    # Convenience alias kept for backward compatibility with callers that
-    # checked .passed; now True only when outcome is PASS.
     @property
     def passed(self) -> bool:
         return self.outcome is GateOutcome.PASS
@@ -109,58 +108,7 @@ class GateResult:
         }
 
 
-def evaluate_gates(
-    backtest_report: Any,
-    model_name: str = "blend",
-) -> GateResult:
-    """
-    Evaluate G2 and G3 for *model_name* using pool-aggregate metrics.
-
-    Returns a GateResult whose .all_pass is True ONLY when both gates are
-    explicitly PASS (not SKIP, not FAIL). Callers MUST NOT equate SKIP
-    with permission to promote — use select_model() to enforce this.
-    """
-    aggregate: Dict[str, Any] = getattr(backtest_report, "aggregate", {}) or {}
-    model_agg = aggregate.get(model_name) or {}
-
-    notes: List[str] = []
-    gate_results: List[SingleGateResult] = []
-
-    # ── G2: Winsorized MAPE ───────────────────────────────────────────────────
-    mape_val = model_agg.get("mape_winsorized")
-    n_preds  = model_agg.get("n_predictions") or 0
-
-    if mape_val is None or n_preds < G2_MIN_PREDICTIONS:
-        g2_note = (
-            f"G2 SKIP: mape_winsorized={mape_val!r}, "
-            f"n_predictions={n_preds} < minimum {G2_MIN_PREDICTIONS}. "
-            "Insufficient evidence — promotion blocked."
-        )
-        notes.append(g2_note)
-        g2_result = SingleGateResult(
-            name="G2_MAPE",
-            outcome=GateOutcome.SKIP,
-            value=mape_val,
-            threshold=G2_MAPE_THRESHOLD,
-            reason=g2_note,
-        )
-    else:
-        outcome = GateOutcome.PASS if mape_val <= G2_MAPE_THRESHOLD else GateOutcome.FAIL
-        g2_result = SingleGateResult(
-            name="G2_MAPE",
-            outcome=outcome,
-            value=round(mape_val, 4),
-            threshold=G2_MAPE_THRESHOLD,
-            reason=(
-                f"MAPE {mape_val:.1%} "
-                f"{'≤' if outcome is GateOutcome.PASS else '>'} "
-                f"{G2_MAPE_THRESHOLD:.1%}"
-            ),
-        )
-    gate_results.append(g2_result)
-
-    # ── G3: Directional Accuracy ──────────────────────────────────────────────
-    # Pool hits/folds across all per-pair ModelResults for this model.
+def _get_da(backtest_report: Any, model_name: str) -> Tuple[Optional[float], int, int]:
     total_hits  = 0
     total_folds = 0
     for pair_result in getattr(backtest_report, "per_pair", []):
@@ -168,42 +116,84 @@ def evaluate_gates(
             if getattr(mr, "model", None) == model_name:
                 total_hits  += getattr(mr, "directional_hits",  0) or 0
                 total_folds += getattr(mr, "directional_folds", 0) or 0
+    if total_folds == 0:
+        return None, 0, 0
+    return total_hits / total_folds, total_hits, total_folds
 
-    if total_folds < G3_MIN_DIRECTIONAL:
-        g3_note = (
-            f"G3 SKIP: {total_folds} directional samples < minimum {G3_MIN_DIRECTIONAL}. "
-            "Insufficient evidence — promotion blocked."
-        )
-        notes.append(g3_note)
-        g3_result = SingleGateResult(
-            name="G3_DA",
-            outcome=GateOutcome.SKIP,
-            value=None,
-            threshold=G3_DA_THRESHOLD,
-            reason=g3_note,
-        )
+
+def evaluate_gates(
+    backtest_report: Any,
+    candidate_name: str,
+    incumbent_name: str = DEFAULT_MODEL,
+) -> GateResult:
+    """
+    Evaluate comparative gates for *candidate_name*.
+    Returns a GateResult whose .all_pass is True ONLY when comparative gates PASS.
+    """
+    aggregate: Dict[str, Any] = getattr(backtest_report, "aggregate", {}) or {}
+    cand_agg = aggregate.get(candidate_name) or {}
+
+    notes: List[str] = []
+    gate_results: List[SingleGateResult] = []
+
+    cand_mape = cand_agg.get("mape_winsorized")
+    cand_preds = cand_agg.get("n_predictions") or 0
+
+    if candidate_name in ("feature_ols", "holt_winters"):
+        # G2: Beat MA and OLS on MAPE
+        ma_agg = aggregate.get("ma") or {}
+        ols_agg = aggregate.get("ols") or {}
+        ma_mape = ma_agg.get("mape_winsorized")
+        ols_mape = ols_agg.get("mape_winsorized")
+        
+        if cand_mape is None or ma_mape is None or ols_mape is None or cand_preds < MIN_PREDICTIONS:
+            note = f"G2 SKIP: insufficient predictions or missing MAPE (preds={cand_preds})."
+            notes.append(note)
+            gate_results.append(SingleGateResult("G2", GateOutcome.SKIP, cand_mape, None, note))
+        else:
+            if cand_mape < ma_mape and cand_mape < ols_mape:
+                gate_results.append(SingleGateResult("G2", GateOutcome.PASS, cand_mape, min(ma_mape, ols_mape), "Candidate beats MA and OLS"))
+            else:
+                gate_results.append(SingleGateResult("G2", GateOutcome.FAIL, cand_mape, min(ma_mape, ols_mape), f"Candidate {cand_mape} did not beat MA ({ma_mape}) and OLS ({ols_mape})"))
+
+    elif candidate_name == "gbm":
+        # G3: Beat incumbent on MAPE, DA drop <= 2%
+        inc_agg = aggregate.get(incumbent_name) or {}
+        inc_mape = inc_agg.get("mape_winsorized")
+        
+        cand_da, cand_hits, cand_folds = _get_da(backtest_report, candidate_name)
+        inc_da, inc_hits, inc_folds = _get_da(backtest_report, incumbent_name)
+        
+        if cand_mape is None or inc_mape is None or cand_preds < MIN_PREDICTIONS:
+            note = f"G3 MAPE SKIP: insufficient predictions or missing MAPE (preds={cand_preds})."
+            notes.append(note)
+            gate_results.append(SingleGateResult("G3_MAPE", GateOutcome.SKIP, cand_mape, inc_mape, note))
+        else:
+            if cand_mape < inc_mape:
+                gate_results.append(SingleGateResult("G3_MAPE", GateOutcome.PASS, cand_mape, inc_mape, "GBM beats incumbent MAPE"))
+            else:
+                gate_results.append(SingleGateResult("G3_MAPE", GateOutcome.FAIL, cand_mape, inc_mape, f"GBM {cand_mape} did not beat incumbent {inc_mape}"))
+                
+        if cand_da is None or inc_da is None or cand_folds < MIN_DIRECTIONAL or inc_folds < MIN_DIRECTIONAL:
+            note = f"G3 DA SKIP: insufficient directional samples (cand={cand_folds}, inc={inc_folds})."
+            notes.append(note)
+            gate_results.append(SingleGateResult("G3_DA", GateOutcome.SKIP, cand_da, None, note))
+        else:
+            threshold = inc_da - 0.02
+            if cand_da >= threshold:
+                gate_results.append(SingleGateResult("G3_DA", GateOutcome.PASS, cand_da, threshold, "GBM DA within 2% of incumbent"))
+            else:
+                gate_results.append(SingleGateResult("G3_DA", GateOutcome.FAIL, cand_da, threshold, f"GBM DA {cand_da:.1%} is lower than incumbent {inc_da:.1%} - 2%"))
     else:
-        da_val  = total_hits / total_folds
-        outcome = GateOutcome.PASS if da_val >= G3_DA_THRESHOLD else GateOutcome.FAIL
-        g3_result = SingleGateResult(
-            name="G3_DA",
-            outcome=outcome,
-            value=round(da_val, 4),
-            threshold=G3_DA_THRESHOLD,
-            reason=(
-                f"DA {da_val:.1%} "
-                f"{'≥' if outcome is GateOutcome.PASS else '<'} "
-                f"{G3_DA_THRESHOLD:.1%} ({total_hits}/{total_folds} folds)"
-            ),
-        )
-    gate_results.append(g3_result)
+        # Default models or unrecognized models automatically skip (cannot be promoted via G2/G3).
+        gate_results.append(SingleGateResult("UNKNOWN", GateOutcome.SKIP, None, None, f"No gate rules defined for {candidate_name}"))
 
-    result = GateResult(model=model_name, gates=gate_results, notes=notes)
+    result = GateResult(model=candidate_name, gates=gate_results, notes=notes)
 
     if not result.all_pass:
         logger.info(
             "gate_evaluation_blocking",
-            model=model_name,
+            model=candidate_name,
             all_pass=False,
             blocking=[g.name for g in result.blocking_gates],
         )
