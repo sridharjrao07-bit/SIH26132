@@ -6,16 +6,33 @@ from typing import List, Dict, Optional, Any
 
 @dataclass(frozen=True)
 class FeatureRow:
-    """A row in the feature matrix for the forecasting model."""
+    """A row in the feature matrix for the forecasting model.
+
+    Point-in-time availability contract
+    ------------------------------------
+    All features use ONLY data that would be observable at the forecast origin
+    (i.e., data available at close-of-day t-1, to predict price at t):
+
+    - lag_1, lag_7, lag_14     : confirmed market observations from t-1, t-7, t-14
+    - arrivals_7d_avg          : average of t-7..t-1 arrivals (all lagged)
+    - momentum_14d             : (price[t-1] - price[t-15]) / price[t-15] — fully lagged
+    - rain_7d_cum_mm           : cumulative precipitation t-7..t-1 (lagged; no same-day)
+    - district_mean_price      : CAUTION — built from mandi data for date t, which would
+                                 NOT be available until t+1. For production inference this
+                                 must use the previous day's district average.
+    - event_pressure           : computed only from events with event_date <= t-1.
+                                 Events extracted retroactively (publication_date unknown)
+                                 are approximate; flagged in evaluation reports.
+    """
     day_offset: int          # Days since the start of the series
     dow: int                 # Day of week (0=Monday, 6=Sunday)
     lag_1: Optional[float]   # Price 1 day ago
     lag_7: Optional[float]   # Price 7 days ago
     lag_14: Optional[float]  # Price 14 days ago
-    arrivals_7d_avg: Optional[float]  # 7-day average of arrivals
-    momentum_14d: Optional[float]     # Price change over last 14 days (current - lag_14)
-    rain_7d_cum_mm: Optional[float]   # 7-day cumulative rainfall in mm
-    district_mean_price: Optional[float] # Mean price for the same commodity in the district
+    arrivals_7d_avg: Optional[float]  # 7-day average of arrivals (t-7..t-1)
+    momentum_14d: Optional[float]     # (price[t-1] - price[t-15]) / price[t-15]
+    rain_7d_cum_mm: Optional[float]   # 7-day cumulative rainfall (t-7..t-1)
+    district_mean_price: Optional[float] # Mean price for the same commodity in the district (see caution above)
     event_pressure: float             # Computed event pressure score (-2.0 to 2.0)
 
 
@@ -112,8 +129,7 @@ def build_feature_matrix(
         day_offset = (curr_date - start_date).days
         dow = curr_date.weekday()
         
-        curr_price = r.get("modal_price")
-        
+
         def get_lag_price(days_back):
             d = curr_date - timedelta(days=days_back)
             return series_by_date[d].get("modal_price") if d in series_by_date else None
@@ -134,10 +150,13 @@ def build_feature_matrix(
                     arr_count += 1
         arrivals_7d_avg = (arr_sum / arr_count) if arr_count > 0 else None
         
-        # Momentum
+        # Momentum: fractional change from t-15 to t-1 (no same-day data used).
+        # This is strictly lagged: both observations must pre-date the forecast origin.
+        # Returns None if either calendar-date observation is missing or denominator == 0.
         momentum_14d = None
-        if curr_price is not None and lag_14 is not None:
-            momentum_14d = curr_price - lag_14
+        lag_15 = get_lag_price(15)
+        if lag_1 is not None and lag_15 is not None and lag_15 != 0:
+            momentum_14d = (lag_1 - lag_15) / lag_15
             
         # Rain 7d
         rain_sum = 0.0
@@ -152,9 +171,14 @@ def build_feature_matrix(
         # Only assign if we have at least some data in the last 7 days
         rain_7d_cum_mm = rain_sum if rain_count > 0 else None
         
-        dist_price = district_by_date.get(curr_date.isoformat())
+        # District price: use the PREVIOUS day's average to avoid same-day leakage.
+        # At forecast time for date t, the mandi data for t is not yet published.
+        prev_day = (curr_date - timedelta(days=1)).isoformat()
+        dist_price = district_by_date.get(prev_day)
         
-        pressure = _compute_event_pressure(curr_date, events, target_commodity_id)
+        # Event pressure: only events with event_date < curr_date (strictly before).
+        # Events on curr_date are not available until after market close.
+        pressure = _compute_event_pressure(curr_date - timedelta(days=1), events, target_commodity_id)
         
         matrix.append(FeatureRow(
             day_offset=day_offset,
