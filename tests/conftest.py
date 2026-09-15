@@ -145,6 +145,8 @@ class FakeSupabase:
                     return _ExecuteResult(data=store._rpc_transition_payment(params))
                 if fn_name == "transition_grievance_status":
                     return _ExecuteResult(data=store._rpc_transition_grievance(params))
+                if fn_name == "lots_for_buyer_supply":
+                    return _ExecuteResult(data=store._rpc_lots_for_buyer_supply(params))
                 return _ExecuteResult(data=True)
 
         return _RpcQuery()
@@ -182,6 +184,19 @@ class FakeSupabase:
         self._rpc_handlers[fn_name] = result
 
     # ── RPC emulators ─────────────────────────────────────────────────────────
+
+    def _rpc_lots_for_buyer_supply(self, params: dict) -> list:
+        """Emulate lots_for_buyer_supply SECURITY DEFINER: open/offered lots, commodity filter."""
+        p_commodity_id = params.get("p_commodity_id")
+        return [
+            {k: row[k] for k in (
+                "id", "commodity_id", "market_id", "quantity_qtl", "grade",
+                "asking_price", "status", "harvest_date", "fpo_id"
+            ) if k in row}
+            for row in self._data.get("lots", [])
+            if row.get("status") in ("open", "offered")
+            and (p_commodity_id is None or str(row.get("commodity_id", "")) == str(p_commodity_id))
+        ]
 
     def _rpc_transition_payment(self, params: dict):
         """Emulate transition_payment_status SECURITY DEFINER: assert ownership + state machine."""

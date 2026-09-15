@@ -114,7 +114,6 @@ def _make_series(n: int, base_date: date, base_price: float = 1000.0):
 
 def test_momentum_14d_formula_is_fractional_change():
     """momentum_14d = (price[t-1] - price[t-15]) / price[t-15] (no same-day)."""
-    from datetime import timedelta
     from forecasting.features import build_feature_matrix
 
     base = date(2026, 9, 1)
