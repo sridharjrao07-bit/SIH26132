@@ -10,6 +10,7 @@ from tests.conftest import (
     COMMODITY_ID_ONION,
     COMMODITY_ID_TOMATO,
     FARMER_USER_ID,
+    FakeSupabase,
     mint_jwt,
 )
 
@@ -125,6 +126,38 @@ def test_lot_offer_payment_grievance_flow(override_supabase, fake_supabase):
     }, headers=farmer_headers())
     assert grief.status_code == 200
     assert grief.json()["status"] == "open"
+
+def test_payment_creation_db_error_masked(override_supabase, fake_supabase, monkeypatch):
+    """DB errors during payment creation must not leak internal diagnostic text."""
+    fake_supabase.seed("offers", [{
+        "id": "off-mask", "lot_id": "lot-mask", "buyer_id": "buyer-1",
+        "user_id": FARMER_USER_ID, "status": "accepted", "price_per_qtl": 2000,
+        "quantity_qtl": 10
+    }])
+    fake_supabase.seed("payments", [])
+
+    original_dispatch = FakeSupabase._dispatch
+
+    def _broken_dispatch(self, *, table, op, payload, conflict, filters, select_cols):
+        if table == "payments" and op == "insert":
+            raise Exception('FATAL: relation "payments_archive" does not exist at character 42')
+        return original_dispatch(self, table=table, op=op, payload=payload,
+                                 conflict=conflict, filters=filters,
+                                 select_cols=select_cols)
+
+    monkeypatch.setattr(FakeSupabase, "_dispatch", _broken_dispatch)
+
+    pay = client.post("/api/v1/payments/", json={
+        "offer_id": "off-mask",
+        "amount": 20000,
+        "reference": "UPI-DEMO-2",
+    }, headers=farmer_headers())
+
+    assert pay.status_code == 400
+    assert "FATAL:" not in pay.text
+    assert "does not exist" not in pay.text
+    assert "could not create payment" in pay.json()["detail"].lower()
+
 
 
 def test_profile_get_and_patch(override_supabase, fake_supabase):
