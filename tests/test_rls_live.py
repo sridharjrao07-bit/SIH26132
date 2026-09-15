@@ -79,3 +79,33 @@ def test_live_cross_tenant_isolation():
         }
     )
     assert res_w.status_code == 200, res_w.text
+
+def test_live_buyer_supply_rpc_guard():
+    """
+    Test the SECURITY DEFINER RPC `lots_for_buyer_supply`.
+    It must return 200 (even if empty) for buyers, and should also return 200 (but strictly empty) 
+    or error for non-buyers (farmers). Our SQL enforces public.has_role('buyer'), 
+    so a farmer will get an empty array (or 403 if we changed it to raise).
+    """
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_ANON_KEY")
+    if not url or not key:
+        pytest.skip("SUPABASE_URL or SUPABASE_ANON_KEY not configured")
+
+    # We need a buyer user for positive test, but we only have FARMER_USER_ID seeded in conftest's mint_jwt logic.
+    # However, in live tests, we assume FARMER_USER_ID is a farmer in the live DB too.
+    farmer_token = mint_jwt(FARMER_USER_ID)
+    
+    # 1. Negative Test: Farmer calls buyer RPC
+    res_negative = requests.post(
+        f"{url}/rest/v1/rpc/lots_for_buyer_supply",
+        headers={
+            "apikey": key,
+            "Authorization": f"Bearer {farmer_token}",
+            "Content-Type": "application/json"
+        },
+        json={"p_commodity_id": None, "p_limit": 10, "p_offset": 0}
+    )
+    # PostgREST returns 200 with [] if the function returns empty table.
+    assert res_negative.status_code == 200, f"RPC call failed: {res_negative.text}"
+    assert res_negative.json() == [], "Farmer should not see buyer supply (should be empty array due to has_role('buyer'))"

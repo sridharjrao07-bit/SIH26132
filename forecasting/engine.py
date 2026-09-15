@@ -265,6 +265,7 @@ def _make_forecast_rows(
     sanity:       Optional[Tuple[float, float]],
     as_of:        Optional[date] = None,
     features:     Optional[List[Any]] = None,
+    pretrained_model: Optional[Any] = None,
 ) -> List[dict]:
     """
     Build forecast dicts for one (market, commodity) pair.
@@ -311,10 +312,13 @@ def _make_forecast_rows(
     confidence = "none"
     
     # Try the requested model if it's not "auto"
-    if requested_model != "auto" and requested_model in MODELS:
-        model_cls = MODELS[requested_model]
+    if requested_model != "auto" and (requested_model in MODELS or requested_model == "gbm"):
+        model_cls = MODELS.get(requested_model)
         try:
-            if requested_model == "feature_ols":
+            if requested_model == "gbm" and pretrained_model is not None:
+                model_inst = pretrained_model
+                model_inst.fit(series, features, pair_id=(market_id, commodity_id))
+            elif requested_model == "feature_ols":
                 if features is None:
                     raise ValueError("Features required for feature_ols")
                 model_inst = model_cls(prices, features)
@@ -365,9 +369,12 @@ def _make_forecast_rows(
         upper = round(upper, 2)
         
         features_used = []
-        if method == "feature_ols":
+        if method in ("feature_ols", "gbm"):
             names = ["bias", "lag_1", "lag_7", "lag_14", "arrivals_7d_avg", "momentum_14d", "rain_7d_cum_mm", "district_mean_price", "event_pressure"]
-            features_used = [names[c] for c in getattr(model_inst, "keep_cols", [])]
+            if method == "feature_ols":
+                features_used = [names[c] for c in getattr(model_inst, "keep_cols", [])]
+            else:
+                features_used = ["market_id", "commodity_id", "dow", "lag_1", "lag_7", "lag_14", "arrivals_7d_avg", "momentum_14d", "rain_7d_cum_mm", "district_mean_price", "event_pressure"]
             
         rows.append({
             "market_id":       market_id,
@@ -494,14 +501,39 @@ class ForecastEngine:
             if m_id:
                 weather_by_market.setdefault(m_id, []).append(w)
 
+        # Pre-fetch history if gbm is requested
+        requested_model = get_settings().forecast_model
+        global_gbm = None
+        pairs_history = {}
+        
         for market_id, commodity_id in pairs:
             try:
-                history = self._fetch_history(market_id, commodity_id)
+                pairs_history[(market_id, commodity_id)] = self._fetch_history(market_id, commodity_id)
+            except Exception as e:
+                logger.warning("history_fetch_failed", market_id=market_id, commodity_id=commodity_id, error=str(e))
+                pairs_history[(market_id, commodity_id)] = []
+
+        if requested_model == "gbm":
+            try:
+                from forecasting.gbm import train_global_gbm
+                global_gbm = train_global_gbm(
+                    pairs_history=pairs_history,
+                    weather=weather_daily,
+                    events=events,
+                    district_prices=[],
+                    strict_pit=False
+                )
+            except Exception as e:
+                logger.warning("global_gbm_training_failed", error=str(e))
+
+        for market_id, commodity_id in pairs:
+            try:
+                history = pairs_history.get((market_id, commodity_id), [])
                 series  = build_daily_series(history)
                 sanity  = sanity_bands.get(commodity_id)
                 
                 features = None
-                if get_settings().forecast_model == "feature_ols":
+                if get_settings().forecast_model in ("feature_ols", "gbm"):
                     try:
                         from forecasting.features import build_feature_matrix
                         market_weather = weather_by_market.get(market_id, [])
@@ -515,7 +547,9 @@ class ForecastEngine:
                     except Exception as e:
                         logger.warning("feature_build_failed", error=str(e))
                 
-                rows    = _make_forecast_rows(market_id, commodity_id, series, sanity, features=features)
+                rows    = _make_forecast_rows(
+                    market_id, commodity_id, series, sanity, features=features, pretrained_model=global_gbm
+                )
 
                 if not rows:
                     pairs_skipped += 1
