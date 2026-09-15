@@ -5,16 +5,6 @@ Protocol (verbatim, stored in every BacktestReport.protocol):
     "walk-forward, horizon=7, 8 folds of 7 days over the last 56 days,
     expanding train window (everything before each fold start), one winner
     row per day by source precedence"
-
-Design constraints
-------------------
-* Pure Python — no numpy, no ML deps.
-* Any model that raises mid-run produces a NaN row; the run never aborts.
-* Models implement ForecastModel protocol: name, fit(series), predict(horizon).
-* NaiveLastWeekSameDay is always included as a benchmark.
-* Aggregate metrics pool ALL (pred, actual) pairs across ALL pairs for each
-  model (not macro-average of pair-level metrics) so small-n pairs don't
-  over-influence the aggregate.
 """
 from __future__ import annotations
 
@@ -47,18 +37,10 @@ TOTAL_TEST_DAYS = N_FOLDS * FOLD_SIZE  # 56 days
 
 
 # ---------------------------------------------------------------------------
-# Protocol for forecast models (structural subtyping — no base class needed)
+# Protocol for forecast models
 # ---------------------------------------------------------------------------
 
 class ForecastModel(Protocol):
-    """
-    Minimal interface for plugging models into the backtest harness.
-
-    ``fit`` receives the training series as [(date, price), ...] sorted
-    ascending.  ``predict`` returns (price, lower, upper) for each horizon day.
-    Models may raise any exception; the harness catches it and records NaN.
-    """
-
     @property
     def name(self) -> str: ...
 
@@ -66,58 +48,39 @@ class ForecastModel(Protocol):
         self,
         series: List[Tuple[date, float]],
         features: Optional[Any] = None,
+        pair_id: Optional[Tuple[str, str]] = None,
     ) -> None: ...
 
     def predict(self, horizon: int = HORIZON) -> List[Tuple[float, float, float]]: ...
 
 
 # ---------------------------------------------------------------------------
-# Adapters wrapping existing engine models
+# Adapters
 # ---------------------------------------------------------------------------
 
 class BaselineMA:
-    """Adapter: wraps MovingAverageModel from forecasting.engine."""
-
     name = "ma"
-
-    def fit(self, series: List[Tuple[date, float]], features=None) -> None:
+    def fit(self, series: List[Tuple[date, float]], features=None, pair_id=None) -> None:
         from forecasting.engine import MovingAverageModel
         prices = [p for _, p in series]
         self._model = MovingAverageModel(prices)
-
     def predict(self, horizon: int = HORIZON) -> List[Tuple[float, float, float]]:
         return self._model.predict(horizon)
 
-
 class BaselineOLS:
-    """Adapter: wraps LinearRegressionModel from forecasting.engine."""
-
     name = "ols"
-
-    def fit(self, series: List[Tuple[date, float]], features=None) -> None:
+    def fit(self, series: List[Tuple[date, float]], features=None, pair_id=None) -> None:
         from forecasting.engine import LinearRegressionModel
         prices = [p for _, p in series]
         self._model = LinearRegressionModel(prices)
-
     def predict(self, horizon: int = HORIZON) -> List[Tuple[float, float, float]]:
         return self._model.predict(horizon)
 
-
 class NaiveLastWeekSameDay:
-    """
-    Benchmark: predict price[t] = price[t-7] (same weekday last week).
-
-    No bounds — lower = upper = predicted.  This is intentionally dumb; any
-    real model should beat it on a directional-accuracy basis.
-    """
-
     name = "naive"
-
-    def fit(self, series: List[Tuple[date, float]], features=None) -> None:
-        # Store the full date→price map so we can look up t-7
+    def fit(self, series: List[Tuple[date, float]], features=None, pair_id=None) -> None:
         self._lookup: Dict[date, float] = {d: p for d, p in series}
         self._last_date = series[-1][0] if series else None
-
     def predict(self, horizon: int = HORIZON) -> List[Tuple[float, float, float]]:
         if not self._last_date:
             return [(float("nan"), float("nan"), float("nan"))] * horizon
@@ -129,36 +92,25 @@ class NaiveLastWeekSameDay:
             results.append((p, p, p))
         return results
 
-
 class FeatureOLSAdapter:
     name = "feature_ols"
-    
-    def fit(self, series: List[Tuple[date, float]], features=None) -> None:
+    def fit(self, series: List[Tuple[date, float]], features=None, pair_id=None) -> None:
         from forecasting.models import FeatureOLSModel
         prices = [p for _, p in series]
         if features is None:
             raise ValueError("FeatureOLS requires features")
         self._model = FeatureOLSModel(prices, features)
-        
     def predict(self, horizon: int = HORIZON) -> List[Tuple[float, float, float]]:
         return self._model.predict(horizon)
 
 class HoltWintersAdapter:
     name = "holt_winters"
-    
-    def fit(self, series: List[Tuple[date, float]], features=None) -> None:
+    def fit(self, series: List[Tuple[date, float]], features=None, pair_id=None) -> None:
         from forecasting.models import HoltWintersModel
         prices = [p for _, p in series]
         self._model = HoltWintersModel(prices)
-        
     def predict(self, horizon: int = HORIZON) -> List[Tuple[float, float, float]]:
         return self._model.predict(horizon)
-
-
-# GlobalGBMAdapter is intentionally removed.
-# GBM is delisted from the backtest registry until per-fold bounded-window
-# reconstruction is complete. See docs/FORECASTING.md §5.
-
 
 # ---------------------------------------------------------------------------
 # Registry
@@ -170,25 +122,16 @@ MODEL_REGISTRY: Dict[str, Any] = {
     "naive":        NaiveLastWeekSameDay,
     "feature_ols":  FeatureOLSAdapter,
     "holt_winters": HoltWintersAdapter,
-    # "gbm" is paused — do NOT add it here; see docs/FORECASTING.md §5.
+    "gbm":          None, # GBM is handled specially via train_global_gbm
 }
 
-
-def get_model(name: str) -> ForecastModel:
-    """Return a fresh model instance by name, or raise ValueError."""
+def get_local_model(name: str) -> ForecastModel:
     if name == "gbm":
-        raise ValueError(
-            "model 'gbm' is temporarily paused pending per-fold bounded-window "
-            "reconstruction; available: " + str(sorted(MODEL_REGISTRY.keys()))
-        )
+        raise ValueError("GBM must be trained globally")
     cls = MODEL_REGISTRY.get(name)
     if cls is None:
-        raise ValueError(
-            f"Unknown model name {name!r}. "
-            f"Available: {sorted(MODEL_REGISTRY.keys())}"
-        )
+        raise ValueError(f"Unknown model name {name!r}")
     return cls()
-
 
 # ---------------------------------------------------------------------------
 # Result dataclasses
@@ -196,22 +139,19 @@ def get_model(name: str) -> ForecastModel:
 
 @dataclass
 class ModelResult:
-    """Per-model metrics for one (market, commodity) pair."""
     model:               str
     mae:                 Optional[float]
     mape_winsorized:     Optional[float]
     directional_hits:    Optional[int]
     directional_folds:   Optional[int]
     interval_coverage:   Optional[float]
-    nan_rate:            float = 0.0    # fraction of predictions that were NaN
+    nan_rate:            float = 0.0
 
     def to_dict(self) -> dict:
         return asdict(self)
 
-
 @dataclass
 class PairResult:
-    """Backtest results for one (market_id, commodity_id) pair."""
     market_id:    str
     commodity_id: str
     n_obs:        int
@@ -225,27 +165,28 @@ class PairResult:
             "models":       [m.to_dict() for m in self.models],
         }
 
-
 @dataclass
 class BacktestReport:
-    """Top-level backtest result."""
     generated_at:   str
     protocol:       str
     horizon:        int
     history_days:   int
+    evaluation_scope: str
+    promotion_eligible: bool
     per_pair:       List[PairResult]
-    aggregate:      Dict[str, Any]   # model → aggregate metrics across all pairs
+    aggregate:      Dict[str, Any]
 
     def to_json(self) -> dict:
         return {
-            "generated_at": self.generated_at,
-            "protocol":     self.protocol,
-            "horizon":      self.horizon,
-            "history_days": self.history_days,
-            "per_pair":     [p.to_dict() for p in self.per_pair],
-            "aggregate":    self.aggregate,
+            "generated_at":       self.generated_at,
+            "protocol":           self.protocol,
+            "horizon":            self.horizon,
+            "history_days":       self.history_days,
+            "evaluation_scope":   self.evaluation_scope,
+            "promotion_eligible": self.promotion_eligible,
+            "per_pair":           [p.to_dict() for p in self.per_pair],
+            "aggregate":          self.aggregate,
         }
-
 
 # ---------------------------------------------------------------------------
 # Walk-forward harness internals
@@ -258,301 +199,299 @@ def _safe_float(v: Any) -> Optional[float]:
     except (TypeError, ValueError):
         return None
 
-
-def _run_one_pair(
-    series: List[Tuple[date, float]],
-    model_names: List[str],
-    features: Optional[List[Any]] = None,
-) -> Dict[str, Dict[str, Any]]:
-    """
-    Run walk-forward backtest for a single pair.
-
-    Returns:
-        {model_name: {"actuals": [...], "preds": [...],
-                      "lowers": [...], "uppers": [...],
-                      "last_train_prices": [...], "nan_count": int}}
-    """
-    n = len(series)
-    if n < TOTAL_TEST_DAYS + 1:
-        return {}  # not enough data for even 1 fold
-
-    # Index of first fold start: n - TOTAL_TEST_DAYS
-    first_fold_start = n - TOTAL_TEST_DAYS
-
-    # Accumulate across folds for each model
-    results: Dict[str, Dict] = {
-        name: {
-            "actuals":            [],
-            "preds":              [],
-            "lowers":             [],
-            "uppers":             [],
-            "last_train_prices":  [],
-            "nan_count":          0,
-        }
-        for name in model_names
-    }
-
-    for fold_idx in range(N_FOLDS):
-        fold_start = first_fold_start + fold_idx * FOLD_SIZE
-        train_series = series[:fold_start]   # expanding window
-        fold_series  = series[fold_start: fold_start + FOLD_SIZE]
-        train_features = features[:fold_start] if features else None
-
-        if not train_series or not fold_series:
-            continue
-
-        last_train_price = train_series[-1][1]
-
-        for name in model_names:
-            try:
-                model = get_model(name)
-                model.fit(train_series, features=train_features)
-                raw_preds = model.predict(horizon=len(fold_series))
-            except Exception as e:
-                # Model failed this fold — record NaN for every day of the fold
-                logger.warning(
-                    "backtest_model_fold_failed",
-                    model=name,
-                    fold=fold_idx,
-                    error=str(e),
-                )
-                for _, actual in fold_series:
-                    results[name]["actuals"].append(actual)
-                    results[name]["preds"].append(float("nan"))
-                    results[name]["lowers"].append(float("nan"))
-                    results[name]["uppers"].append(float("nan"))
-                    results[name]["last_train_prices"].append(last_train_price)
-                    results[name]["nan_count"] += 1
-                continue
-
-            for i, (_, actual) in enumerate(fold_series):
-                if i < len(raw_preds):
-                    pred, lo, hi = raw_preds[i]
-                    pred_f = _safe_float(pred)
-                    lo_f   = _safe_float(lo)
-                    hi_f   = _safe_float(hi)
-                else:
-                    pred_f = lo_f = hi_f = float("nan")
-
-                is_nan = pred_f is None or not math.isfinite(pred_f)
-                results[name]["actuals"].append(actual)
-                results[name]["preds"].append(pred_f if not is_nan else float("nan"))
-                results[name]["lowers"].append(lo_f if lo_f is not None else float("nan"))
-                results[name]["uppers"].append(hi_f if hi_f is not None else float("nan"))
-                results[name]["last_train_prices"].append(last_train_price)
-                if is_nan:
-                    results[name]["nan_count"] += 1
-
-    return results
-
-
-def _metrics_from_fold_data(
-    data: Dict[str, Any],
-) -> ModelResult:
-    """Compute ModelResult from accumulated fold data for one model."""
-    actuals = data["actuals"]
-    preds   = data["preds"]
-    lowers  = data["lowers"]
-    uppers  = data["uppers"]
-    last_prices = data["last_train_prices"]
-    nan_count   = data["nan_count"]
-
-    total = len(preds)
-    nan_rate = nan_count / total if total > 0 else 0.0
-
-    mae_val  = mae(actuals, preds)
-    mape_val = mape_winsorized(actuals, preds)
-
-    # Directional accuracy: day-1 of each fold (index 0, FOLD_SIZE, ...)
-    day1_actuals = actuals[::FOLD_SIZE]
-    day1_preds   = preds[::FOLD_SIZE]
-    day1_last    = last_prices[::FOLD_SIZE]
-
-    total_hits = 0
-    total_considered = 0
-    for anchor, fold_preds_1, fold_actual_1 in zip(day1_last, day1_preds, day1_actuals):
-        h, c = directional_accuracy(anchor, [fold_preds_1], [fold_actual_1])
-        total_hits      += h
-        total_considered += c
-
-    cov = interval_coverage(uppers, lowers, actuals)
-
-    return ModelResult(
-        model=data.get("name", "unknown"),
-        mae=None if math.isnan(mae_val) else round(mae_val, 4),
-        mape_winsorized=None if math.isnan(mape_val) else round(mape_val, 4),
-        directional_hits=total_hits,
-        directional_folds=total_considered,
-        interval_coverage=None if math.isnan(cov) else round(cov, 4),
-        nan_rate=round(nan_rate, 4),
-    )
-
-
-# ---------------------------------------------------------------------------
-# Public entry point
-# ---------------------------------------------------------------------------
-
 def run_backtest(
     supabase,
     pairs: List[Tuple[str, str]],
     history_days: int = 365,
     model_names: Optional[List[str]] = None,
+    evaluation_scope: str = "official",
 ) -> BacktestReport:
     """
-    Run the walk-forward backtest for the given (market_id, commodity_id) pairs.
-
-    Parameters
-    ----------
-    supabase : Supabase Client or FakeSupabase
-        Used only to fetch price history (read-only).
-    pairs : list of (market_id, commodity_id)
-    history_days : int
-        How far back to fetch price history (training + test window).
-    model_names : list of str, optional
-        Model names from MODEL_REGISTRY to evaluate.  Defaults to
-        ["ma", "ols", "naive"].
-
-    Returns
-    -------
-    BacktestReport
+    Run walk-forward backtest over calendar folds, with global training for GBM.
     """
     from forecasting.engine import build_daily_series
-
+    from forecasting.features import build_feature_matrix
+    
     if model_names is None:
-        model_names = ["ma", "ols", "naive"]
-
-    # Validate model names up front — unknown name → ValueError (caller → 422)
+        model_names = ["ma", "ols", "naive", "feature_ols", "holt_winters", "gbm"]
+        
     for name in model_names:
         if name not in MODEL_REGISTRY:
-            raise ValueError(
-                f"Unknown model name {name!r}. "
-                f"Available: {sorted(MODEL_REGISTRY.keys())}"
-            )
-
-    # Ensure naive is always present as benchmark
+            raise ValueError(f"Unknown model name {name!r}")
+            
     if "naive" not in model_names:
-        model_names = list(model_names) + ["naive"]
-
+        model_names.append("naive")
+        
     cutoff = (date.today() - timedelta(days=history_days)).isoformat()
+    
+    # 1. Fetch data globally
+    raw_history = {}
+    weather = []
+    events = []
+    try:
+        weather = supabase.table("weather_daily").select("*").gte("observation_date", cutoff).execute().data or []
+        events = supabase.table("events").select("*").gte("event_date", cutoff).execute().data or []
+        for market_id, commodity_id in pairs:
+            resp = supabase.table("prices").select("arrival_date, modal_price, arrival_qty, source, variety").eq("market_id", market_id).eq("commodity_id", commodity_id).gte("arrival_date", cutoff).order("arrival_date", desc=False).execute()
+            raw_history[(market_id, commodity_id)] = resp.data or []
+    except Exception as e:
+        logger.error("backtest_data_fetch_failed", error=str(e))
+        return BacktestReport(datetime.now(timezone.utc).isoformat(), BACKTEST_PROTOCOL, HORIZON, history_days, evaluation_scope, False, [], {})
 
-    # Pool: model → list of (actual, pred, lo, hi) for aggregate metrics
-    pool: Dict[str, Dict[str, Any]] = {
+    # Pre-build full series and features for all pairs
+    full_series = {}
+    full_features = {}
+    for (m, c), rows in raw_history.items():
+        s = build_daily_series(rows)
+        if len(s) == 0:
+            continue
+            
+        by_date = {}
+        for r in rows:
+            d_str = r["arrival_date"]
+            d = date.fromisoformat(d_str) if isinstance(d_str, str) else d_str
+            by_date.setdefault(d, []).append(r)
+            
+        history_dicts = []
+        for d, p in s:
+            day_rows = by_date.get(d, [])
+            if day_rows:
+                from forecasting.engine import _source_rank
+                best_rank   = min(_source_rank(r.get("source", "")) for r in day_rows)
+                candidates  = [r for r in day_rows if _source_rank(r.get("source", "")) == best_rank]
+                general     = [r for r in candidates if (r.get("variety") or "General") == "General"]
+                chosen      = general[0] if general else candidates[0]
+                qty = chosen.get("arrival_qty") or 0.0
+            else:
+                qty = 0.0
+            history_dicts.append({"arrival_date": d.isoformat(), "modal_price": p, "arrival_qty": float(qty)})
+            
+        feat = build_feature_matrix(
+            series=history_dicts,
+            weather=[w for w in weather if w.get("market_id") == m],
+            events=events,
+            district_prices=[],
+            target_commodity_id=c,
+            strict_pit=True
+        )
+        full_series[(m, c)] = s
+        full_features[(m, c)] = feat
+
+    # 2. Determine Calendar Folds
+    # Find max date across all series
+    max_d = None
+    for s in full_series.values():
+        if s:
+            md = s[-1][0]
+            if max_d is None or md > max_d:
+                max_d = md
+                
+    if not max_d:
+        return BacktestReport(datetime.now(timezone.utc).isoformat(), BACKTEST_PROTOCOL, HORIZON, history_days, evaluation_scope, False, [], {})
+        
+    first_fold_start = max_d - timedelta(days=TOTAL_TEST_DAYS) + timedelta(days=1)
+    
+    # 3. Setup accumulator pool
+    pool = {
         name: {
-            "actuals": [], "preds": [], "lowers": [], "uppers": [],
-            "nan_count": 0, "name": name,
-        }
-        for name in model_names
+            "actuals": [], "preds": [], "lowers": [], "uppers": [], "last_train_prices": [], "nan_count": 0, "name": name, "hits": 0, "considered": 0
+        } for name in model_names
+    }
+    
+    pair_accumulators = {
+        (m, c): {
+            name: {"actuals": [], "preds": [], "lowers": [], "uppers": [], "last_train_prices": [], "nan_count": 0}
+            for name in model_names
+        } for (m, c) in full_series.keys()
     }
 
-    per_pair: List[PairResult] = []
-
-    for market_id, commodity_id in pairs:
-        # Fetch full history for this pair
-        try:
-            resp = (
-                supabase.table("prices")
-                .select("arrival_date, modal_price, arrival_qty, source, variety")
-                .eq("market_id", market_id)
-                .eq("commodity_id", commodity_id)
-                .gte("arrival_date", cutoff)
-                .order("arrival_date", desc=False)
-                .execute()
-            )
-            raw_rows = resp.data or []
-        except Exception:
-            continue
-
-        series = build_daily_series(raw_rows)
-        n_obs  = len(series)
-
-        if n_obs < TOTAL_TEST_DAYS + 1:
-            per_pair.append(PairResult(
-                market_id=market_id,
-                commodity_id=commodity_id,
-                n_obs=n_obs,
-                models=[],
-            ))
-            continue
-            
-        from forecasting.features import build_feature_matrix
+    # 4. Iterate over Folds
+    for fold_idx in range(N_FOLDS):
+        fold_start = first_fold_start + timedelta(days=fold_idx * FOLD_SIZE)
+        fold_end = fold_start + timedelta(days=FOLD_SIZE - 1)
         
-        # We need the winner row's arrival_qty for each date in series.
-        # Use the same precedence rules implicitly by letting the engine map them, or just do it inline here since engine returns (date, price).
-        # Actually, build_daily_series already does this. The easiest way to get the winner's arrival_qty is to use the exact same logic.
-        from forecasting.engine import _source_rank
-        by_date: Dict[date, List[dict]] = {}
-        for row in raw_rows:
-            d_raw = row["arrival_date"]
-            d = date.fromisoformat(d_raw) if isinstance(d_raw, str) else d_raw
-            by_date.setdefault(d, []).append(row)
+        # Train global GBM for this fold
+        global_gbm = None
+        if "gbm" in model_names:
+            # Build training history strictly before fold_start
+            train_history = {}
+            for (m, c), rows in raw_history.items():
+                train_history[(m, c)] = []
+                for r in rows:
+                    d_str = r["arrival_date"]
+                    d = date.fromisoformat(d_str) if isinstance(d_str, str) else d_str
+                    if d < fold_start:
+                        train_history[(m, c)].append(r)
+            try:
+                from forecasting.gbm import train_global_gbm
+                global_gbm = train_global_gbm(
+                    pairs_history=train_history,
+                    weather=[w for w in weather if date.fromisoformat(w["observation_date"][:10]) < fold_start],
+                    events=[e for e in events if date.fromisoformat(e["event_date"][:10]) < fold_start],
+                    district_prices=[],
+                    strict_pit=True
+                )
+            except Exception as e:
+                logger.warning("fold_global_gbm_failed", fold=fold_idx, error=str(e))
+                global_gbm = None
+                
+        # Iterate over pairs for local training & prediction
+        for (m, c), s in full_series.items():
+            train_s = [(d, p) for (d, p) in s if d < fold_start]
+            test_s = [(d, p) for (d, p) in s if fold_start <= d <= fold_end]
             
-        winner_qty = {}
-        for d, day_rows in by_date.items():
-            best_rank = min(_source_rank(r.get("source", "")) for r in day_rows)
-            candidates = [r for r in day_rows if _source_rank(r.get("source", "")) == best_rank]
-            general = [r for r in candidates if (r.get("variety") or "General") == "General"]
-            chosen = general[0] if general else candidates[0]
-            winner_qty[d] = chosen.get("arrival_qty", 0.0)
-
-        history_dicts = [{"arrival_date": d.isoformat(), "modal_price": p, "arrival_qty": winner_qty.get(d, 0.0)} for d, p in series]
-        
-        # We also need to fetch weather and events for backtest, ideally passing them to build_feature_matrix.
-        # But this is just backtest, let's pass them as empty for now or fetch them.
-        # To make it accurate, we should fetch them. Let's do it outside the loop once.
-        features = build_feature_matrix(history_dicts, target_commodity_id=commodity_id)
-
-        fold_data = _run_one_pair(series, model_names, features=features)
-        if not fold_data:
-            continue
-
-        # Attach model name to fold_data (needed by _metrics_from_fold_data)
-        for name in model_names:
-            if name in fold_data:
-                fold_data[name]["name"] = name
-
-        pair_models: List[ModelResult] = []
-        for name in model_names:
-            if name not in fold_data:
+            if not train_s or not test_s:
                 continue
-            mr = _metrics_from_fold_data(fold_data[name])
+                
+            last_train_price = train_s[-1][1]
+            train_f = [f for (d, p), f in zip(s, full_features[(m, c)]) if d < fold_start]
+            
+            for name in model_names:
+                preds = []
+                try:
+                    if name == "gbm":
+                        if global_gbm is None:
+                            raise ValueError("GBM model failed to train")
+                        model = global_gbm
+                    else:
+                        model = get_local_model(name)
+                        
+                    model.fit(train_s, features=train_f, pair_id=(m, c))
+                    preds = model.predict(horizon=FOLD_SIZE)
+                except Exception as e:
+                    logger.warning("fold_model_failed", model=name, fold=fold_idx, pair=(m, c), error=str(e))
+                    for d, actual in test_s:
+                        pair_accumulators[(m, c)][name]["actuals"].append(actual)
+                        pair_accumulators[(m, c)][name]["preds"].append(float("nan"))
+                        pair_accumulators[(m, c)][name]["lowers"].append(float("nan"))
+                        pair_accumulators[(m, c)][name]["uppers"].append(float("nan"))
+                        pair_accumulators[(m, c)][name]["last_train_prices"].append(last_train_price)
+                        pair_accumulators[(m, c)][name]["nan_count"] += 1
+                    continue
+                    
+                # Score ONLY matching calendar dates (no interpolated actuals)
+                for i in range(FOLD_SIZE):
+                    pred_date = fold_start + timedelta(days=i)
+                    actual_match = [p for d, p in test_s if d == pred_date]
+                    if not actual_match:
+                        continue # Date not present in test_s, don't score
+                        
+                    actual = actual_match[0]
+                    if i < len(preds):
+                        p, lo, hi = preds[i]
+                        p_f = _safe_float(p)
+                        lo_f = _safe_float(lo)
+                        hi_f = _safe_float(hi)
+                    else:
+                        p_f = lo_f = hi_f = float("nan")
+                        
+                    is_nan = p_f is None or not math.isfinite(p_f)
+                    
+                    pair_accumulators[(m, c)][name]["actuals"].append(actual)
+                    pair_accumulators[(m, c)][name]["preds"].append(p_f if not is_nan else float("nan"))
+                    pair_accumulators[(m, c)][name]["lowers"].append(lo_f if lo_f is not None else float("nan"))
+                    pair_accumulators[(m, c)][name]["uppers"].append(hi_f if hi_f is not None else float("nan"))
+                    pair_accumulators[(m, c)][name]["last_train_prices"].append(last_train_price)
+                    if is_nan:
+                        pair_accumulators[(m, c)][name]["nan_count"] += 1
+
+    # 5. Build Result objects
+    per_pair = []
+    for (m, c), acc in pair_accumulators.items():
+        n_obs = len(full_series[(m, c)])
+        pair_models = []
+        for name in model_names:
+            actuals = acc[name]["actuals"]
+            if not actuals:
+                continue
+                
+            preds = acc[name]["preds"]
+            last_prices = acc[name]["last_train_prices"]
+            
+            mae_val = mae(actuals, preds)
+            mape_val = mape_winsorized(actuals, preds)
+            cov = interval_coverage(acc[name]["uppers"], acc[name]["lowers"], actuals)
+            
+            # Directional accuracy uses all paired instances (fold day 1 logic approximated by pairs scored)
+            total_hits, total_considered = directional_accuracy(last_prices, preds, actuals)
+            
+            mr = ModelResult(
+                model=name,
+                mae=None if math.isnan(mae_val) else round(mae_val, 4),
+                mape_winsorized=None if math.isnan(mape_val) else round(mape_val, 4),
+                directional_hits=total_hits,
+                directional_folds=total_considered,
+                interval_coverage=None if math.isnan(cov) else round(cov, 4),
+                nan_rate=round(acc[name]["nan_count"] / len(preds), 4) if preds else 0.0
+            )
             pair_models.append(mr)
-            # Accumulate into global pool
-            pool[name]["actuals"].extend(fold_data[name]["actuals"])
-            pool[name]["preds"].extend(fold_data[name]["preds"])
-            pool[name]["lowers"].extend(fold_data[name]["lowers"])
-            pool[name]["uppers"].extend(fold_data[name]["uppers"])
-            pool[name]["nan_count"] += fold_data[name]["nan_count"]
+            
+            # Pool to global
+            pool[name]["actuals"].extend(actuals)
+            pool[name]["preds"].extend(preds)
+            pool[name]["lowers"].extend(acc[name]["lowers"])
+            pool[name]["uppers"].extend(acc[name]["uppers"])
+            pool[name]["nan_count"] += acc[name]["nan_count"]
+            pool[name]["hits"] += total_hits
+            pool[name]["considered"] += total_considered
+            
+        per_pair.append(PairResult(market_id=m, commodity_id=c, n_obs=n_obs, models=pair_models))
 
-        per_pair.append(PairResult(
-            market_id=market_id,
-            commodity_id=commodity_id,
-            n_obs=n_obs,
-            models=pair_models,
-        ))
-
-    # Build aggregate (pooled across all pairs)
-    aggregate: Dict[str, Any] = {}
+    # 6. Aggregate
+    aggregate = {}
     for name in model_names:
         p = pool[name]
-        agg_mae  = mae(p["actuals"], p["preds"])
-        agg_mape = mape_winsorized(p["actuals"], p["preds"])
-        agg_cov  = interval_coverage(p["uppers"], p["lowers"], p["actuals"])
-        total    = len(p["preds"])
+        actuals = p["actuals"]
+        if not actuals:
+            continue
+        agg_mae = mae(actuals, p["preds"])
+        agg_mape = mape_winsorized(actuals, p["preds"])
+        agg_cov = interval_coverage(p["uppers"], p["lowers"], actuals)
+        total = len(p["preds"])
+        agg_da = (p["hits"] / p["considered"] * 100.0) if p["considered"] > 0 else 0.0
         aggregate[name] = {
-            "mae":              None if math.isnan(agg_mae) else round(agg_mae, 4),
-            "mape_winsorized":  None if math.isnan(agg_mape) else round(agg_mape, 4),
+            "mae": None if math.isnan(agg_mae) else round(agg_mae, 4),
+            "mape_winsorized": None if math.isnan(agg_mape) else round(agg_mape, 4),
             "interval_coverage": None if math.isnan(agg_cov) else round(agg_cov, 4),
-            "nan_rate":         round(p["nan_count"] / total, 4) if total else None,
-            "n_predictions":    total,
+            "directional_accuracy": round(agg_da, 2),
+            "nan_rate": round(p["nan_count"] / total, 4) if total else 0.0,
+            "n_predictions": total,
         }
-        
-        # GBM feature importances removed — gbm is delisted from registry.
+        if name == "gbm" and global_gbm is not None:
+            aggregate[name]["feature_importances"] = global_gbm.get_feature_importances()
+
+    promotion_eligible = False
+    if evaluation_scope == "official":
+        if "gbm" in aggregate and "ma" in aggregate and "ols" in aggregate:
+            gbm_mape = aggregate["gbm"].get("mape_winsorized")
+            ma_mape = aggregate["ma"].get("mape_winsorized")
+            ols_mape = aggregate["ols"].get("mape_winsorized")
+            
+            if gbm_mape is not None and ma_mape is not None and ols_mape is not None:
+                # G2: Candidate must beat MA and OLS on aggregate winsorized MAPE
+                if gbm_mape < ma_mape and gbm_mape < ols_mape:
+                    # G3: GBM must beat the winner on aggregate MAPE with DA <= 2pp lower
+                    baselines = ["ma", "ols", "naive", "feature_ols", "holt_winters"]
+                    best_baseline_mape = min((aggregate[b].get("mape_winsorized") for b in baselines if b in aggregate and aggregate[b].get("mape_winsorized") is not None), default=float('inf'))
+                    
+                    # Find the baseline that got the best MAPE and compare DA
+                    best_baseline_da = 0.0
+                    for b in baselines:
+                        if b in aggregate and aggregate[b].get("mape_winsorized") == best_baseline_mape:
+                            best_baseline_da = max(best_baseline_da, aggregate[b].get("directional_accuracy", 0.0))
+                            
+                    gbm_da = aggregate["gbm"].get("directional_accuracy", 0.0)
+                    
+                    if gbm_mape < best_baseline_mape and gbm_da >= (best_baseline_da - 2.0):
+                        promotion_eligible = True
 
     return BacktestReport(
         generated_at=datetime.now(timezone.utc).isoformat(),
         protocol=BACKTEST_PROTOCOL,
         horizon=HORIZON,
         history_days=history_days,
+        evaluation_scope=evaluation_scope,
+        promotion_eligible=promotion_eligible,
         per_pair=per_pair,
         aggregate=aggregate,
     )
