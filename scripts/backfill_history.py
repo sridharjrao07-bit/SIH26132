@@ -93,6 +93,7 @@ async def backfill(days: int, markets_csv: str, commodities_csv: str, sleep_time
     total_seen = 0
     total_written = 0
     total_rejected = 0
+    total_transient_skips = 0
     
     hard_failure = False
     
@@ -101,51 +102,87 @@ async def backfill(days: int, markets_csv: str, commodities_csv: str, sleep_time
         written = 0
         rejected = 0
         
+        transient_skips = 0
         for market in market_list:
             district = market["district"]
             for commodity in fetch_keys:
+                if hard_failure:
+                    break
+                    
                 try:
                     raw_records = await adapter.fetch_prices(district=district, commodity=commodity, date=dt)
-                    seen += len(raw_records)
-                    
-                    all_valid = []
-                    for raw in raw_records:
-                        valid_dict, reason = validator.validate_and_normalize(raw)
-                        if valid_dict is None:
-                            rejected += 1
-                            continue
-                            
-                        m_id = market_map.get(_norm_key(raw.market_name))
-                        if not m_id:
-                            rejected += 1
-                            continue
-                            
-                        valid_dict["market_id"] = m_id
-                        all_valid.append(valid_dict)
+                except Exception as e:
+                    from ingestion.base import SourceFetchError
+                    import httpx
+                    is_transient = False
+                    if isinstance(e, SourceFetchError) and getattr(e, "__cause__", None) is not None:
+                        cause = e.__cause__
+                        if isinstance(cause, httpx.HTTPStatusError):
+                            if cause.response.status_code >= 500 or cause.response.status_code == 429:
+                                is_transient = True
+                        elif isinstance(cause, httpx.RequestError):
+                            is_transient = True
+                    elif type(e).__name__ in ("TimeoutError", "ConnectionError"):
+                        is_transient = True
+
+                    if not is_transient:
+                        logger.error("api_fetch_failed_hard", district=district, commodity=commodity, date=dt.isoformat(), error=str(e))
+                        hard_failure = True
+                        break
                         
-                    if all_valid:
-                        conflict = "market_id, commodity_id, arrival_date, variety, grade, source"
-                        UPSERT_CHUNK = 200
-                        for i in range(0, len(all_valid), UPSERT_CHUNK):
-                            chunk = all_valid[i:i+UPSERT_CHUNK]
+                    logger.warning("api_fetch_failed_transient", district=district, commodity=commodity, date=dt.isoformat(), error=type(e).__name__)
+                    transient_skips += 1
+                    continue
+                    
+                seen += len(raw_records)
+                
+                all_valid = []
+                for raw in raw_records:
+                    valid_dict, reason = validator.validate_and_normalize(raw)
+                    if valid_dict is None:
+                        rejected += 1
+                        continue
+                        
+                    m_id = market_map.get(_norm_key(raw.market_name))
+                    if not m_id:
+                        rejected += 1
+                        continue
+                        
+                    valid_dict["market_id"] = m_id
+                    all_valid.append(valid_dict)
+                    
+                if all_valid:
+                    conflict = "market_id, commodity_id, arrival_date, variety, grade, source"
+                    UPSERT_CHUNK = 200
+                    for i in range(0, len(all_valid), UPSERT_CHUNK):
+                        chunk = all_valid[i:i+UPSERT_CHUNK]
+                        try:
                             # Run DB call in thread
                             await asyncio.to_thread(
                                 lambda c=chunk: supabase.table("prices").upsert(c, on_conflict=conflict).execute()
                             )
                             written += len(chunk)
-                except Exception as e:
-                    logger.warning("fetch_failed", district=district, commodity=commodity, date=dt.isoformat(), error=str(e))
-                    continue
-                    
+                        except Exception as e:
+                            logger.error("hard_db_write_failed", error=type(e).__name__)
+                            hard_failure = True
+                            break
+                            
                 time.sleep(sleep_time)
+            if hard_failure:
+                break
+                
+        if hard_failure:
+            logger.error("aborting_due_to_db_failure")
+            break
 
-        logger.info("date_processed", date=dt.isoformat(), seen=seen, written=written, rejected=rejected)
+        logger.info("date_processed", date=dt.isoformat(), seen=seen, written=written, rejected=rejected, transient_skips=transient_skips)
         total_seen += seen
         total_written += written
         total_rejected += rejected
+        total_transient_skips += transient_skips
 
     logger.info("backfill_complete", dates_written=f"{start_date.isoformat()}..{end_date.isoformat()}",
-                seen=total_seen, written=total_written, rejected=total_rejected)
+                seen=total_seen, written=total_written, rejected=total_rejected, transient_skips=total_transient_skips)
     
     if hard_failure:
         sys.exit(1)
