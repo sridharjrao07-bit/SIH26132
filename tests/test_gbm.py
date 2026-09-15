@@ -3,7 +3,7 @@ import random
 from datetime import date, timedelta
 
 from forecasting.backtest import run_backtest
-from forecasting.gbm import GlobalGBM, ForecastModelError
+from forecasting.gbm import ForecastModelError
 
 try:
     import lightgbm  # noqa: F401  # availability check
@@ -34,9 +34,11 @@ def test_import_failure_fallback(monkeypatch):
 
     monkeypatch.setattr(builtins, "__import__", mock_import)
 
+    from forecasting.gbm import train_global_gbm
+    
     # Use the model - should raise ForecastModelError on instantiation
     with pytest.raises(ForecastModelError, match="Optional ML dependencies not installed"):
-        _ = GlobalGBM()
+        _ = train_global_gbm({}, [], [], [])
 
 
 def _generate_synthetic_data(seed: int, n_days: int = 200, is_noise: bool = False):
