@@ -1,7 +1,7 @@
 import structlog
 from statistics import pstdev
-from typing import List, Tuple, Optional
-import math
+from datetime import date
+from typing import List, Optional
 from forecasting.features import FeatureRow
 
 logger = structlog.get_logger()
@@ -146,7 +146,7 @@ class FeatureOLSModel:
             vec.append(val)
         return vec
 
-    def predict(self, horizon: int = 7) -> List[Tuple[float, float, float]]:
+    def predict(self, horizon: int = 7, forecast_origin: Optional[date] = None) -> List[float]:
         if self.fallback:
             # We defer to the engine's fallback logic
             raise RuntimeError("predict called on fallback model")
@@ -182,11 +182,7 @@ class FeatureOLSModel:
             vec = self._get_feature_vector(vf)
             pred = sum(b * x for b, x in zip(self.beta, vec))
             sim_prices.append(pred)
-            
-            margin = CONFIDENCE_Z * self.sigma * math.sqrt(h + 1)
-            lo = round(max(0.0, pred - margin), 2)
-            hi = round(pred + margin, 2)
-            preds.append((round(pred, 2), lo, hi))
+            preds.append(pred)
             
         return preds
 
@@ -229,21 +225,15 @@ class HoltWintersModel:
             except Exception:
                 self.fallback = True
 
-    def predict(self, horizon: int = 7) -> List[Tuple[float, float, float]]:
+    def predict(self, horizon: int = 7, forecast_origin: Optional[date] = None) -> List[float]:
         if self.fallback:
             raise RuntimeError("predict called on fallback model")
             
         forecasts = self.model_fit.forecast(horizon)
         
-        # Calculate sigma from in-sample residuals
-        residuals = self.model_fit.resid
-        sigma = pstdev(residuals) if len(residuals) > 1 else 0.0
+        # Calculate sigma from in-sample residuals if not already done
+        if not hasattr(self, 'sigma'):
+            residuals = self.model_fit.resid
+            self.sigma = pstdev(residuals) if len(residuals) > 1 else 0.0
         
-        preds = []
-        for i, pred in enumerate(forecasts):
-            margin = CONFIDENCE_Z * sigma * math.sqrt(i + 1)
-            lo = round(max(0.0, pred - margin), 2)
-            hi = round(pred + margin, 2)
-            preds.append((round(pred, 2), lo, hi))
-            
-        return preds
+        return list(forecasts)
