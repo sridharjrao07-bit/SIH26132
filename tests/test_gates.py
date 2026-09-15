@@ -1,11 +1,22 @@
-"""Tests for forecasting.gates — G2 (MAPE) and G3 (directional accuracy) gates."""
+"""
+Tests for forecasting.gates
+
+Covers:
+  - GateOutcome semantics (PASS/SKIP/FAIL)
+  - G2 and G3 individual gate evaluation
+  - select_model() — the enforced selection path
+  - Critical contract: SKIP blocks promotion (not a pass)
+  - Serialization
+"""
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-import pytest
 
 from forecasting.gates import (
+    GateOutcome,
     evaluate_gates,
+    select_model,
+    DEFAULT_MODEL,
     G2_MAPE_THRESHOLD,
     G3_DA_THRESHOLD,
     G2_MIN_PREDICTIONS,
@@ -13,17 +24,13 @@ from forecasting.gates import (
 )
 
 
-# ── Minimal stub types (not the real dataclasses — avoids import chain) ──────
+# ── Minimal stub types ────────────────────────────────────────────────────────
 
 @dataclass
 class _ModelResult:
     model:             str
-    mae:               Optional[float] = None
-    mape_winsorized:   Optional[float] = None
     directional_hits:  Optional[int]   = None
     directional_folds: Optional[int]   = None
-    interval_coverage: Optional[float] = None
-    nan_rate:          float           = 0.0
 
 
 @dataclass
@@ -40,58 +47,12 @@ class _BacktestReport:
     per_pair:  List[_PairResult] = field(default_factory=list)
 
 
-# ── G2 tests ─────────────────────────────────────────────────────────────────
-
-def test_g2_passes_when_mape_below_threshold():
-    report = _BacktestReport(
-        aggregate={"blend": {"mape_winsorized": 0.15, "n_predictions": 50}},
-    )
-    result = evaluate_gates(report, model_name="blend")
-    g2 = next(g for g in result.gates if g.name == "G2_MAPE")
-    assert g2.passed is True
-    assert g2.value == pytest.approx(0.15)
-
-
-def test_g2_fails_when_mape_above_threshold():
-    report = _BacktestReport(
-        aggregate={"blend": {"mape_winsorized": 0.25, "n_predictions": 50}},
-    )
-    result = evaluate_gates(report, model_name="blend")
-    g2 = next(g for g in result.gates if g.name == "G2_MAPE")
-    assert g2.passed is False
-    assert result.all_pass is False
-
-
-def test_g2_skips_when_n_predictions_below_minimum():
-    """Insufficient data must not block — gate passes with a note."""
-    report = _BacktestReport(
-        aggregate={"blend": {"mape_winsorized": 0.99, "n_predictions": G2_MIN_PREDICTIONS - 1}},
-    )
-    result = evaluate_gates(report, model_name="blend")
-    g2 = next(g for g in result.gates if g.name == "G2_MAPE")
-    assert g2.passed is True
-    assert result.notes  # at least one note added
-
-
-def test_g2_skips_when_mape_is_none():
-    report = _BacktestReport(
-        aggregate={"blend": {"mape_winsorized": None, "n_predictions": 100}},
-    )
-    result = evaluate_gates(report, model_name="blend")
-    g2 = next(g for g in result.gates if g.name == "G2_MAPE")
-    assert g2.passed is True  # None → skip, not fail
-
-
-# ── G3 tests ─────────────────────────────────────────────────────────────────
-
-def _report_with_da(hits: int, folds: int, mape: float = 0.10, n_preds: int = 50):
+def _report(mape: Optional[float], n_preds: int, hits: int, folds: int):
+    """Build a minimal BacktestReport stub for testing."""
     pair = _PairResult(
         market_id="m1", commodity_id="c1", n_obs=100,
-        models=[_ModelResult(
-            model="blend",
-            directional_hits=hits,
-            directional_folds=folds,
-        )],
+        models=[_ModelResult(model="blend", directional_hits=hits,
+                             directional_folds=folds)],
     )
     return _BacktestReport(
         aggregate={"blend": {"mape_winsorized": mape, "n_predictions": n_preds}},
@@ -99,71 +60,170 @@ def _report_with_da(hits: int, folds: int, mape: float = 0.10, n_preds: int = 50
     )
 
 
-def test_g3_passes_when_da_above_threshold():
-    report = _report_with_da(hits=6, folds=10)
-    result = evaluate_gates(report, model_name="blend")
-    g3 = next(g for g in result.gates if g.name == "G3_DA")
-    assert g3.passed is True
-    assert g3.value == pytest.approx(0.6)
+# ── GateOutcome contract ──────────────────────────────────────────────────────
+
+def test_only_pass_does_not_block_promotion():
+    assert not GateOutcome.PASS.blocks_promotion
+    assert GateOutcome.SKIP.blocks_promotion
+    assert GateOutcome.FAIL.blocks_promotion
 
 
-def test_g3_fails_when_da_below_threshold():
-    report = _report_with_da(hits=4, folds=10)
+# ── CRITICAL: SKIP must block promotion ──────────────────────────────────────
+
+def test_skip_on_insufficient_g2_blocks_select_model():
+    """SKIP is not a pass — select_model must retain the current model."""
+    report = _report(mape=0.99, n_preds=G2_MIN_PREDICTIONS - 1,
+                     hits=8, folds=10)
     result = evaluate_gates(report, model_name="blend")
+
+    g2 = next(g for g in result.gates if g.name == "G2_MAPE")
+    assert g2.outcome is GateOutcome.SKIP
+    assert g2.passed is False          # .passed property reflects outcome
+    assert result.all_pass is False    # all_pass requires all PASS, not just not-FAIL
+
+    selected = select_model(result, current_model="blend")
+    assert selected == "blend"         # retained, not promoted
+
+
+def test_skip_on_insufficient_g3_blocks_select_model():
+    """Insufficient directional samples → SKIP → retention."""
+    report = _report(mape=0.10, n_preds=50,
+                     hits=0, folds=G3_MIN_DIRECTIONAL - 1)
+    result = evaluate_gates(report, model_name="blend")
+
     g3 = next(g for g in result.gates if g.name == "G3_DA")
-    assert g3.passed is False
-    assert g3.value == pytest.approx(0.4)
+    assert g3.outcome is GateOutcome.SKIP
+    assert result.all_pass is False
+
+    selected = select_model(result, current_model="ma")
+    assert selected == "ma"            # current model retained
+
+
+def test_both_skipped_all_pass_is_false():
+    """If no gates can be evaluated, all_pass must be False."""
+    report = _report(mape=None, n_preds=0, hits=0, folds=0)
+    result = evaluate_gates(report, model_name="blend")
     assert result.all_pass is False
 
 
-def test_g3_skips_when_directional_folds_below_minimum():
-    report = _report_with_da(hits=0, folds=G3_MIN_DIRECTIONAL - 1)
+# ── G2 pass/fail ─────────────────────────────────────────────────────────────
+
+def test_g2_pass_when_mape_at_threshold():
+    report = _report(mape=G2_MAPE_THRESHOLD, n_preds=50, hits=8, folds=10)
+    result = evaluate_gates(report, model_name="blend")
+    g2 = next(g for g in result.gates if g.name == "G2_MAPE")
+    assert g2.outcome is GateOutcome.PASS
+
+
+def test_g2_fail_when_mape_above_threshold():
+    report = _report(mape=G2_MAPE_THRESHOLD + 0.01, n_preds=50, hits=8, folds=10)
+    result = evaluate_gates(report, model_name="blend")
+    g2 = next(g for g in result.gates if g.name == "G2_MAPE")
+    assert g2.outcome is GateOutcome.FAIL
+    assert result.all_pass is False
+
+
+# ── G3 pass/fail ─────────────────────────────────────────────────────────────
+
+def test_g3_pass_when_da_at_threshold():
+    # Exactly at threshold: 55/100
+    hits = round(G3_DA_THRESHOLD * 100)
+    report = _report(mape=0.15, n_preds=50, hits=hits, folds=100)
     result = evaluate_gates(report, model_name="blend")
     g3 = next(g for g in result.gates if g.name == "G3_DA")
-    assert g3.passed is True
-    assert result.notes  # note added
+    assert g3.outcome is GateOutcome.PASS
 
 
-# ── Combined gate tests ───────────────────────────────────────────────────────
+def test_g3_fail_when_da_below_threshold():
+    # One short: 54/100
+    hits = round(G3_DA_THRESHOLD * 100) - 1
+    report = _report(mape=0.15, n_preds=50, hits=hits, folds=100)
+    result = evaluate_gates(report, model_name="blend")
+    g3 = next(g for g in result.gates if g.name == "G3_DA")
+    assert g3.outcome is GateOutcome.FAIL
+    assert result.all_pass is False
 
-def test_all_pass_when_both_gates_pass():
-    report = _report_with_da(hits=8, folds=10, mape=0.12, n_preds=56)
+
+# ── select_model — the enforced selection path ────────────────────────────────
+
+def test_select_model_promotes_when_all_gates_pass():
+    report = _report(mape=0.15, n_preds=50, hits=8, folds=10)
     result = evaluate_gates(report, model_name="blend")
     assert result.all_pass is True
+    selected = select_model(result, current_model="ma")
+    assert selected == "blend"         # candidate promoted
 
 
-def test_all_pass_false_when_g2_fails_even_if_g3_passes():
-    report = _report_with_da(hits=8, folds=10, mape=0.25, n_preds=56)
+def test_select_model_retains_current_on_g2_fail():
+    report = _report(mape=0.25, n_preds=50, hits=8, folds=10)
+    result = evaluate_gates(report, model_name="blend")
+    selected = select_model(result, current_model="ma")
+    assert selected == "ma"
+
+
+def test_select_model_retains_current_on_g3_fail():
+    report = _report(mape=0.15, n_preds=50, hits=3, folds=10)
+    result = evaluate_gates(report, model_name="blend")
+    selected = select_model(result, current_model="ma")
+    assert selected == "ma"
+
+
+def test_select_model_retains_default_when_no_current_specified():
+    """When current_model is omitted, DEFAULT_MODEL is retained."""
+    report = _report(mape=0.25, n_preds=50, hits=3, folds=10)
+    result = evaluate_gates(report, model_name="blend")
+    selected = select_model(result)
+    assert selected == DEFAULT_MODEL
+
+
+def test_select_model_retains_on_one_skip_one_pass():
+    """One gate SKIP + one gate PASS → retention (not promotion)."""
+    report = _report(
+        mape=0.15, n_preds=50,          # G2 would PASS
+        hits=0, folds=G3_MIN_DIRECTIONAL - 1,  # G3 is SKIP
+    )
     result = evaluate_gates(report, model_name="blend")
     assert result.all_pass is False
+    selected = select_model(result, current_model="ma")
+    assert selected == "ma"
 
 
-def test_all_pass_false_when_g3_fails_even_if_g2_passes():
-    report = _report_with_da(hits=3, folds=10, mape=0.12, n_preds=56)
+# ── blocking_gates property ───────────────────────────────────────────────────
+
+def test_blocking_gates_lists_only_skip_and_fail():
+    report = _report(mape=0.25, n_preds=50, hits=8, folds=10)
     result = evaluate_gates(report, model_name="blend")
-    assert result.all_pass is False
+    blocking = result.blocking_gates
+    assert all(g.outcome.blocks_promotion for g in blocking)
+    assert any(g.name == "G2_MAPE" for g in blocking)
 
 
-def test_gate_result_to_dict_is_serializable():
-    report = _report_with_da(hits=7, folds=10, mape=0.14, n_preds=56)
+# ── GateResult.to_dict — serialization ───────────────────────────────────────
+
+def test_to_dict_outcome_values_are_strings():
+    report = _report(mape=0.25, n_preds=50, hits=3, folds=10)
     result = evaluate_gates(report, model_name="blend")
     d = result.to_dict()
     assert isinstance(d, dict)
-    assert "model" in d and "all_pass" in d and "gates" in d
+    assert "all_pass" in d
     for g in d["gates"]:
-        assert "name" in g and "passed" in g and "threshold" in g
+        assert g["outcome"] in ("pass", "skip", "fail")
+        assert isinstance(g["passed"], bool)
 
 
-def test_unknown_model_name_returns_skipped_gates():
-    """Requesting gates for a model not in aggregate should not raise."""
-    report = _BacktestReport(aggregate={"blend": {"mape_winsorized": 0.10, "n_predictions": 50}})
+# ── Edge cases ────────────────────────────────────────────────────────────────
+
+def test_unknown_model_name_skips_all_gates_blocks_promotion():
+    report = _BacktestReport(
+        aggregate={"blend": {"mape_winsorized": 0.10, "n_predictions": 50}}
+    )
     result = evaluate_gates(report, model_name="nonexistent_model")
-    # All gates should be skipped (not raised), result.all_pass=True (no evidence)
-    assert result.all_pass is True
+    assert result.all_pass is False    # no evidence → all SKIP → blocks
+    selected = select_model(result, current_model="blend")
+    assert selected == "blend"
 
 
 def test_threshold_constants_are_sane():
-    """Sanity check: thresholds are in plausible ranges."""
     assert 0 < G2_MAPE_THRESHOLD <= 1
     assert 0 < G3_DA_THRESHOLD <= 1
     assert G2_MIN_PREDICTIONS >= 1
