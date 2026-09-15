@@ -16,7 +16,9 @@
 -- from the returned rows.
 
 CREATE OR REPLACE FUNCTION public.lots_for_buyer_supply(
-    p_commodity_id TEXT DEFAULT NULL
+    p_commodity_id TEXT DEFAULT NULL,
+    p_limit INT DEFAULT 100,
+    p_offset INT DEFAULT 0
 )
 RETURNS TABLE (
     id              UUID,
@@ -34,6 +36,9 @@ SECURITY DEFINER
 STABLE
 SET search_path = public
 AS $$
+    -- Security Check: Only allow users with the 'buyer' role to execute this logic.
+    -- If called by another role, return empty set (or we could raise exception, 
+    -- but SQL functions returning empty is safe).
     SELECT
         l.id,
         l.commodity_id,
@@ -46,17 +51,19 @@ AS $$
         l.fpo_id
     FROM public.lots l
     WHERE
-        l.status IN ('open', 'offered')
+        public.has_role('buyer')
+        AND l.status IN ('open', 'offered')
         AND (p_commodity_id IS NULL OR l.commodity_id::TEXT = p_commodity_id)
     ORDER BY l.created_at DESC
-    LIMIT 500;
+    LIMIT LEAST(p_limit, 500)
+    OFFSET p_offset;
 $$;
 
 -- Revoke default public access, then grant to authenticated only.
-REVOKE ALL ON FUNCTION public.lots_for_buyer_supply(TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.lots_for_buyer_supply(TEXT) TO authenticated;
+REVOKE ALL ON FUNCTION public.lots_for_buyer_supply(TEXT, INT, INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.lots_for_buyer_supply(TEXT, INT, INT) TO authenticated;
 
-COMMENT ON FUNCTION public.lots_for_buyer_supply(TEXT) IS
-    'Returns open/offered lots matching an optional commodity filter. '
-    'SECURITY DEFINER: callers see only the projected columns; no service-role '
-    'escalation is needed in the application layer.';
+COMMENT ON FUNCTION public.lots_for_buyer_supply(TEXT, INT, INT) IS
+    'Returns open/offered lots matching an optional commodity filter for buyers. '
+    'SECURITY DEFINER: exposes only projected columns, bounded by limit/offset, '
+    'and explicitly enforces public.has_role(''buyer'').';

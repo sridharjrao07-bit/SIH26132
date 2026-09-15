@@ -59,7 +59,7 @@ def list_buyers(
 @router.get("/{buyer_id}/supply")
 def buyer_supply(
     buyer_id: str,
-    supabase: Client = Depends(get_supabase),
+    supabase: Client = Depends(get_supabase_as_user),
 ):
     """Open lots that fit this verified buyer's demand (buyer-side aggregation).
 
