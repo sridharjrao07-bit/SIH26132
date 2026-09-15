@@ -95,7 +95,7 @@ def mape_winsorized(
 
 
 def directional_accuracy(
-    last_train_price: float,
+    last_train_prices: Sequence[float],
     fold_preds: Sequence[float],
     fold_actuals: Sequence[float],
     flat_eps: float = 0.01,
@@ -104,41 +104,45 @@ def directional_accuracy(
     Count folds where the *direction* of price movement was correctly predicted.
 
     A fold contributes to the denominator only if the actual price change
-    (actual − last_train_price) is non-trivial, i.e.
-    ``|change| / last_train_price > flat_eps``.  Flat folds (< 1% move by
-    default) are excluded: there is no signal to evaluate.
+    (actual - last_train_price) is non-trivial.
 
     Parameters
     ----------
-    last_train_price : float
-        The last observed price in the training window (the anchor).
+    last_train_prices : sequence of float
+        The last observed price in the training window for each fold prediction.
     fold_preds : sequence of float
-        One predicted price per fold (day-1 prediction of each fold).
+        Predicted prices.
     fold_actuals : sequence of float
-        One actual price per fold (day-1 realisation of each fold).
+        Actual prices.
     flat_eps : float
-        Fractional threshold below which a fold is considered "flat" and
-        excluded from the denominator.  Default 0.01 = 1 %.
+        Fractional threshold below which a fold is considered "flat".
 
     Returns
     -------
     (hits, folds_considered) : tuple[int, int]
-        ``folds_considered`` is the number of non-flat folds.
-        Directional accuracy = hits / folds_considered (caller computes ratio).
     """
-    if last_train_price == 0.0:
-        return 0, 0
-
     hits = 0
     considered = 0
-    pairs = _valid_pairs(fold_actuals, fold_preds)  # parallel; NaN already removed
-    for actual, pred in pairs:
-        actual_change = actual - last_train_price
-        if abs(actual_change) / abs(last_train_price) <= flat_eps:
+    
+    # Must be same length
+    for anchor, pred, actual in zip(last_train_prices, fold_preds, fold_actuals):
+        if anchor is None or pred is None or actual is None or anchor == 0.0:
+            continue
+        try:
+            af, pf, ancf = float(actual), float(pred), float(anchor)
+        except (TypeError, ValueError):
+            continue
+        if not (math.isfinite(af) and math.isfinite(pf) and math.isfinite(ancf)):
+            continue
+            
+        actual_change = af - ancf
+        if abs(actual_change) / abs(ancf) <= flat_eps:
             continue  # flat fold — excluded from denominator
+            
         considered += 1
-        pred_change = pred - last_train_price
-        # Same sign ↔ correct direction; zero-pred counts as "no prediction" → miss
+        pred_change = pf - ancf
+        
+        # Same sign ↔ correct direction
         if actual_change > 0 and pred_change > 0:
             hits += 1
         elif actual_change < 0 and pred_change < 0:

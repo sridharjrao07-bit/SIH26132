@@ -465,9 +465,9 @@ def test_backtest_arrival_qty_winner(fake_supabase, monkeypatch):
     
     import forecasting.features
     original_build = forecasting.features.build_feature_matrix
-    def mock_build_feature_matrix(history_dicts, **kwargs):
-        captured_history.extend(history_dicts)
-        return original_build(history_dicts, **kwargs)
+    def mock_build_feature_matrix(series=None, **kwargs):
+        captured_history.extend(series)
+        return original_build(series=series, **kwargs)
         
     monkeypatch.setattr("forecasting.features.build_feature_matrix", mock_build_feature_matrix)
     
