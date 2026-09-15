@@ -95,6 +95,7 @@ async def backfill(days: int, markets_csv: str, commodities_csv: str, sleep_time
     total_rejected = 0
     total_transient_skips = 0
     
+    persisted_dates = set()
     hard_failure = False
     
     for dt in dates_to_fetch:
@@ -140,11 +141,13 @@ async def backfill(days: int, markets_csv: str, commodities_csv: str, sleep_time
                 for raw in raw_records:
                     valid_dict, reason = validator.validate_and_normalize(raw)
                     if valid_dict is None:
+                        logger.debug("rejected_by_validator", reason=reason, raw=raw)
                         rejected += 1
                         continue
                         
                     m_id = market_map.get(_norm_key(raw.market_name))
                     if not m_id:
+                        logger.debug("rejected_unknown_market", market_name=raw.market_name)
                         rejected += 1
                         continue
                         
@@ -162,10 +165,12 @@ async def backfill(days: int, markets_csv: str, commodities_csv: str, sleep_time
                                 lambda c=chunk: supabase.table("prices").upsert(c, on_conflict=conflict).execute()
                             )
                             written += len(chunk)
+                            persisted_dates.add(dt.isoformat())
                         except Exception as e:
                             logger.error("hard_db_write_failed", error=type(e).__name__)
                             hard_failure = True
-                            break
+                            # Accumulate partial success before failing
+                            continue
                             
                 time.sleep(sleep_time)
             if hard_failure:
@@ -181,7 +186,14 @@ async def backfill(days: int, markets_csv: str, commodities_csv: str, sleep_time
         total_rejected += rejected
         total_transient_skips += transient_skips
 
-    logger.info("backfill_complete", dates_written=f"{start_date.isoformat()}..{end_date.isoformat()}",
+    # Print sorted persisted dates or summarize if too many
+    persisted_list = sorted(list(persisted_dates))
+    if len(persisted_list) > 5:
+        dates_out = f"{persisted_list[0]} .. {persisted_list[-1]} ({len(persisted_list)} dates)"
+    else:
+        dates_out = ",".join(persisted_list) if persisted_list else "None"
+        
+    logger.info("backfill_complete", persisted_dates=dates_out,
                 seen=total_seen, written=total_written, rejected=total_rejected, transient_skips=total_transient_skips)
     
     if hard_failure:
@@ -189,13 +201,18 @@ async def backfill(days: int, markets_csv: str, commodities_csv: str, sleep_time
 
 def main():
     parser = argparse.ArgumentParser(description="Backfill historical prices")
-    parser.add_argument("--days", type=int, required=True, help="Number of days to backfill")
+    parser.add_argument("--days", type=int, default=None, help="Number of days to backfill")
     parser.add_argument("--markets", type=str, default="", help="Comma-separated market names")
     parser.add_argument("--commodities", type=str, default="", help="Comma-separated commodity names")
     parser.add_argument("--sleep", type=float, default=1.0, help="Sleep time between API calls")
     args = parser.parse_args()
     
-    asyncio.run(backfill(args.days, args.markets, args.commodities, args.sleep))
+    days = args.days
+    if days is None:
+        from app.config import get_settings
+        days = get_settings().backfill_days
+        
+    asyncio.run(backfill(days, args.markets, args.commodities, args.sleep))
 
 if __name__ == "__main__":
     main()
