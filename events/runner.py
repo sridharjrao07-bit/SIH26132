@@ -95,9 +95,20 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
             events = await extractor.extract(headline)
             for evt in events:
                 comm_id = None
-                if evt.commodity_name and evt.commodity_name.lower() in commodity_map:
-                    comm_id = commodity_map[evt.commodity_name.lower()]
-                    
+                if evt.commodity_name:
+                    # A name was extracted — it must map to a known commodity.
+                    # If it doesn't, the event is quarantined (not written as global).
+                    comm_id = commodity_map.get(evt.commodity_name.lower())
+                    if comm_id is None:
+                        logger.warning(
+                            "event_runner_unmapped_commodity",
+                            commodity_name=evt.commodity_name,
+                            source_url=headline.source_url,
+                        )
+                        quarantined += 1
+                        continue
+                # evt.commodity_name is None → genuinely global event; commodity_id stays NULL.
+
                 row = {
                     "source_url": headline.source_url,
                     "headline": headline.headline,
@@ -111,7 +122,7 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
                     "reasoning": evt.reasoning,
                     "raw_text": headline.raw_text
                 }
-                
+
                 # Write to database
                 supabase.table("events").insert(row).execute()
                 new_written += 1
