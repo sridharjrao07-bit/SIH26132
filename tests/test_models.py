@@ -46,10 +46,11 @@ def test_feature_ols_beats_baseline():
     # making its MAE smaller than OLS which just fits a straight line over time.
     actuals = prices[-7:]
     
-    mae_feature = sum(abs(p[0] - a) for p, a in zip(preds, actuals)) / 7
-    mae_base = sum(abs(p[0] - a) for p, a in zip(base_preds, actuals)) / 7
-    
-    # Assert feature OLS is better
+    mae_feature = sum(abs(p - a) for p, a in zip(preds, actuals)) / 7
+
+    assert mae_feature < 25.0
+    # OLS is a simple line fit over a trend, MAE will be huge since the true relation is AR(1)
+    mae_base = sum(abs(p - a) for p, a in zip(base_preds, actuals)) / 7
     assert mae_feature < mae_base
 
 def test_feature_ols_drops_none_columns():
@@ -68,7 +69,7 @@ def test_feature_ols_drops_none_columns():
     preds = model.predict(7)
     
     assert len(preds) == 7
-    for p, lo, hi in preds:
+    for p in preds:
         assert math.isfinite(p)
 
 def test_holt_winters_fallback_short_series():
@@ -115,7 +116,9 @@ def test_band_properties():
         models_to_test.append(hw)
         
     for model in models_to_test:
-        preds = model.predict(7)
+        raw_preds = model.predict(7)
+        from forecasting.engine import apply_postprocessing
+        preds = apply_postprocessing(raw_preds, model.sigma, sanity=None)
         # Check lower <= price <= upper
         for p, lo, hi in preds:
             assert lo <= p <= hi

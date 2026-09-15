@@ -20,9 +20,8 @@ def test_ma_model_basic():
 
     preds = model.predict(horizon=2)
     assert len(preds) == 2
-    for (p, lo, hi) in preds:
+    for p in preds:
         assert p == 1100.0
-        assert lo < p < hi
 
 
 def test_ma_model_single_obs():
@@ -30,7 +29,7 @@ def test_ma_model_single_obs():
     assert model.level == 1500.0
     assert model.sigma == 0.0
     preds = model.predict(horizon=1)
-    assert preds[0] == (1500.0, 1500.0, 1500.0)
+    assert preds[0] == 1500.0
 
 
 def test_lr_model_perfect_line():
@@ -43,8 +42,8 @@ def test_lr_model_perfect_line():
 
     # next x=5 -> 1250, x=6 -> 1300
     preds = model.predict(horizon=2)
-    assert preds[0] == (1250.0, 1250.0, 1250.0)
-    assert preds[1] == (1300.0, 1300.0, 1300.0)
+    assert preds[0] == 1250.0
+    assert preds[1] == 1300.0
 
 
 def test_lr_model_single_obs():
@@ -59,8 +58,8 @@ def test_blend_predictions():
     prices = [1000, 1000, 1000] # MA = 1000, LR slope = 0, int = 1000
     ma = MovingAverageModel(prices)
     lr = LinearRegressionModel(prices)
-    preds = _blend_predictions(ma, lr, horizon=2)
-    assert preds[0] == (1000.0, 1000.0, 1000.0)
+    preds, blended_sigma = _blend_predictions(ma, lr, horizon=2)
+    assert preds[0] == 1000.0
 
 
 def test_build_daily_series_precedence():

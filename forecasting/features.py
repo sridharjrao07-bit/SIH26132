@@ -81,14 +81,15 @@ def _compute_event_pressure(
     events: List[Dict[str, Any]],
     target_commodity_id: Optional[str] = None,
     strict_pit: bool = False,
+    target_date: Optional[date] = None,
 ) -> tuple[float, bool]:
     """
-    Compute event pressure score at *forecast_origin*.
+    Compute event pressure score at *forecast_origin* for *target_date*.
 
     Parameters
     ----------
     forecast_origin : date
-        The date for which the forecast is being made (T).  Only events
+        The date at which the forecast is being made (T). Only events
         available strictly before this date are eligible.
     events : list of event dicts
         Each dict may have: event_date, publication_date, commodity_id,
@@ -101,6 +102,9 @@ def _compute_event_pressure(
         If False: require event_date < forecast_origin (approximate).
                   Events with NULL publication_date are included if event_date
                   satisfies the filter.
+    target_date : date, optional
+        The future date the prediction is for. Determines the age of the event.
+        Defaults to forecast_origin if not provided.
 
     Returns
     -------
@@ -111,6 +115,7 @@ def _compute_event_pressure(
     """
     pressure = 0.0
     approximate = not strict_pit  # already approximate if not strict
+    target_date = target_date or forecast_origin
 
     for e in events:
         evt_date_str = e.get("event_date")
@@ -167,7 +172,7 @@ def _compute_event_pressure(
         magnitude = e.get("magnitude", "moderate")
         weight = 0.5 if magnitude == "minor" else 1.5 if magnitude == "major" else 1.0
 
-        age_days = (forecast_origin - evt_date).days
+        age_days = (target_date - evt_date).days
         if not (0 <= age_days <= 14):
             continue
 

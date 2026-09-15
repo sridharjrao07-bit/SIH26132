@@ -25,6 +25,7 @@ PostgREST 1,000-row cap avoided by:
   (a) paginated distinct-pairs query (PAGE_SIZE=500),
   (b) per-pair history fetch (bounded by HISTORY_DAYS × ~3 rows ≈ 180 rows).
 """
+import math
 import structlog
 import time
 from datetime import date, datetime, timedelta, timezone
@@ -62,45 +63,34 @@ def _source_rank(source: str) -> int:
     return SOURCE_PRECEDENCE.get(source, 99)
 
 
-def build_daily_series(rows: List[dict]) -> List[Tuple[date, float]]:
+def build_daily_rows(rows: List[dict]) -> List[Tuple[date, dict]]:
     """
-    Collapse multiple price rows per (market, commodity, date) into one point.
-
-    The prices table has a UNIQUE key on (market_id, commodity_id, arrival_date,
-    variety, grade, source), so a single day may have 2–4 rows. Averaging them
-    would produce a price that never existed at the mandi.
-
-    Aggregation rules (applied in order):
-    1. Group by arrival_date.
-       PostgREST returns date columns as ISO-8601 strings — coerce to date.
-    2. Source precedence: data_gov_in > agmarknet > manual > manual_seed.
-       If any government-source row exists, it wins (provenance story for judges).
-    3. Within the winning source, prefer variety='General'.
-       A red-onion modal price ≠ the general onion price.
-    4. Never average across varieties/sources.
-
-    Returns: sorted [(date, modal_price), ...] ascending by date.
+    Apply source precedence and variety filtering to pick the single best row per day.
     """
     by_date: Dict[date, List[dict]] = {}
     for row in rows:
         raw = row["arrival_date"]
-        # Defensive coerce: PostgREST returns ISO strings; direct date objects
-        # also accepted (e.g., from tests that pass date objects).
         d = date.fromisoformat(raw) if isinstance(raw, str) else raw
         by_date.setdefault(d, []).append(row)
 
-    series: List[Tuple[date, float]] = []
+    series: List[Tuple[date, dict]] = []
     for d, day_rows in by_date.items():
-        # Pick best source
         best_rank   = min(_source_rank(r.get("source", "")) for r in day_rows)
         candidates  = [r for r in day_rows if _source_rank(r.get("source", "")) == best_rank]
-        # Within best source, prefer variety='General'
         general     = [r for r in candidates if (r.get("variety") or "General") == "General"]
         chosen      = general[0] if general else candidates[0]
-        series.append((d, float(chosen["modal_price"])))
+        series.append((d, chosen))
 
     series.sort(key=lambda t: t[0])
     return series
+
+
+def build_daily_series(rows: List[dict]) -> List[Tuple[date, float]]:
+    """
+    Legacy wrapper for build_daily_rows returning just (date, modal_price).
+    """
+    return [(d, float(row["modal_price"])) for d, row in build_daily_rows(rows)]
+
 
 
 def build_district_daily_series(rows: List[dict]) -> List[Tuple[date, float]]:
@@ -149,15 +139,9 @@ class MovingAverageModel:
         self.level  = sum(window) / len(window)
         self.sigma  = pstdev(window) if len(window) > 1 else 0.0
 
-    def predict(self, horizon: int = HORIZON_DAYS) -> List[Tuple[float, float, float]]:
-        """Returns [(predicted, lower, upper), ...] for each day ahead."""
-        margin  = CONFIDENCE_Z * self.sigma
-        results = []
-        for _ in range(horizon):
-            lo = round(max(0.0, self.level - margin), 2)
-            hi = round(self.level + margin, 2)
-            results.append((round(self.level, 2), lo, hi))
-        return results
+    def predict(self, horizon: int = HORIZON_DAYS, forecast_origin: Optional[date] = None) -> List[float]:
+        """Returns [predicted, ...] for each day ahead."""
+        return [self.level for _ in range(horizon)]
 
 
 class LinearRegressionModel:
@@ -200,40 +184,66 @@ class LinearRegressionModel:
         self.sigma = pstdev(residuals) if len(residuals) > 1 else 0.0
         self._n    = n   # next x index for projection
 
-    def predict(self, horizon: int = HORIZON_DAYS) -> List[Tuple[float, float, float]]:
-        """Returns [(predicted, lower, upper), ...] for each day ahead."""
-        margin  = CONFIDENCE_Z * self.sigma
-        results = []
-        for i in range(horizon):
-            x  = self._n + i
-            p  = self.intercept + self.slope * x
-            lo = round(max(0.0, p - margin), 2)
-            hi = round(p + margin, 2)
-            results.append((round(p, 2), lo, hi))
-        return results
+    def predict(self, horizon: int = HORIZON_DAYS, forecast_origin: Optional[date] = None) -> List[float]:
+        """Returns [predicted, ...] for each day ahead."""
+        return [self.intercept + self.slope * (self._n + i) for i in range(horizon)]
 
 
 def _blend_predictions(
     ma: MovingAverageModel,
     lr: LinearRegressionModel,
     horizon: int = HORIZON_DAYS,
-) -> List[Tuple[float, float, float]]:
+) -> Tuple[List[float], float]:
     """
     Blend MA and LR: 0.4·MA + 0.6·LR.
-
-    Bounds use conservative σ = max(σ_MA, σ_LR) around the blended centre.
-    MA is flat (same level every day); LR projects forward along the fitted slope.
+    Returns (raw_preds, blended_sigma).
     """
     sigma  = max(ma.sigma, lr.sigma)
-    margin = CONFIDENCE_Z * sigma
     results = []
     for i in range(horizon):
-        ma_p = ma.level                                    # flat extrapolation
-        lr_p = lr.intercept + lr.slope * (lr._n + i)      # forward projection
-        p    = round(0.4 * ma_p + 0.6 * lr_p, 2)
-        lo   = round(max(0.0, p - margin), 2)
-        hi   = round(p + margin, 2)
-        results.append((p, lo, hi))
+        ma_p = ma.level
+        lr_p = lr.intercept + lr.slope * (lr._n + i)
+        p    = 0.4 * ma_p + 0.6 * lr_p
+        results.append(p)
+    return results, sigma
+
+def apply_postprocessing(
+    raw_preds: List[float], 
+    sigma: float, 
+    sanity: Optional[Tuple[float, float]] = None
+) -> List[Tuple[float, Optional[float], Optional[float]]]:
+    """
+    Apply standard interval widening (sqrt(h)), nonnegative bounding, 
+    and commodity sanity clamps. Naive coverage (sigma == 0) returns None for bounds.
+    """
+    results = []
+    for i, p in enumerate(raw_preds, start=1):
+        # We assume 1.96 multiplier is applied outside or here? 
+        # Wait, CONFIDENCE_Z is 1.96.
+        margin = CONFIDENCE_Z * sigma * math.sqrt(i) if sigma > 0 else 0.0
+        
+        if sanity is not None:
+            p = _clamp(p, sanity[0], sanity[1])
+            
+        if sigma <= 0:
+            lo, hi = p, p
+        else:
+            lo = max(0.0, p - margin)
+            hi = p + margin
+            
+        if sanity is not None:
+            lo = _clamp(lo, sanity[0], sanity[1])
+            hi = _clamp(hi, sanity[0], sanity[1])
+            if lo > p:
+                lo = p
+            if hi < p:
+                hi = p
+        
+        results.append((
+            round(p, 2), 
+            round(lo, 2) if lo is not None else None, 
+            round(hi, 2) if hi is not None else None
+        ))
     return results
 
 
@@ -328,7 +338,8 @@ def _make_forecast_rows(
             if getattr(model_inst, 'fallback', False):
                 logger.warning("forecast_model_fallback", market_id=market_id, commodity_id=commodity_id, model=requested_model)
             else:
-                preds = model_inst.predict()
+                raw_preds = model_inst.predict(horizon=HORIZON_DAYS, forecast_origin=horizon_start)
+                preds = apply_postprocessing(raw_preds, model_inst.sigma, sanity)
                 method = requested_model
                 confidence = "high" if n >= HIGH_CONFIDENCE_THRESHOLD else "medium"
         except Exception as e:
@@ -339,34 +350,22 @@ def _make_forecast_rows(
         if n >= BLEND_THRESHOLD:
             ma_model   = MovingAverageModel(prices)
             lr_model   = LinearRegressionModel(prices)
-            preds      = _blend_predictions(ma_model, lr_model)
+            raw_preds, blended_sigma = _blend_predictions(ma_model, lr_model)
+            preds      = apply_postprocessing(raw_preds, blended_sigma, sanity)
             method     = "blend"
             confidence = "high" if n >= HIGH_CONFIDENCE_THRESHOLD else "medium"
         else:
             # 10 ≤ n ≤ 14 — MA only
             ma_model   = MovingAverageModel(prices)
-            preds      = ma_model.predict()
+            raw_preds  = ma_model.predict(forecast_origin=horizon_start)
+            preds      = apply_postprocessing(raw_preds, ma_model.sigma, sanity)
             method     = "moving_avg"
             confidence = "medium"
 
     rows = []
     for i, (predicted, lower, upper) in enumerate(preds):
         fdate = (horizon_start + timedelta(days=i + 1)).isoformat()
-        # In-sample residual band, widened with horizon (random-walk √h).
-        # Day-1 keeps the in-sample σ; day-7 is √7 ≈ 2.65× that width.
-        margin = (upper - predicted) * ((i + 1) ** 0.5)
-        lower = predicted - margin
-        upper = predicted + margin
-        if sanity is not None:
-            predicted = _clamp(predicted, sanity[0], sanity[1])
-            lower = _clamp(max(0.0, predicted - margin), sanity[0], sanity[1])
-            upper = _clamp(predicted + margin, sanity[0], sanity[1])
-            if lower > predicted:
-                lower = predicted
-            if upper < predicted:
-                upper = predicted
-        lower = round(max(0.0, lower), 2)
-        upper = round(upper, 2)
+
         
         features_used = []
         if method in ("feature_ols", "gbm"):
