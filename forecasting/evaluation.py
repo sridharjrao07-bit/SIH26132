@@ -95,25 +95,26 @@ def mape_winsorized(
 
 
 def directional_accuracy(
-    last_train_prices: Sequence[float],
-    fold_preds: Sequence[float],
-    fold_actuals: Sequence[float],
+    folds_last_train_price: Sequence[float],
+    folds_preds: Sequence[Sequence[float]],
+    folds_actuals: Sequence[Sequence[float]],
     flat_eps: float = 0.01,
 ) -> Tuple[int, int]:
     """
-    Count folds where the *direction* of price movement was correctly predicted.
+    Count folds where the *direction* of the weekly mean price movement 
+    relative to forecast_origin price was correctly predicted.
 
-    A fold contributes to the denominator only if the actual price change
-    (actual - last_train_price) is non-trivial.
+    A fold contributes to the denominator only if the mean actual price change
+    (mean_actual - last_train_price) is non-trivial.
 
     Parameters
     ----------
-    last_train_prices : sequence of float
-        The last observed price in the training window for each fold prediction.
-    fold_preds : sequence of float
-        Predicted prices.
-    fold_actuals : sequence of float
-        Actual prices.
+    folds_last_train_price : sequence of float
+        The last observed price in the training window for each fold.
+    folds_preds : sequence of sequence of float
+        Predicted prices for each fold.
+    folds_actuals : sequence of sequence of float
+        Actual prices for each fold.
     flat_eps : float
         Fractional threshold below which a fold is considered "flat".
 
@@ -124,23 +125,33 @@ def directional_accuracy(
     hits = 0
     considered = 0
     
-    # Must be same length
-    for anchor, pred, actual in zip(last_train_prices, fold_preds, fold_actuals):
-        if anchor is None or pred is None or actual is None or anchor == 0.0:
-            continue
-        try:
-            af, pf, ancf = float(actual), float(pred), float(anchor)
-        except (TypeError, ValueError):
-            continue
-        if not (math.isfinite(af) and math.isfinite(pf) and math.isfinite(ancf)):
+    for anchor, preds, actuals in zip(folds_last_train_price, folds_preds, folds_actuals):
+        if anchor is None or anchor == 0.0:
             continue
             
-        actual_change = af - ancf
+        try:
+            ancf = float(anchor)
+        except (TypeError, ValueError):
+            continue
+            
+        if not math.isfinite(ancf):
+            continue
+            
+        valid_preds = [float(p) for p in preds if p is not None and math.isfinite(float(p))]
+        valid_actuals = [float(a) for a in actuals if a is not None and math.isfinite(float(a))]
+        
+        if not valid_preds or not valid_actuals:
+            continue
+            
+        mean_pred = sum(valid_preds) / len(valid_preds)
+        mean_actual = sum(valid_actuals) / len(valid_actuals)
+        
+        actual_change = mean_actual - ancf
         if abs(actual_change) / abs(ancf) <= flat_eps:
             continue  # flat fold — excluded from denominator
             
         considered += 1
-        pred_change = pf - ancf
+        pred_change = mean_pred - ancf
         
         # Same sign ↔ correct direction
         if actual_change > 0 and pred_change > 0:
