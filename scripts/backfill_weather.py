@@ -64,6 +64,7 @@ async def backfill(days: int, markets_csv: str, sleep_time: float):
     total_seen = 0
     total_written = 0
     total_rejected = 0
+    total_transient_skips = 0
     
     hard_failure = False
     
@@ -80,56 +81,80 @@ async def backfill(days: int, markets_csv: str, sleep_time: float):
                 
                 try:
                     data = await fetch_weather_chunk(client, lat, lng, current_start, current_end)
+                except Exception as e:
+                    is_transient = False
+                    if isinstance(e, httpx.HTTPStatusError):
+                        if e.response.status_code >= 500 or e.response.status_code == 429:
+                            is_transient = True
+                    elif isinstance(e, httpx.RequestError) or type(e).__name__ in ("TimeoutError", "ConnectionError"):
+                        is_transient = True
+
+                    if not is_transient:
+                        logger.error("api_fetch_failed_hard", market=market["name"], start=current_start.isoformat(), end=current_end.isoformat(), error=str(e))
+                        hard_failure = True
+                        break
+
+                    logger.warning("api_fetch_failed_transient", market=market["name"], start=current_start.isoformat(), end=current_end.isoformat(), error=type(e).__name__)
+                    total_transient_skips += 1
+                    current_start = current_end + timedelta(days=1)
+                    time.sleep(sleep_time)
+                    continue
                     
-                    daily = data.get("daily", {})
-                    time_array = daily.get("time", [])
-                    precip_array = daily.get("precipitation_sum", [])
-                    temp_array = daily.get("temperature_2m_mean", [])
+                daily = data.get("daily", {})
+                time_array = daily.get("time", [])
+                precip_array = daily.get("precipitation_sum", [])
+                temp_array = daily.get("temperature_2m_mean", [])
+                
+                seen = len(time_array)
+                total_seen += seen
+                
+                records = []
+                rejected = 0
+                for i in range(seen):
+                    dt_str = time_array[i]
+                    p_sum = precip_array[i]
+                    t_mean = temp_array[i]
                     
-                    seen = len(time_array)
-                    total_seen += seen
-                    
-                    records = []
-                    rejected = 0
-                    for i in range(seen):
-                        dt_str = time_array[i]
-                        p_sum = precip_array[i]
-                        t_mean = temp_array[i]
+                    if p_sum is None or t_mean is None:
+                        rejected += 1
+                        continue
                         
-                        if p_sum is None or t_mean is None:
-                            rejected += 1
-                            continue
-                            
-                        records.append({
-                            "market_id": market_id,
-                            "observation_date": dt_str,
-                            "precipitation_sum_mm": round(p_sum, 2),
-                            "temperature_2m_mean_c": round(t_mean, 2),
-                            "source": "open_meteo_archive"
-                        })
-                    
-                    total_rejected += rejected
-                    
-                    if records:
-                        conflict = "market_id, observation_date"
-                        UPSERT_CHUNK = 200
+                    records.append({
+                        "market_id": market_id,
+                        "observation_date": dt_str,
+                        "precipitation_sum_mm": round(p_sum, 2),
+                        "temperature_2m_mean_c": round(t_mean, 2),
+                        "source": "open_meteo_archive"
+                    })
+                
+                total_rejected += rejected
+                
+                if records:
+                    conflict = "market_id, observation_date"
+                    UPSERT_CHUNK = 200
+                    try:
                         for i in range(0, len(records), UPSERT_CHUNK):
                             chunk = records[i:i+UPSERT_CHUNK]
                             await asyncio.to_thread(
                                 lambda c=chunk: supabase.table("weather_daily").upsert(c, on_conflict=conflict).execute()
                             )
                             total_written += len(chunk)
-                            
-                except Exception as e:
-                    logger.error("weather_chunk_failed", market=market["name"], start=current_start.isoformat(), end=current_end.isoformat(), error=str(e))
-                    hard_failure = True
-                    # Let it continue, but exit 1 at end
-                    
+                    except Exception as e:
+                        logger.error("hard_db_write_failed", error=type(e).__name__)
+                        hard_failure = True
+                        break
+                        
                 current_start = current_end + timedelta(days=1)
                 time.sleep(sleep_time)
+            
+            if hard_failure:
+                break
                 
+    if hard_failure:
+        logger.error("aborting_due_to_db_failure")
+        
     logger.info("backfill_complete", dates_written=f"{start_date.isoformat()}..{end_date.isoformat()}",
-                seen=total_seen, written=total_written, rejected=total_rejected)
+                seen=total_seen, written=total_written, rejected=total_rejected, transient_skips=total_transient_skips)
     
     if hard_failure:
         sys.exit(1)
