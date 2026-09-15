@@ -3,8 +3,8 @@ from datetime import date
 from forecasting.features import _compute_event_pressure
 
 def test_event_pressure_hand_computed():
-    # 2 events (up/moderate/0.8/age 0d; down/major/0.6/age 3d) → exact expected value with `exp(−0.9)`
-    target_date = date(2026, 9, 14)
+    # 2 events (up/moderate/0.8/age 1d; down/major/0.6/age 4d) → exact expected value
+    target_date = date(2026, 9, 15)  # 1 day after the event date of 2026-09-14
     events = [
         {
             "event_date": "2026-09-14",
@@ -20,28 +20,29 @@ def test_event_pressure_hand_computed():
         }
     ]
     
-    # Event 1: sign(up)=+1, weight(moderate)=1.0, conf=0.8, age=0 -> 1.0 * 1.0 * 0.8 * exp(0) = 0.8
-    # Event 2: sign(down)=-1, weight(major)=1.5, conf=0.6, age=3 -> -1.0 * 1.5 * 0.6 * exp(-0.9) = -0.9 * exp(-0.9)
-    # Total: 0.8 - 0.9 * exp(-0.9)
+    # Event 1: sign(up)=+1, weight(moderate)=1.0, conf=0.8, age=1 -> 1.0 * 1.0 * 0.8 * exp(-0.3)
+    # Event 2: sign(down)=-1, weight(major)=1.5, conf=0.6, age=4 -> -1.0 * 1.5 * 0.6 * exp(-1.2) = -0.9 * exp(-1.2)
+    # Total: 0.8 * exp(-0.3) - 0.9 * exp(-1.2)
     
-    expected = 0.8 - 0.9 * math.exp(-0.9)
-    pressure = _compute_event_pressure(target_date, events)
-    assert pressure == expected
+    expected = 0.8 * math.exp(-0.3) - 0.9 * math.exp(-1.2)
+    pressure, _ = _compute_event_pressure(target_date, events)
+    assert abs(pressure - expected) < 1e-9
 
 def test_event_pressure_older_than_14d_excluded():
-    target_date = date(2026, 9, 14)
+    target_date = date(2026, 9, 15)
     events = [
         {
-            "event_date": "2026-08-30", # age 15
+            "event_date": "2026-08-30", # age 16 > 14
             "direction": "up",
             "magnitude": "major",
             "confidence": 1.0
         }
     ]
-    assert _compute_event_pressure(target_date, events) == 0.0
+    pressure, _ = _compute_event_pressure(target_date, events)
+    assert pressure == 0.0
 
 def test_event_pressure_commodity_mismatch_excluded():
-    target_date = date(2026, 9, 14)
+    target_date = date(2026, 9, 15)
     events = [
         {
             "event_date": "2026-09-14",
@@ -59,12 +60,19 @@ def test_event_pressure_commodity_mismatch_excluded():
         }
     ]
     # First is excluded due to mismatch, second is included because it's None.
-    # Second: sign(-1) * weight(1.5) * conf(1.0) * exp(0) = -1.5
-    assert _compute_event_pressure(target_date, events, "target-uuid") == -1.5
+    # Second: sign(-1) * weight(1.5) * conf(1.0) * exp(-0.3) = -1.5 * exp(-0.3)
+    pressure, _ = _compute_event_pressure(target_date, events, "target-uuid")
+    assert abs(pressure - (-1.5 * math.exp(-0.3))) < 1e-9
 
 def test_event_pressure_clamped():
-    target_date = date(2026, 9, 14)
+    target_date = date(2026, 9, 15)
     events = [
+        {
+            "event_date": "2026-09-14",
+            "direction": "up",
+            "magnitude": "major",
+            "confidence": 1.0
+        },
         {
             "event_date": "2026-09-14",
             "direction": "up",
@@ -78,8 +86,9 @@ def test_event_pressure_clamped():
             "confidence": 1.0
         }
     ]
-    # Each gives +1.5 -> total +3.0 -> clamped to +2.0
-    assert _compute_event_pressure(target_date, events) == 2.0
+    # Each gives 1.5 * exp(-0.3) ~ 1.11, three give ~ 3.33 -> clamped to +2.0
+    pressure, _ = _compute_event_pressure(target_date, events)
+    assert pressure == 2.0
     
     events_down = [
         {
@@ -93,10 +102,50 @@ def test_event_pressure_clamped():
             "direction": "down",
             "magnitude": "major",
             "confidence": 1.0
+        },
+        {
+            "event_date": "2026-09-14",
+            "direction": "down",
+            "magnitude": "major",
+            "confidence": 1.0
         }
     ]
-    # Each gives -1.5 -> total -3.0 -> clamped to -2.0
-    assert _compute_event_pressure(target_date, events_down) == -2.0
+    # Each gives -1.5 * exp(-0.3) ~ -1.11 -> total ~ -3.33 -> clamped to -2.0
+    pressure, _ = _compute_event_pressure(target_date, events_down)
+    assert pressure == -2.0
+
+def test_event_pressure_publication_date_strict_pit():
+    target_date = date(2026, 9, 14)
+    events = [
+        {   # Excluded: publication date >= target_date
+            "event_date": "2026-09-10",
+            "publication_date": "2026-09-15",
+            "direction": "up",
+            "magnitude": "major",
+            "confidence": 1.0
+        },
+        {   # Excluded: publication date is NULL and strict_pit=True
+            "event_date": "2026-09-10",
+            "direction": "up",
+            "magnitude": "major",
+            "confidence": 1.0
+        },
+        {   # Included: publication date < target_date
+            "event_date": "2026-09-10",
+            "publication_date": "2026-09-13",
+            "direction": "up",
+            "magnitude": "major",
+            "confidence": 1.0
+        }
+    ]
+    
+    # Only the third event is eligible
+    # sign(up)=1.0 * weight(major)=1.5 * conf=1.0 * exp(-0.3 * 4)
+    expected = 1.5 * math.exp(-0.3 * 4)
+    
+    pressure, approx = _compute_event_pressure(target_date, events, strict_pit=True)
+    assert abs(pressure - expected) < 1e-9
+    assert approx is False
 
 
 # ── momentum_14d point-in-time tests ─────────────────────────────────────────
