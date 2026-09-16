@@ -11,7 +11,7 @@ try:
 except ImportError:
     HAS_LIGHTGBM = False
 
-pytestmark = pytest.mark.skipif(not HAS_LIGHTGBM, reason="lightgbm not installed")
+# Module-level skip removed to allow import-failure test to run on base environment.
 
 @pytest.fixture(autouse=True)
 def reset_global_gbm():
@@ -19,7 +19,7 @@ def reset_global_gbm():
     yield
 
 
-def test_import_failure_fallback(monkeypatch):
+def test_import_failure_fallback(monkeypatch, mock_supabase):
     """
     Import failure: monkeypatch lightgbm import -> engine falls back to tier behavior, 
     logs warning, writes valid rows
@@ -34,11 +34,22 @@ def test_import_failure_fallback(monkeypatch):
 
     monkeypatch.setattr(builtins, "__import__", mock_import)
 
-    from forecasting.gbm import train_global_gbm
+    # Run actual backtest and verify it degrades gracefully and reports execution failure
+    rows, _, builder = _generate_synthetic_data(seed=42, n_days=200, is_noise=True)
+    supabase = mock_supabase(builder, rows)
     
-    # Use the model - should raise ForecastModelError on instantiation
-    with pytest.raises(ForecastModelError, match="Optional ML dependencies not installed"):
-        _ = train_global_gbm({}, [], [], [])
+    report = run_backtest(supabase, pairs=[("M1", "C1")], history_days=150, model_names=["gbm", "naive"])
+    
+    # GBM should have failed gracefully and be blocked
+    assert "gbm" in report.aggregate
+    gbm_agg = report.aggregate["gbm"]
+    assert gbm_agg["status"] == "blocked"
+    assert gbm_agg["reason"] == "execution_failure"
+    assert gbm_agg["n_execution_failure"] > 0
+    
+    # Naive should have succeeded independently
+    assert "naive" in report.aggregate
+    assert report.aggregate["naive"]["status"] == "ok"
 
 
 def _generate_synthetic_data(seed: int, n_days: int = 200, is_noise: bool = False):
@@ -125,6 +136,7 @@ def mock_supabase(monkeypatch):
         return MockSupabase()
     return patch
 
+@pytest.mark.skipif(not HAS_LIGHTGBM, reason="lightgbm not installed")
 def test_noise_set_performance(mock_supabase):
     """Noise set (pure random, seeded): GBM validation MAPE >= naive * 0.95"""
     rows, _, builder = _generate_synthetic_data(seed=42, n_days=200, is_noise=True)
@@ -138,6 +150,7 @@ def test_noise_set_performance(mock_supabase):
     assert gbm_mape is not None and naive_mape is not None
     assert gbm_mape >= naive_mape * 0.95, f"GBM MAPE {gbm_mape} is suspiciously good on noise compared to {naive_mape}"
 
+@pytest.mark.skipif(not HAS_LIGHTGBM, reason="lightgbm not installed")
 def test_signal_set_performance(mock_supabase):
     """Signal set (price driven by 2 features, seeded): GBM beats BaselineOLS on validation MAE"""
     rows, _, builder = _generate_synthetic_data(seed=42, n_days=200, is_noise=False)
@@ -151,6 +164,7 @@ def test_signal_set_performance(mock_supabase):
     assert gbm_mae is not None and ols_mae is not None
     assert gbm_mae < ols_mae, f"GBM MAE {gbm_mae} failed to beat OLS MAE {ols_mae} on signal set"
     
+@pytest.mark.skipif(not HAS_LIGHTGBM, reason="lightgbm not installed")
 def test_backtest_report_format(mock_supabase):
     """Backtest report format: `gbm` exists, lists `feature_importances`, correctly formats nulls."""
     rows, _, builder = _generate_synthetic_data(seed=42, n_days=30, is_noise=True)
