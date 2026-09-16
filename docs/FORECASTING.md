@@ -40,8 +40,11 @@ Before training, the model strictly enforces variance checks using Gaussian elim
 
 ## 5. Global GBM Status
 
-The Gradient Boosting model (`GlobalGBM`) is currently undergoing reconstruction. The initial implementation relied heavily on global dataset state, which violates the strict data-leakage boundaries of the walk-forward backtesting harness. 
-Status: **Integration Paused**. It has been refactored to remove global state but remains delisted from the primary `engine.py` until per-fold, bounded-window training is fully implemented and passes the isolated test suite.
+The Gradient Boosting model (`GlobalGBM`) has been refactored to remove global state and adhere to strict walk-forward boundaries.
+**Current Status**: 
+- **Evaluation Status**: `BLOCKED` (Phase 6). The current smoke test database lacks sufficient history (requires 57+ days for training/calibration) to produce valid out-of-sample predictions.
+- **Automatic-Selection Status**: **Disabled**. Because the model cannot currently be verified against baseline models in the backtest harness, the engine will safely fall back to baselines (e.g., Naive or Moving Average) and will not automatically promote GBM.
+- **Explicit-Selection Availability**: **Available**. Users may still explicitly select the `gbm` model via API parameters, but its accuracy is currently unverified.
 
 ## 6. Current Accuracy Card
 
