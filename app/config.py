@@ -69,6 +69,7 @@ class Settings(BaseSettings):
     event_llm_api_key: str = Field(default="")
     event_llm_base_url: str = Field(default="")
     event_sources: str = Field(default="pib,news,bulletin")
+    events_source_mode: str = Field(default="off")
     backfill_days: int = Field(default=730)
 
     # ── Auth DB enforcement ───────────────────────────────────────────────────

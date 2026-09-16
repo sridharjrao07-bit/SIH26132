@@ -71,14 +71,14 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
 
     logger.info("event_runner_starting", extractor=extractor_name, since_days=since_days)
 
-    # Use FIXTURE mode for testing, OFF if events disabled, LIVE for prod.
     # This determines provenance_mode written to source_documents.
-    if settings.app_env == "test":
+    source_mode_str = settings.events_source_mode.lower()
+    if source_mode_str == "fixture":
         mode = SourceMode.FIXTURE
-    elif not settings.event_job_enabled:
-        mode = SourceMode.OFF
-    else:
+    elif source_mode_str == "live":
         mode = SourceMode.LIVE
+    else:
+        mode = SourceMode.OFF
 
     provenance_mode = "fixture" if mode == SourceMode.FIXTURE else "live"
 
@@ -147,21 +147,39 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
 
     for headline in new_headlines:
         try:
-            doc_row = {
-                "source_url": headline.source_url,
-                "headline": headline.headline,
-                "raw_text": headline.raw_text,
-                "publication_date": headline.published_date.isoformat(),
-                "extraction_status": "extracting",
-                "extractor_version": extractor_name,
-                "provenance_mode": provenance_mode,
-            }
-            doc_resp = supabase.table("source_documents").insert(doc_row).execute()
-            if not doc_resp.data:
-                raise Exception("Failed to insert source_document")
-            doc_id = doc_resp.data[0]["id"]
+            # Atomic Claim
+            content_hash = hashlib.sha256((headline.headline + headline.raw_text).encode()).hexdigest()
+            claim_resp = supabase.rpc("claim_source_document", {
+                "p_source_url": headline.source_url,
+                "p_source_name": headline.source_name,
+                "p_headline": headline.headline,
+                "p_content_text": headline.raw_text,
+                "p_published_at": headline.published_date.isoformat(),
+                "p_provenance_mode": provenance_mode,
+                "p_content_hash": content_hash
+            }).execute()
 
-            events: List[ExtractedEvent] = await extractor.extract(headline)
+            claim_data = claim_resp.data
+            if not claim_data or claim_data.get("status") in ["already_complete", "lease_active"]:
+                continue
+                
+            if claim_data.get("status") != "claimed":
+                raise Exception(f"Unexpected claim status: {claim_data.get('status')}")
+
+            doc_id = claim_data["document_id"]
+            claim_token = claim_data["claim_token"]
+
+            try:
+                events = await extractor.extract(headline)
+            except Exception as e:
+                # Report failure
+                supabase.rpc("report_extraction_failure", {
+                    "p_doc_id": doc_id,
+                    "p_claim_token": claim_token,
+                    "p_reason": str(e)
+                }).execute()
+                logger.error("event_runner_extraction_failed", url=headline.source_url, error=str(e))
+                continue
 
             events_payload = []
             for evt in events:
@@ -177,7 +195,6 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
                         quarantined += 1
                         continue
 
-                # Use occurrence date for identity; fall back to publication date with warning.
                 occurrence_date = evt.event_date
                 if occurrence_date is None:
                     logger.warning(
@@ -212,29 +229,26 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
                 if evt.confidence < 0.5:
                     quarantined += 1
 
-            # Publish atomically via RPC. The RPC:
-            #   - Acquires a FOR UPDATE lock on the document row.
-            #   - Raises if the document has any reviewed events (reviewed_by IS NOT NULL),
-            #     preventing silent overwrite of human annotations.
-            #   - Deletes stale events from a prior failed attempt.
-            #   - Inserts the complete batch with ON CONFLICT DO NOTHING.
-            #   - Marks extraction_status = 'complete'.
-            # If this raises, the document stays in 'extracting' and is retried next run.
-            rpc_resp = supabase.rpc("publish_extracted_events", {
+            rpc_resp = supabase.rpc("publish_extracted_events_v2", {
                 "p_doc_id": doc_id,
+                "p_claim_token": claim_token,
                 "p_extractor_version": extractor_name,
                 "p_events": events_payload,
             }).execute()
 
             result_data = rpc_resp.data if hasattr(rpc_resp, "data") else {}
             rpc_status = result_data.get("status") if isinstance(result_data, dict) else "complete"
+            if rpc_status == "failed":
+                logger.error("event_runner_publish_failed", doc_id=doc_id, reason=result_data.get("reason"))
+                continue
+                
             written_count = result_data.get("written", len(events_payload)) if isinstance(result_data, dict) else len(events_payload)
             new_written += written_count
             logger.info("event_runner_doc_published", doc_id=doc_id, status=rpc_status, written=written_count)
 
         except Exception as e:
             logger.error("event_runner_extract_write_error", url=headline.source_url, error=str(e))
-            # Document remains in 'extracting'; will be retried if not stale.
+            # Could try report_extraction_failure here too if doc_id/claim_token are in scope
 
     return {
         "seen": seen,
