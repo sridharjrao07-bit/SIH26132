@@ -155,10 +155,52 @@ async def backfill(days: int, markets_csv: str, commodities_csv: str, sleep_time
                     all_valid.append(valid_dict)
                     
                 if all_valid:
+                    # Establish source precedence/correction protection
+                    # 1. Fetch existing prices for these market/commodity/dates
+                    m_ids = list(set(r["market_id"] for r in all_valid))
+                    c_ids = list(set(r["commodity_id"] for r in all_valid))
+                    
+                    try:
+                        resp = await asyncio.to_thread(
+                            lambda: supabase.table("prices").select("market_id, commodity_id, arrival_date, variety, grade, source")
+                            .in_("market_id", m_ids)
+                            .in_("commodity_id", c_ids)
+                            .eq("arrival_date", dt.isoformat())
+                            .execute()
+                        )
+                        existing = resp.data
+                    except Exception as e:
+                        logger.error("existing_prices_fetch_failed", error=str(e))
+                        existing = []
+                        
+                    # 2. Build map of existing source ranks
+                    SOURCE_PRECEDENCE = {"human": 1, "agmarknet_correction": 2, "data_gov_in": 3}
+                    def get_rank(s): return SOURCE_PRECEDENCE.get(s, 99)
+                    
+                    existing_best = {}
+                    for r in existing:
+                        key = (r["market_id"], r["commodity_id"], r["arrival_date"], r["variety"], r["grade"])
+                        rank = get_rank(r["source"])
+                        if key not in existing_best or rank < existing_best[key]:
+                            existing_best[key] = rank
+                            
+                    # 3. Filter incoming rows
+                    filtered_valid = []
+                    for row in all_valid:
+                        key = (row["market_id"], row["commodity_id"], row["arrival_date"], row["variety"], row["grade"])
+                        incoming_rank = get_rank(row["source"])
+                        
+                        # Only upsert if no existing row has a strictly better (lower) rank
+                        if key in existing_best and existing_best[key] < incoming_rank:
+                            logger.debug("skipping_due_to_precedence", key=key, existing_rank=existing_best[key], incoming_rank=incoming_rank)
+                            continue
+                            
+                        filtered_valid.append(row)
+                        
                     conflict = "market_id, commodity_id, arrival_date, variety, grade, source"
                     UPSERT_CHUNK = 200
-                    for i in range(0, len(all_valid), UPSERT_CHUNK):
-                        chunk = all_valid[i:i+UPSERT_CHUNK]
+                    for i in range(0, len(filtered_valid), UPSERT_CHUNK):
+                        chunk = filtered_valid[i:i+UPSERT_CHUNK]
                         try:
                             # Run DB call in thread
                             await asyncio.to_thread(
