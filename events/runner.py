@@ -84,7 +84,7 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
     for i in range(0, len(source_urls), 100):
         chunk = source_urls[i:i+100]
         try:
-            resp = supabase.table("events").select("source_url").in_("source_url", chunk).execute()
+            resp = supabase.table("source_documents").select("source_url").in_("source_url", chunk).execute()
             for row in resp.data:
                 existing_urls.add(row["source_url"])
         except Exception as e:
@@ -100,12 +100,24 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
         
     for headline in new_headlines:
         try:
+            import hashlib
+            doc_row = {
+                "source_url": headline.source_url,
+                "headline": headline.headline,
+                "raw_text": headline.raw_text,
+                "publication_date": headline.published_date.isoformat(),
+                "extraction_status": "extracting",
+                "extractor_version": extractor_name
+            }
+            doc_resp = supabase.table("source_documents").insert(doc_row).execute()
+            if not doc_resp.data:
+                raise Exception("Failed to insert source_document")
+            doc_id = doc_resp.data[0]["id"]
+            
             events = await extractor.extract(headline)
             for evt in events:
                 comm_id = None
                 if evt.commodity_name:
-                    # A name was extracted — it must map to a known commodity.
-                    # If it doesn't, the event is quarantined (not written as global).
                     comm_id = commodity_map.get(evt.commodity_name.lower())
                     if comm_id is None:
                         logger.warning(
@@ -115,10 +127,13 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
                         )
                         quarantined += 1
                         continue
-                # evt.commodity_name is None → genuinely global event; commodity_id stays NULL.
+
+                hash_input = f"{comm_id or ''}{evt.district or ''}{evt.event_type}{headline.published_date.isoformat()}"
+                event_hash = hashlib.md5(hash_input.encode()).hexdigest()
 
                 row = {
-                    "source_url": headline.source_url,
+                    "source_document_id": doc_id,
+                    "event_hash": event_hash,
                     "headline": headline.headline,
                     "event_date": headline.published_date.isoformat(),
                     "commodity_id": comm_id,
@@ -136,6 +151,8 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
                 new_written += 1
                 if evt.confidence < 0.5:
                     quarantined += 1
+            
+            supabase.table("source_documents").update({"extraction_status": "complete"}).eq("id", doc_id).execute()
                     
         except Exception as e:
             logger.error("event_runner_extract_write_error", url=headline.source_url, error=str(e))
