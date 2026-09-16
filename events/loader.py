@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Optional
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 def load_published_events(
     supabase,
@@ -28,12 +28,15 @@ def load_published_events(
             query = query.or_(f"commodity_id.eq.{commodity_id},commodity_id.is.null")
         if district:
             query = query.or_(f"district.ilike.{district},district.is.null")
+            
+        today_iso = date.today().isoformat()
         if event_date_from:
             query = query.gte("event_date", event_date_from.isoformat())
+        query = query.lte("event_date", today_iso)
             
-        if availability_before:
-            query = query.not_.is_("publication_date", "null")
-            query = query.lt("publication_date", availability_before.isoformat())
+        avail = availability_before or datetime.now(timezone.utc)
+        query = query.not_.is_("publication_date", "null")
+        query = query.lt("publication_date", avail.isoformat())
         
         if min_confidence > 0:
             query = query.gte("confidence", min_confidence)

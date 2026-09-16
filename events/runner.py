@@ -126,17 +126,20 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
         chunk = source_urls[i:i + 100]
         try:
             resp = supabase.table("source_documents").select(
-                "source_url, extraction_status, created_at"
+                "source_url, extraction_status, lease_expires_at"
             ).in_("source_url", chunk).execute()
             for row in resp.data:
                 status = row.get("extraction_status")
-                created = row.get("created_at", "")
+                lease_str = row.get("lease_expires_at")
                 if status == "complete":
                     skip_urls.add(row["source_url"])
-                elif status == "extracting" and created > stale_cutoff:
-                    # Recently started extraction — another worker may own it
-                    skip_urls.add(row["source_url"])
-                # failed or stale extracting: allow retry (not added to skip_urls)
+                elif status == "extracting" and lease_str:
+                    try:
+                        lease_time = datetime.fromisoformat(lease_str.replace("Z", "+00:00"))
+                        if lease_time > datetime.now(timezone.utc):
+                            skip_urls.add(row["source_url"])
+                    except ValueError:
+                        pass
         except Exception as e:
             logger.error("event_runner_dedupe_error", error=str(e))
 
@@ -145,6 +148,7 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
     # 3. Extract and Write (transactionally via RPC)
     new_written = 0
     quarantined = 0
+    failed_docs = 0
 
     for source_name, headline in new_headlines:
         doc_id = None
@@ -171,6 +175,9 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
 
             doc_id = claim_data["document_id"]
             claim_token = claim_data["claim_token"]
+
+            # Use the authoritative content snapshot stored in the database
+            headline.raw_text = claim_data.get("raw_text", headline.raw_text)
 
             events = await extractor.extract(headline)
 
@@ -229,26 +236,31 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
                 "p_events": events_payload,
             }).execute()
 
-            result_data = rpc_resp.data if hasattr(rpc_resp, "data") else {}
-            rpc_status = result_data.get("status") if isinstance(result_data, dict) else "complete"
+            result_data = rpc_resp.data
+            if not isinstance(result_data, dict):
+                raise Exception("publish_extracted_events_v2 returned non-dictionary response")
+                
+            rpc_status = result_data.get("status")
             if rpc_status == "failed":
                 logger.error("event_runner_publish_failed", doc_id=doc_id, reason=result_data.get("reason"))
+                failed_docs += 1
                 continue
             elif rpc_status != "complete":
                 raise Exception(f"Publish RPC returned invalid status: {rpc_status}")
                 
-            written_count = result_data.get("written", len(events_payload)) if isinstance(result_data, dict) else len(events_payload)
+            written_count = result_data.get("written", 0)
             new_written += written_count
             logger.info("event_runner_doc_published", doc_id=doc_id, status=rpc_status, written=written_count)
 
         except Exception as e:
+            failed_docs += 1
             logger.error("event_runner_extract_write_error", url=headline.source_url, error=str(e))
             if doc_id and claim_token:
                 try:
                     supabase.rpc("report_extraction_failure", {
                         "p_doc_id": doc_id,
                         "p_claim_token": claim_token,
-                        "p_reason": str(e)
+                        "p_reason": str(e)[:250]
                     }).execute()
                 except Exception as ex:
                     logger.error("event_runner_report_failure_error", doc_id=doc_id, original_error=str(e), reporting_error=str(ex))
@@ -256,6 +268,7 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
     return {
         "seen": seen,
         "new_written": new_written,
+        "failed_docs": failed_docs,
         "quarantined": quarantined,
         "failed_sources": failed_sources,
         "extractor": extractor_name

@@ -5,7 +5,7 @@ from current market supply (arrivals) and nearby storage. Forecast is a
 tie-breaker: holding through a glut only makes sense if prices are expected
 to recover *and* a godown exists.
 """
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime, timezone
 from statistics import median
 from typing import Optional
 
@@ -59,8 +59,22 @@ def compute_sale_window(
     today = date.today()
     cutoff = (today - timedelta(days=15)).isoformat()
 
+    cutoff_date_str = (today - timedelta(days=7)).isoformat()
+    now_iso = datetime.now(timezone.utc).isoformat()
+
     if recent_events is not None:
-        all_recent_events = recent_events
+        all_recent_events = []
+        for e in recent_events:
+            if e.get("provenance_mode") != "live" or _f(e.get("confidence")) is None or _f(e.get("confidence")) < 0.5:
+                continue
+            edate = e.get("event_date")
+            if edate and edate > today.isoformat():
+                continue
+            pub = e.get("publication_date")
+            if pub and pub > now_iso:
+                continue
+            if edate and edate >= cutoff_date_str:
+                all_recent_events.append(e)
     else:
         cutoff_date = (today - timedelta(days=7)).isoformat()
         resp = (
