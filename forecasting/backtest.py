@@ -341,14 +341,15 @@ def run_backtest(
         name: {
             "actuals": [], "preds": [], "lowers": [], "uppers": [], "last_train_prices": [], 
             "n_missing_history": 0, "n_execution_failure": 0, "n_invalid_prediction": 0, "n_unscored_target": 0, "n_valid_predictions": 0,
-            "name": name, "hits": 0, "considered": 0
+            "name": name, "hits": 0, "considered": 0, "incomplete_folds": 0
         } for name in model_names
     }
     
     pair_accumulators = {
         (m, c): {
             name: {"actuals": [], "preds": [], "lowers": [], "uppers": [], "folds": [], 
-                   "n_missing_history": 0, "n_execution_failure": 0, "n_invalid_prediction": 0, "n_unscored_target": 0, "n_valid_predictions": 0}
+                   "n_missing_history": 0, "n_execution_failure": 0, "n_invalid_prediction": 0, "n_unscored_target": 0, "n_valid_predictions": 0,
+                   "incomplete_folds": 0}
             for name in model_names
         } for (m, c) in full_series.keys()
     }
@@ -413,7 +414,7 @@ def run_backtest(
             for name in model_names:
                 preds = []
                 try:
-                    horizon_start = train_s[-1][0] if train_s else (fold_start - timedelta(days=1))
+                    horizon_start = fold_start - timedelta(days=1)
                     if name == "gbm":
                         if global_gbm is None:
                             raise ValueError("GBM model failed to train")
@@ -502,11 +503,18 @@ def run_backtest(
             preds = acc[name]["preds"]
             mae_val = mae(actuals, preds)
             mape_val = mape_winsorized(actuals, preds)
-            cov = interval_coverage(acc[name]["uppers"], acc[name]["lowers"], actuals)
+            valid_intervals = sum(
+                1 for h, l, a in zip(acc[name]["uppers"], acc[name]["lowers"], actuals)
+                if h is not None and l is not None and a is not None and math.isfinite(h) and math.isfinite(l) and math.isfinite(a)
+            )
+            if valid_intervals == 0:
+                cov = float('nan')
+            else:
+                cov = interval_coverage(acc[name]["uppers"], acc[name]["lowers"], actuals)
             
             # Directional accuracy uses all paired instances (weekly means over actual matching dates)
             folds = acc[name]["folds"]
-            total_hits, total_considered = directional_accuracy(
+            total_hits, total_considered, incomplete_folds = directional_accuracy(
                 [f["last_train_price"] for f in folds],
                 [f["preds"] for f in folds],
                 [f["actuals"] for f in folds]
@@ -514,10 +522,24 @@ def run_backtest(
             
             total_valid = acc[name]["n_valid_predictions"]
             
+            if total_valid > 0:
+                status = "blocked" if incomplete_folds > 0 else "ok"
+                reason = "incomplete_fold_predictions" if incomplete_folds > 0 else None
+            else:
+                status = "blocked"
+                if acc[name]["n_execution_failure"] > 0:
+                    reason = "execution_failure"
+                elif acc[name]["n_missing_history"] > 0:
+                    reason = "missing_history"
+                elif acc[name]["n_invalid_prediction"] > 0:
+                    reason = "invalid_prediction"
+                else:
+                    reason = "insufficient_training_or_calibration_history"
+                    
             mr = ModelResult(
                 model=name,
-                status="ok" if total_valid > 0 else "blocked",
-                reason=None if total_valid > 0 else "insufficient_training_or_calibration_history",
+                status=status,
+                reason=reason,
                 mae=None if math.isnan(mae_val) or total_valid == 0 else round(mae_val, 4),
                 mape_winsorized=None if math.isnan(mape_val) or total_valid == 0 else round(mape_val, 4),
                 directional_hits=total_hits if total_valid > 0 else None,
@@ -545,6 +567,7 @@ def run_backtest(
             pool[name]["n_unscored_target"] += acc[name]["n_unscored_target"]
             pool[name]["hits"] += total_hits
             pool[name]["considered"] += total_considered
+            pool[name]["incomplete_folds"] += incomplete_folds
             
         per_pair.append(PairResult(
             market_id=m, 
@@ -563,13 +586,34 @@ def run_backtest(
             continue
         agg_mae = mae(actuals, p["preds"])
         agg_mape = mape_winsorized(actuals, p["preds"])
-        agg_cov = interval_coverage(p["uppers"], p["lowers"], actuals)
+        valid_intervals = sum(
+            1 for h, l, a in zip(p["uppers"], p["lowers"], actuals)
+            if h is not None and l is not None and a is not None and math.isfinite(h) and math.isfinite(l) and math.isfinite(a)
+        )
+        if valid_intervals == 0:
+            agg_cov = float('nan')
+        else:
+            agg_cov = interval_coverage(p["uppers"], p["lowers"], actuals)
         valid = p["n_valid_predictions"]
         total = valid + p["n_missing_history"] + p["n_execution_failure"] + p["n_invalid_prediction"]
         agg_da = (p["hits"] / p["considered"] * 100.0) if p["considered"] > 0 else 0.0
+        if valid > 0:
+            status = "blocked" if p["incomplete_folds"] > 0 else "ok"
+            reason = "incomplete_fold_predictions" if p["incomplete_folds"] > 0 else None
+        else:
+            status = "blocked"
+            if p["n_execution_failure"] > 0:
+                reason = "execution_failure"
+            elif p["n_missing_history"] > 0:
+                reason = "missing_history"
+            elif p["n_invalid_prediction"] > 0:
+                reason = "invalid_prediction"
+            else:
+                reason = "insufficient_training_or_calibration_history"
+
         aggregate[name] = {
-            "status": "ok" if valid > 0 else "blocked",
-            "reason": None if valid > 0 else "insufficient_training_or_calibration_history",
+            "status": status,
+            "reason": reason,
             "mae": None if math.isnan(agg_mae) or valid == 0 else round(agg_mae, 4),
             "mape_winsorized": None if math.isnan(agg_mape) or valid == 0 else round(agg_mape, 4),
             "interval_coverage": None if math.isnan(agg_cov) or valid == 0 else round(agg_cov, 4),
