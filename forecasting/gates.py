@@ -108,17 +108,19 @@ class GateResult:
         }
 
 
-def _get_da(backtest_report: Any, model_name: str) -> Tuple[Optional[float], int, int]:
+def _get_da(backtest_report: Any, model_name: str) -> Tuple[Optional[float], int, int, set[str]]:
     total_hits  = 0
     total_folds = 0
+    samples = set()
     for pair_result in getattr(backtest_report, "per_pair", []):
         for mr in getattr(pair_result, "models", []):
             if getattr(mr, "model", None) == model_name:
                 total_hits  += getattr(mr, "directional_hits",  0) or 0
                 total_folds += getattr(mr, "directional_folds", 0) or 0
+                samples.update(getattr(mr, "da_evaluated_samples", []))
     if total_folds == 0:
-        return None, 0, 0
-    return total_hits / total_folds, total_hits, total_folds
+        return None, 0, 0, set()
+    return total_hits / total_folds, total_hits, total_folds, samples
 
 
 def evaluate_gates(
@@ -166,8 +168,8 @@ def evaluate_gates(
         inc_agg = aggregate.get(incumbent_name) or {}
         inc_mape = inc_agg.get("mape_winsorized")
         
-        cand_da, cand_hits, cand_folds = _get_da(backtest_report, candidate_name)
-        inc_da, inc_hits, inc_folds = _get_da(backtest_report, incumbent_name)
+        cand_da, cand_hits, cand_folds, cand_samples = _get_da(backtest_report, candidate_name)
+        inc_da, inc_hits, inc_folds, inc_samples = _get_da(backtest_report, incumbent_name)
         
         if not inc_agg:
             note = f"G3 MAPE SKIP: missing incumbent evidence ({incumbent_name})."
@@ -187,7 +189,7 @@ def evaluate_gates(
             note = f"G3 DA SKIP: insufficient directional samples (cand={cand_folds}, inc={inc_folds})."
             notes.append(note)
             gate_results.append(SingleGateResult("G3_DA", GateOutcome.SKIP, cand_da, None, note))
-        elif cand_folds != inc_folds:
+        elif cand_samples != inc_samples:
             note = f"G3 DA SKIP: noncomparable samples (cand={cand_folds}, inc={inc_folds})."
             notes.append(note)
             gate_results.append(SingleGateResult("G3_DA", GateOutcome.SKIP, cand_da, inc_da, note))

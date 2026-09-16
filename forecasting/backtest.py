@@ -183,6 +183,7 @@ class ModelResult:
     directional_folds:   Optional[int]
     interval_coverage:   Optional[float]
     directional_accuracy:Optional[float] = None
+    da_evaluated_samples: List[str] = field(default_factory=list)
     n_attempted_predictions: int = 0
     n_valid_predictions: int = 0
     n_missing_history: int = 0
@@ -443,7 +444,8 @@ def run_backtest(
                     pair_accumulators[(m, c)][name]["folds"].append({
                         "last_train_price": last_train_price,
                         "actuals": [a for _, a in test_s],
-                        "preds": [float("nan")] * len(test_s)
+                        "preds": [float("nan")] * len(test_s),
+                        "target_dates": [d.isoformat() if isinstance(d, date) else d for d, _ in test_s]
                     })
                     continue
                     
@@ -487,7 +489,8 @@ def run_backtest(
                     pair_accumulators[(m, c)][name]["folds"].append({
                         "last_train_price": last_train_price,
                         "actuals": fold_actuals,
-                        "preds": fold_preds
+                        "preds": fold_preds,
+                        "target_dates": [d.isoformat() if isinstance(d, date) else d for d, _ in test_s]
                     })
 
     # 5. Build Result objects
@@ -514,11 +517,17 @@ def run_backtest(
             
             # Directional accuracy uses all paired instances (weekly means over actual matching dates)
             folds = acc[name]["folds"]
-            total_hits, total_considered, incomplete_folds = directional_accuracy(
+            total_hits, total_considered, incomplete_folds, evaluated_fold_indices = directional_accuracy(
                 [f["last_train_price"] for f in folds],
                 [f["preds"] for f in folds],
                 [f["actuals"] for f in folds]
             )
+            
+            da_evaluated_samples = []
+            for idx in evaluated_fold_indices:
+                f = folds[idx]
+                for d in f["target_dates"]:
+                    da_evaluated_samples.append(f"{m}|{c}|{idx}|{d}")
             
             total_valid = acc[name]["n_valid_predictions"]
             
@@ -552,6 +561,7 @@ def run_backtest(
                 n_execution_failure=acc[name]["n_execution_failure"],
                 n_invalid_prediction=acc[name]["n_invalid_prediction"],
                 n_unscored_target=acc[name]["n_unscored_target"],
+                da_evaluated_samples=da_evaluated_samples,
             )
             pair_models.append(mr)
             
