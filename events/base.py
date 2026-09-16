@@ -21,6 +21,10 @@ class ExtractedEvent(BaseModel):
     magnitude: str = Field(pattern="^(minor|moderate|major)$")
     confidence: float = Field(ge=0.0, le=1.0)
     reasoning: str
+    # Occurrence date: when the agricultural event happened (used for identity).
+    # If absent, runner falls back to headline.published_date and logs a warning.
+    # Confidence/direction/magnitude changes do not affect event identity.
+    event_date: Optional[date] = None
 
 class EventExtractor(ABC):
     @abstractmethod
