@@ -237,4 +237,4 @@ class IngestionRunner:
                 "duration_ms":      duration_ms,
             }).execute()
         except Exception as e:
-            logger.error("failed_to_write_ingestion_log", error=str(e))
+            logger.error("degraded_persistence", reason="audit_log_write_failed", error=str(e))
