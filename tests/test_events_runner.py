@@ -45,9 +45,36 @@ async def test_runner_dedupe_and_isolation(monkeypatch):
     class EventsTable(FakeQuery):
         def insert(self, row):
             inserts.append(row)
-            return self
+            # return something that can .execute()
+            class MockBuilder:
+                def execute(self):
+                    return type('Obj', (object,), {'data': [{'id': 'fake-id'}]})()
+            return MockBuilder()
+        def update(self, row):
+            class MockBuilder:
+                def eq(self, col, val): return self
+                def execute(self): return type('Obj', (object,), {'data': []})()
+            return MockBuilder()
             
-    monkeypatch.setattr(db, "table", lambda t: EventsTable() if t == "events" else FakeQuery())
+    def mock_table(t):
+        if t == "events":
+            return EventsTable()
+        if t == "source_documents":
+            # For source documents, we don't track them in inserts array, but we need to return the ID
+            class SourceDocsTable(FakeQuery):
+                def insert(self, row):
+                    class MockBuilder:
+                        def execute(self): return type('Obj', (object,), {'data': [{'id': 'fake-id'}]})()
+                    return MockBuilder()
+                def update(self, row):
+                    class MockBuilder:
+                        def eq(self, col, val): return self
+                        def execute(self): return type('Obj', (object,), {'data': []})()
+                    return MockBuilder()
+            return SourceDocsTable()
+        return FakeQuery()
+        
+    monkeypatch.setattr(db, "table", mock_table)
 
     result = await run(db, since_days=2)
     assert result["seen"] == 2
