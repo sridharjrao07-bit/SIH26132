@@ -27,6 +27,7 @@ class _ModelResult:
     model:             str
     directional_hits:  Optional[int]   = None
     directional_folds: Optional[int]   = None
+    da_evaluated_samples: List[str]    = field(default_factory=list)
 
 
 @dataclass
@@ -46,24 +47,25 @@ class _BacktestReport:
 def _report_for_g2(cand: str, cand_mape: Optional[float], ma_mape: Optional[float], ols_mape: Optional[float], n_preds: int):
     return _BacktestReport(
         aggregate={
-            cand: {"mape_winsorized": cand_mape, "n_predictions": n_preds},
-            "ma": {"mape_winsorized": ma_mape, "n_predictions": n_preds},
-            "ols": {"mape_winsorized": ols_mape, "n_predictions": n_preds},
+            cand: {"mape_winsorized": cand_mape, "n_valid_predictions": n_preds},
+            "ma": {"mape_winsorized": ma_mape, "n_valid_predictions": n_preds},
+            "ols": {"mape_winsorized": ols_mape, "n_valid_predictions": n_preds},
         }
     )
 
 def _report_for_g3(cand_mape: float, inc_mape: float, cand_hits: int, cand_folds: int, inc_hits: int, inc_folds: int, n_preds: int, incumbent: str = "blend"):
+    dummy_samples = ["s1", "s2", "s3"]
     pair = _PairResult(
         market_id="m1", commodity_id="c1", n_obs=100,
         models=[
-            _ModelResult(model="gbm", directional_hits=cand_hits, directional_folds=cand_folds),
-            _ModelResult(model=incumbent, directional_hits=inc_hits, directional_folds=inc_folds)
+            _ModelResult(model="gbm", directional_hits=cand_hits, directional_folds=cand_folds, da_evaluated_samples=dummy_samples),
+            _ModelResult(model=incumbent, directional_hits=inc_hits, directional_folds=inc_folds, da_evaluated_samples=dummy_samples)
         ],
     )
     return _BacktestReport(
         aggregate={
-            "gbm": {"mape_winsorized": cand_mape, "n_predictions": n_preds},
-            incumbent: {"mape_winsorized": inc_mape, "n_predictions": n_preds},
+            "gbm": {"mape_winsorized": cand_mape, "n_valid_predictions": n_preds},
+            incumbent: {"mape_winsorized": inc_mape, "n_valid_predictions": n_preds},
         },
         per_pair=[pair]
     )
@@ -122,9 +124,19 @@ def test_g3_fail_da():
     assert res.all_pass is False
     assert any(g.name == "G3_DA" and g.outcome == GateOutcome.FAIL for g in res.gates)
 
-def test_g3_skip_da():
-    # DA folds too small
-    report = _report_for_g3(0.15, 0.20, 2, 4, 3, 4, 50)
+def test_g3_skip_da_noncomparable():
+    # Different samples
+    pair = _PairResult(
+        market_id="m1", commodity_id="c1", n_obs=100,
+        models=[
+            _ModelResult(model="gbm", directional_hits=10, directional_folds=20, da_evaluated_samples=["s1"]),
+            _ModelResult(model="blend", directional_hits=10, directional_folds=20, da_evaluated_samples=["s2"])
+        ],
+    )
+    report = _BacktestReport(
+        aggregate={"gbm": {"mape_winsorized": 0.1, "n_valid_predictions": 100}, "blend": {"mape_winsorized": 0.2, "n_valid_predictions": 100}},
+        per_pair=[pair]
+    )
     res = evaluate_gates(report, "gbm")
     assert res.all_pass is False
     assert any(g.name == "G3_DA" and g.outcome == GateOutcome.SKIP for g in res.gates)
