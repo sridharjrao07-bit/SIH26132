@@ -319,6 +319,54 @@ def test_engine_run_with_feature_ols(fake_supabase, monkeypatch):
         assert row["method"] == "feature_ols"
         assert row["confidence"] == "high"
 
+def test_engine_run_gbm_fallback(fake_supabase, monkeypatch):
+    """If the configured candidate model (e.g. GBM) throws an exception during engine execution, 
+    the engine must catch it and fallback to the baseline (blend or MA)."""
+    import app.config
+    
+    # Mock settings
+    old_settings = app.config.get_settings()
+    class MockSettings:
+        def __getattr__(self, name):
+            if name == "forecast_model":
+                return "gbm"
+            return getattr(old_settings, name)
+            
+    monkeypatch.setattr("forecasting.engine.get_settings", MockSettings)
+    
+    # Mock train_global_gbm to fail
+    def failing_train_global_gbm(*args, **kwargs):
+        raise ValueError("Simulated GBM training failure in production engine")
+    monkeypatch.setattr("forecasting.gbm.train_global_gbm", failing_train_global_gbm)
+    
+    from datetime import date, timedelta
+    today = date.today()
+    prices_seed = []
+    # Provide enough history for blend
+    for i in range(50):
+        prices_seed.append({
+            "market_id": "m1",
+            "commodity_id": "c1",
+            "arrival_date": (today - timedelta(days=50 - i)).isoformat(),
+            "modal_price": 2000.0,
+            "source": "data_gov_in"
+        })
+    fake_supabase.seed("prices", prices_seed)
+    
+    from forecasting.engine import ForecastEngine
+    engine = ForecastEngine(fake_supabase)
+    summary = engine.run()
+    
+    assert summary["pairs_ok"] == 1
+    upserts = fake_supabase.upsert_calls()
+    assert len(upserts) == 1
+    
+    rows = upserts[0]["payload"]
+    for row in rows:
+        assert row["method"] == "blend"
+        assert row["status"] == "ok"
+        assert "predicted_price" in row
+
 def test_engine_run_feature_ols_fallback(fake_supabase, monkeypatch):
     """Feature build failure or rank deficient -> existing blend method (assert fallback, not crash)"""
     import app.config
