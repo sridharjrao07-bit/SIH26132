@@ -194,5 +194,5 @@ def interval_coverage(
             covered += 1
 
     if total == 0:
-        return 1.0  # vacuously covered; caller may treat as N/A
+        return float('nan')  # caller will translate to null
     return covered / total
