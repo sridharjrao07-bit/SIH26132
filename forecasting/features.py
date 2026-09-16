@@ -74,6 +74,9 @@ class FeatureRow:
     district_mean_price: Optional[float]  # Previous-day district average (see contract)
     event_pressure:      float            # Computed event pressure score (-2.0 to 2.0)
     events_approximate:  bool = False     # True when event_pressure is not PIT-clean
+    # NOTE: 0.0 is also returned when all eligible events are excluded by provenance
+    # (fixture/unknown). events_approximate remains False in that case — a genuine
+    # zero (no signal) is different from an approximate non-zero signal.
 
 
 def _compute_event_pressure(
@@ -94,6 +97,11 @@ def _compute_event_pressure(
     events : list of event dicts
         Each dict may have: event_date, publication_date, commodity_id,
         direction, magnitude, confidence.
+        If the dict carries a `provenance_mode` field (from a JOIN to
+        source_documents), events whose provenance_mode is NOT 'live' are
+        unconditionally excluded. Absent or None provenance_mode is treated
+        as 'unknown' and excluded as well. This ensures fixture and legacy
+        seed data never influence evaluation or production forecasts.
     target_commodity_id : str or None
         If set, exclude events for other commodities.
     strict_pit : bool
@@ -118,6 +126,16 @@ def _compute_event_pressure(
     target_date = target_date or forecast_origin
 
     for e in events:
+        # ── Provenance gate ───────────────────────────────────────────────────
+        # Only 'live' provenance events are eligible for evaluation and production
+        # forecasts. 'fixture' and 'unknown' (including absent/None) are excluded.
+        # This prevents test fixtures and historical seed data from influencing
+        # official evaluation metrics or live recommendations.
+        provenance = e.get("provenance_mode") or "unknown"
+        if provenance != "live":
+            continue
+        # ─────────────────────────────────────────────────────────────────────
+
         evt_date_str = e.get("event_date")
         if not evt_date_str:
             continue
