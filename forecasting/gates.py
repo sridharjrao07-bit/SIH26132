@@ -137,7 +137,12 @@ def evaluate_gates(
     gate_results: List[SingleGateResult] = []
 
     cand_mape = cand_agg.get("mape_winsorized")
-    cand_preds = cand_agg.get("n_predictions") or 0
+    cand_preds = cand_agg.get("n_valid_predictions") or 0
+    cand_attempted = cand_agg.get("n_attempted_predictions") or 0
+    
+    if cand_attempted > cand_preds and cand_preds == 0:
+        notes.append(f"ALL SKIP: candidate had {cand_attempted} attempts but 0 valid predictions.")
+        return GateResult(model=candidate_name, gates=[SingleGateResult("ALL", GateOutcome.SKIP, None, None, "No valid predictions")], notes=notes)
 
     if candidate_name in ("feature_ols", "holt_winters"):
         # G2: Beat MA and OLS on MAPE
@@ -164,7 +169,11 @@ def evaluate_gates(
         cand_da, cand_hits, cand_folds = _get_da(backtest_report, candidate_name)
         inc_da, inc_hits, inc_folds = _get_da(backtest_report, incumbent_name)
         
-        if cand_mape is None or inc_mape is None or cand_preds < MIN_PREDICTIONS:
+        if not inc_agg:
+            note = f"G3 MAPE SKIP: missing incumbent evidence ({incumbent_name})."
+            notes.append(note)
+            gate_results.append(SingleGateResult("G3_MAPE", GateOutcome.SKIP, cand_mape, None, note))
+        elif cand_mape is None or inc_mape is None or cand_preds < MIN_PREDICTIONS:
             note = f"G3 MAPE SKIP: insufficient predictions or missing MAPE (preds={cand_preds})."
             notes.append(note)
             gate_results.append(SingleGateResult("G3_MAPE", GateOutcome.SKIP, cand_mape, inc_mape, note))
@@ -178,6 +187,10 @@ def evaluate_gates(
             note = f"G3 DA SKIP: insufficient directional samples (cand={cand_folds}, inc={inc_folds})."
             notes.append(note)
             gate_results.append(SingleGateResult("G3_DA", GateOutcome.SKIP, cand_da, None, note))
+        elif cand_folds != inc_folds:
+            note = f"G3 DA SKIP: noncomparable samples (cand={cand_folds}, inc={inc_folds})."
+            notes.append(note)
+            gate_results.append(SingleGateResult("G3_DA", GateOutcome.SKIP, cand_da, inc_da, note))
         else:
             threshold = inc_da - 0.02
             if cand_da >= threshold:
