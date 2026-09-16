@@ -1,64 +1,60 @@
-# SQL to apply (Supabase)
+# Database Deployment and Migration Instructions
 
-Run these **in order** on the project SQL editor (Dashboard → SQL → New query).  
-Paste **one file at a time**, run, confirm success, then the next.
+This document provides exact instructions for applying, verifying, and recovering database schema migrations, focusing on the complex event extraction pipelines (Migrations 025–028).
 
-If this is a **new** project, start at `001`.  
-If you already applied a senior-review pass through `007`, start at `008` and continue through `011`.  
-If `008`–`010` are already applied, run only `011`.
-If 008–011 are already applied, run only 012.
+## Clean Installation
 
-**Do not re-run a file that already succeeded.** `create table if not exists` is safe; `create trigger` / `create policy` used to fail with `42710 already exists`. Current `001`/`008`/`009` drop-then-create those objects, but the right move on an existing project is to **skip** what is already there.
+For a fresh environment, apply the migrations sequentially from `db/migrations/`:
 
-Paste this probe first:
-
-```sql
-select table_name
-from information_schema.tables
-where table_schema = 'public'
-order by 1;
+```sh
+psql -d $DATABASE_URL -f db/migrations/001_initial.sql
+# ... apply up to 028 sequentially
+psql -d $DATABASE_URL -f db/migrations/028_events_provenance_review_fixes.sql
 ```
 
-| If you see | Skip through | Next file |
-|---|---|---|
-| `prices` (and no `buyers`) | `001`–`007` | `008` |
-| `buyers` but no `logistics_bookings` | `001`–`008` | `009` |
-| `logistics_bookings` (no `weather_daily`) | `001`–`016` | `017` then `018` then `019` |
-| `weather_daily` | `001`–`019` | Already up to date |
+## Upgrade and Recovery Paths
 
-| # | File | What it does |
-|---|---|---|
-| 1 | `db/migrations/001_schema.sql` | Core schema: markets, commodities, prices, forecasts, profiles, alerts, RLS, `set_updated_at` |
-| 2 | `db/migrations/002_seed.sql` | Nashik APMCs + Onion/Tomato/Soybean/Maize aliases |
-| 3 | `db/migrations/003_security_patch.sql` | Signup cannot self-elevate `role`; unique market `source_code` |
-| 4 | `db/migrations/003b_admin_set_role_grants.sql` | `admin_set_role` EXECUTE for service_role only |
-| 5 | `db/migrations/004_nearby_markets.sql` | `nearby_markets` earthdistance RPC |
-| 6 | `db/migrations/005_forecast_stale_fn.sql` | `mark_stale_forecasts` |
-| 7 | `db/migrations/006_job_locks.sql` | `claim_job_lock` / `release_job_lock` + `nearest_market` |
-| 8 | `db/migrations/007_security_hardening.sql` | Tighten SECURITY DEFINER grants |
-| 9 | `db/migrations/008_marketplace.sql` | Buyers, lots, offers, payments, grievances, logistics options, FPO role, unique phone |
-| 10 | `db/migrations/009_logistics_bookings.sql` | Book a godown/truck against a lot |
-| 11 | `db/migrations/010_lot_grade_check.sql` | `lots.grade` must be FAQ / General / Special |
-| 12 | `db/migrations/011_ops_hardening.sql` | Phone/lots RPCs, markets lat/lng CHECK, alert indexes, `admin_set_role` service_role-only |
-| 13 | `db/migrations/012_payment_atomicity.sql` | `payments.amount > 0`, `lots.quantity_qtl > 0`, one pending/paid payment per offer |
-| 14 | `db/migrations/013_payment_grievance_rpcs.sql` | Payment and grievance RPCs for marketplace operations |
-| 15 | `db/migrations/014_buyer_onboarding.sql` | Buyer onboarding validation and improvements |
-| 16 | `db/migrations/015_storage.sql` | `logistics_options` capacity fields and storage procedures |
-| 17 | `db/migrations/016_linter_fixes.sql` | Fixes for SQL syntax and linter warnings |
-| 18 | `db/migrations/017_weather_daily.sql` | `weather_daily` table for historical weather features |
-| 19 | `db/migrations/018_events.sql` | `events` table for structured market intelligence |
-| 20 | `db/migrations/019_forecast_audit_cols.sql` | `generated_at` and `model_used` audit columns for `forecasts` table |
+If you are upgrading an existing environment, you may encounter broken states from `026_live_events_view.sql` which referenced non-existent columns.
 
-After `008`, seed includes Nashik buyers (traders, processor, institutional, eNAM) and MSWC godowns / truck unions.
+### Scenario A: Migration 026 Failed or is Absent
+If `026` failed (e.g., throwing a column-does-not-exist error) or was skipped:
+1. Ensure `025_events_claim_rpc.sql` has been applied successfully.
+2. Skip attempting to apply `026` directly.
+3. Apply `027_events_provenance_fixes.sql` first. It uses `CREATE OR REPLACE` for views and functions, bypassing the broken state.
+4. Apply `028_events_provenance_review_fixes.sql` to finalize the schema, locking, and authorization corrections.
 
-Elevate a real `auth.users` uuid to admin (SQL editor, as postgres):
+### Scenario B: Migration 027 Applied but Contains Flaws
+Migration 027 was applied to some environments but omitted the `review_status` column and had race conditions in lock acquisition.
+1. Leave `027_events_provenance_fixes.sql` in the applied state. Do NOT modify the file in place on production environments.
+2. Apply `028_events_provenance_review_fixes.sql` as a forward migration. It creates the `review_status` column, backfills historical `legacy_reviewed` states, and replaces the flawed RPCs (`claim_source_document`, `review_event`, `publish_extracted_events_v2`) with corrected logic.
+
+### Scenario C: Existing Incompatible Views
+If you encounter errors about dropping dependent objects (e.g., `cannot drop function claim_source_document because other objects depend on it`):
+1. Temporarily drop the dependent views manually.
+2. Apply `028_events_provenance_review_fixes.sql` which will recreate `live_events_published` and `sale_window_headlines`.
+3. If you have custom out-of-band views, recreate them after 028 completes.
+
+## Verification Probes
+
+After deployment, verify the state by running these probes as the `postgres` user:
 
 ```sql
-select public.admin_set_role('<auth.users uuid>'::uuid, 'admin');
-```
+-- 1. Verify review_status exists and constraints are applied
+SELECT column_name, data_type, column_default 
+FROM information_schema.columns 
+WHERE table_name = 'events' AND column_name = 'review_status';
 
-FPO:
+-- 2. Verify legacy reviews were reconciled
+SELECT review_status, count(*) 
+FROM events 
+WHERE reviewed_by IS NOT NULL 
+GROUP BY review_status;
+-- Expected: If historical reviews existed, they should be in 'legacy_reviewed'.
 
-```sql
-select public.admin_set_role('<auth.users uuid>'::uuid, 'fpo');
+-- 3. Verify RPC existence and security definitions
+SELECT p.proname, p.prosecdef 
+FROM pg_proc p 
+JOIN pg_namespace n ON p.pronamespace = n.oid 
+WHERE n.nspname = 'public' 
+  AND p.proname IN ('claim_source_document', 'review_event', 'publish_extracted_events_v2');
 ```
