@@ -100,19 +100,14 @@ class NaiveLastWeekSameDay:
             lag = target - timedelta(days=7)
             raw.append(self._lookup.get(lag, float("nan")))
             
-        # Naive coverage is N/A (bounds return None) since sigma = 0.0
-        # Wait, if nan, return nan bounds. apply_postprocessing handles floats, 
-        # but max() with nan might be weird. Let's handle it.
-        # It's fine, math.isnan doesn't crash on standard math except we need to be careful with clamping
         processed = apply_postprocessing(raw, self.sigma, sanity=None)
-        # If raw is nan, bounds will be None. In backtest, we expect NaN for failure.
-        # Let's fix processed output to return NaN if raw is NaN.
         final_processed = []
         for r, (p, lo, hi) in zip(raw, processed):
             if math.isnan(r):
                 final_processed.append((float('nan'), float('nan'), float('nan')))
             else:
-                final_processed.append((p, lo if lo is not None else float('nan'), hi if hi is not None else float('nan')))
+                # Naive does not support intervals, explicitly return NaN bounds
+                final_processed.append((p, float('nan'), float('nan')))
         return final_processed
 
 class FeatureOLSAdapter:
@@ -190,7 +185,10 @@ class ModelResult:
     directional_accuracy:Optional[float] = None
     n_attempted_predictions: int = 0
     n_valid_predictions: int = 0
-    n_failed_predictions: int = 0
+    n_missing_history: int = 0
+    n_execution_failure: int = 0
+    n_invalid_prediction: int = 0
+    n_unscored_target: int = 0
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -341,13 +339,16 @@ def run_backtest(
     # 3. Setup accumulator pool
     pool = {
         name: {
-            "actuals": [], "preds": [], "lowers": [], "uppers": [], "last_train_prices": [], "nan_count": 0, "name": name, "hits": 0, "considered": 0
+            "actuals": [], "preds": [], "lowers": [], "uppers": [], "last_train_prices": [], 
+            "n_missing_history": 0, "n_execution_failure": 0, "n_invalid_prediction": 0, "n_unscored_target": 0, "n_valid_predictions": 0,
+            "name": name, "hits": 0, "considered": 0
         } for name in model_names
     }
     
     pair_accumulators = {
         (m, c): {
-            name: {"actuals": [], "preds": [], "lowers": [], "uppers": [], "folds": [], "nan_count": 0}
+            name: {"actuals": [], "preds": [], "lowers": [], "uppers": [], "folds": [], 
+                   "n_missing_history": 0, "n_execution_failure": 0, "n_invalid_prediction": 0, "n_unscored_target": 0, "n_valid_predictions": 0}
             for name in model_names
         } for (m, c) in full_series.keys()
     }
@@ -427,12 +428,17 @@ def run_backtest(
                         preds = model.predict(horizon=FOLD_SIZE, forecast_origin=horizon_start)
                 except Exception as e:
                     logger.warning("fold_model_failed", model=name, fold=fold_idx, pair=(m, c), error=str(e))
-                    for d, actual in test_s:
-                        pair_accumulators[(m, c)][name]["actuals"].append(actual)
-                        pair_accumulators[(m, c)][name]["preds"].append(float("nan"))
-                        pair_accumulators[(m, c)][name]["lowers"].append(float("nan"))
-                        pair_accumulators[(m, c)][name]["uppers"].append(float("nan"))
-                        pair_accumulators[(m, c)][name]["nan_count"] += 1
+                    for i in range(FOLD_SIZE):
+                        pred_date = fold_start + timedelta(days=i)
+                        actual_match = [p for d, p in test_s if d == pred_date]
+                        if not actual_match:
+                            pair_accumulators[(m, c)][name]["n_unscored_target"] += 1
+                        else:
+                            pair_accumulators[(m, c)][name]["actuals"].append(actual_match[0])
+                            pair_accumulators[(m, c)][name]["preds"].append(float("nan"))
+                            pair_accumulators[(m, c)][name]["lowers"].append(float("nan"))
+                            pair_accumulators[(m, c)][name]["uppers"].append(float("nan"))
+                            pair_accumulators[(m, c)][name]["n_execution_failure"] += 1
                     pair_accumulators[(m, c)][name]["folds"].append({
                         "last_train_price": last_train_price,
                         "actuals": [a for _, a in test_s],
@@ -442,11 +448,11 @@ def run_backtest(
                     
                 fold_actuals = []
                 fold_preds = []
-                # Score ONLY matching calendar dates (no interpolated actuals)
                 for i in range(FOLD_SIZE):
                     pred_date = fold_start + timedelta(days=i)
                     actual_match = [p for d, p in test_s if d == pred_date]
                     if not actual_match:
+                        pair_accumulators[(m, c)][name]["n_unscored_target"] += 1
                         continue # Date not present in test_s, don't score
                         
                     actual = actual_match[0]
@@ -464,8 +470,14 @@ def run_backtest(
                     pair_accumulators[(m, c)][name]["preds"].append(p_f if not is_nan else float("nan"))
                     pair_accumulators[(m, c)][name]["lowers"].append(lo_f if lo_f is not None else float("nan"))
                     pair_accumulators[(m, c)][name]["uppers"].append(hi_f if hi_f is not None else float("nan"))
+                    
                     if is_nan:
-                        pair_accumulators[(m, c)][name]["nan_count"] += 1
+                        if name == "naive":
+                            pair_accumulators[(m, c)][name]["n_missing_history"] += 1
+                        else:
+                            pair_accumulators[(m, c)][name]["n_invalid_prediction"] += 1
+                    else:
+                        pair_accumulators[(m, c)][name]["n_valid_predictions"] += 1
                         
                     fold_actuals.append(actual)
                     fold_preds.append(p_f if not is_nan else float("nan"))
@@ -500,34 +512,37 @@ def run_backtest(
                 [f["actuals"] for f in folds]
             )
             
+            total_valid = acc[name]["n_valid_predictions"]
+            
             mr = ModelResult(
                 model=name,
-                status="ok" if (len(preds) - acc[name]["nan_count"] > 0) else "blocked",
-                reason=None if (len(preds) - acc[name]["nan_count"] > 0) else "insufficient_training_or_calibration_history",
-                mae=None if math.isnan(mae_val) or len(preds) == acc[name]["nan_count"] else round(mae_val, 4),
-                mape_winsorized=None if math.isnan(mape_val) or len(preds) == acc[name]["nan_count"] else round(mape_val, 4),
-                directional_hits=total_hits if len(preds) > acc[name]["nan_count"] else None,
-                directional_folds=total_considered if len(preds) > acc[name]["nan_count"] else None,
-                interval_coverage=None if math.isnan(cov) or len(preds) == acc[name]["nan_count"] else round(cov, 4),
-                directional_accuracy=round((total_hits / total_considered * 100.0), 2) if total_considered > 0 and len(preds) > acc[name]["nan_count"] else None,
-                n_attempted_predictions=len(preds),
-                n_valid_predictions=len(preds) - acc[name]["nan_count"],
-                n_failed_predictions=acc[name]["nan_count"]
+                status="ok" if total_valid > 0 else "blocked",
+                reason=None if total_valid > 0 else "insufficient_training_or_calibration_history",
+                mae=None if math.isnan(mae_val) or total_valid == 0 else round(mae_val, 4),
+                mape_winsorized=None if math.isnan(mape_val) or total_valid == 0 else round(mape_val, 4),
+                directional_hits=total_hits if total_valid > 0 else None,
+                directional_folds=total_considered if total_valid > 0 else None,
+                interval_coverage=None if math.isnan(cov) or total_valid == 0 else round(cov, 4),
+                directional_accuracy=round((total_hits / total_considered * 100.0), 2) if total_considered > 0 and total_valid > 0 else None,
+                n_attempted_predictions=total_valid + acc[name]["n_missing_history"] + acc[name]["n_execution_failure"] + acc[name]["n_invalid_prediction"],
+                n_valid_predictions=total_valid,
+                n_missing_history=acc[name]["n_missing_history"],
+                n_execution_failure=acc[name]["n_execution_failure"],
+                n_invalid_prediction=acc[name]["n_invalid_prediction"],
+                n_unscored_target=acc[name]["n_unscored_target"],
             )
             pair_models.append(mr)
-            
-            # Use max considered folds across models as the pair's official count
-            pair_fold_stats[(m, c)]["folds_considered_for_directional_accuracy"] = max(
-                pair_fold_stats[(m, c)]["folds_considered_for_directional_accuracy"], 
-                total_considered
-            )
             
             # Pool to global
             pool[name]["actuals"].extend(actuals)
             pool[name]["preds"].extend(preds)
             pool[name]["lowers"].extend(acc[name]["lowers"])
             pool[name]["uppers"].extend(acc[name]["uppers"])
-            pool[name]["nan_count"] += acc[name]["nan_count"]
+            pool[name]["n_valid_predictions"] += acc[name]["n_valid_predictions"]
+            pool[name]["n_missing_history"] += acc[name]["n_missing_history"]
+            pool[name]["n_execution_failure"] += acc[name]["n_execution_failure"]
+            pool[name]["n_invalid_prediction"] += acc[name]["n_invalid_prediction"]
+            pool[name]["n_unscored_target"] += acc[name]["n_unscored_target"]
             pool[name]["hits"] += total_hits
             pool[name]["considered"] += total_considered
             
@@ -549,8 +564,8 @@ def run_backtest(
         agg_mae = mae(actuals, p["preds"])
         agg_mape = mape_winsorized(actuals, p["preds"])
         agg_cov = interval_coverage(p["uppers"], p["lowers"], actuals)
-        total = len(p["preds"])
-        valid = total - p["nan_count"]
+        valid = p["n_valid_predictions"]
+        total = valid + p["n_missing_history"] + p["n_execution_failure"] + p["n_invalid_prediction"]
         agg_da = (p["hits"] / p["considered"] * 100.0) if p["considered"] > 0 else 0.0
         aggregate[name] = {
             "status": "ok" if valid > 0 else "blocked",
@@ -561,7 +576,10 @@ def run_backtest(
             "directional_accuracy": round(agg_da, 2) if valid > 0 else None,
             "n_attempted_predictions": total,
             "n_valid_predictions": valid,
-            "n_failed_predictions": p["nan_count"]
+            "n_missing_history": p["n_missing_history"],
+            "n_execution_failure": p["n_execution_failure"],
+            "n_invalid_prediction": p["n_invalid_prediction"],
+            "n_unscored_target": p["n_unscored_target"]
         }
         if name == "gbm" and global_gbm is not None:
             aggregate[name]["feature_importances"] = global_gbm.get_feature_importances()
