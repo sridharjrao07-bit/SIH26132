@@ -1,18 +1,52 @@
+import json
+import hashlib
 import structlog
-from datetime import date, timedelta
-from typing import Dict, Any
+from datetime import date, datetime, timezone, timedelta
+from typing import Dict, Any, List
 
 from app.config import get_settings
-from .base import EventSourceError
+from .base import EventSourceError, ExtractedEvent, RawHeadline
 from .sources import PIBSource, NewsFeedSource, StateBulletinsSource, SourceMode
 from .extractor import MockEventExtractor, LLMEventExtractor
 
 logger = structlog.get_logger()
 
+# Documents stuck in 'extracting' for longer than this are considered abandoned
+# and eligible for retry.
+EXTRACTING_STALE_MINUTES = 30
+
+
+def _canonical_event_hash(comm_id, district, event_type: str, occurrence_date: date) -> str:
+    """
+    Deterministic, delimiter-safe hash for event identity within a source document.
+
+    Identity fields:
+      - commodity_id: UUID string or None
+      - district: stripped and lowercased string or None
+      - event_type: stripped and lowercased string
+      - event_date: ISO date string (occurrence, not publication)
+
+    Confidence, direction, and magnitude are NOT part of identity — they may be
+    updated without creating a new event record.
+
+    Two events from different source documents that share all identity fields
+    are NOT considered the same event by this hash: uniqueness is enforced at
+    the (source_document_id, event_hash) level, so each document retains its
+    own independent provenance record.
+    """
+    identity = json.dumps({
+        "commodity_id": str(comm_id) if comm_id else None,
+        "district": (district or "").strip().lower() or None,
+        "event_type": event_type.strip().lower(),
+        "event_date": occurrence_date.isoformat(),
+    }, sort_keys=True, ensure_ascii=True)
+    return hashlib.sha256(identity.encode()).hexdigest()
+
+
 async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
     settings = get_settings()
     since_date = date.today() - timedelta(days=since_days)
-    
+
     # Fetch all commodities once to map names to UUIDs and configure extractors
     try:
         comm_resp = supabase.table("commodities").select("id, name_en").execute()
@@ -20,9 +54,9 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
     except Exception as e:
         logger.error("event_runner_commodity_fetch_error", error=str(e))
         commodity_map = {}
-        
+
     valid_commodities = list(commodity_map.keys())
-    
+
     # Initialize Extractor
     if settings.event_llm.lower() == "off" or not settings.event_llm_api_key:
         extractor = MockEventExtractor(valid_commodities=valid_commodities)
@@ -34,26 +68,29 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
             model=settings.event_llm_model
         )
         extractor_name = f"llm:{settings.event_llm_provider}"
-        
+
     logger.info("event_runner_starting", extractor=extractor_name, since_days=since_days)
-    
-    # Use FIXTURE mode for testing, OFF if events disabled, LIVE for prod
+
+    # Use FIXTURE mode for testing, OFF if events disabled, LIVE for prod.
+    # This determines provenance_mode written to source_documents.
     if settings.app_env == "test":
         mode = SourceMode.FIXTURE
     elif not settings.event_job_enabled:
         mode = SourceMode.OFF
     else:
         mode = SourceMode.LIVE
-        
+
+    provenance_mode = "fixture" if mode == SourceMode.FIXTURE else "live"
+
     sources = [
         ("pib", PIBSource(mode=mode)),
         ("news", NewsFeedSource(mode=mode)),
         ("state_bulletins", StateBulletinsSource(mode=mode))
     ]
-    
+
     failed_sources = []
     all_headlines = []
-    
+
     # 1. Fetch Headlines
     for source_name, source_obj in sources:
         try:
@@ -65,7 +102,7 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
         except Exception as e:
             logger.exception("event_source_unhandled_error", source=source_name, error=str(e))
             failed_sources.append(source_name)
-            
+
     seen = len(all_headlines)
     if not all_headlines:
         return {
@@ -75,46 +112,58 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
             "failed_sources": failed_sources,
             "extractor": extractor_name
         }
-        
-    # 2. Pre-deduplicate
+
+    # 2. Pre-deduplicate: skip 'complete' documents. Re-queue 'failed' and
+    #    stale 'extracting' documents (older than EXTRACTING_STALE_MINUTES).
     source_urls = [h.source_url for h in all_headlines]
-    
-    # Split into chunks of 100 to avoid giant IN clauses
-    existing_urls = set()
+    skip_urls: set = set()
+    stale_cutoff = (
+        datetime.now(timezone.utc) - timedelta(minutes=EXTRACTING_STALE_MINUTES)
+    ).isoformat()
+
     for i in range(0, len(source_urls), 100):
-        chunk = source_urls[i:i+100]
+        chunk = source_urls[i:i + 100]
         try:
-            resp = supabase.table("source_documents").select("source_url").in_("source_url", chunk).execute()
+            resp = supabase.table("source_documents").select(
+                "source_url, extraction_status, created_at"
+            ).in_("source_url", chunk).execute()
             for row in resp.data:
-                existing_urls.add(row["source_url"])
+                status = row.get("extraction_status")
+                created = row.get("created_at", "")
+                if status == "complete":
+                    skip_urls.add(row["source_url"])
+                elif status == "extracting" and created > stale_cutoff:
+                    # Recently started extraction — another worker may own it
+                    skip_urls.add(row["source_url"])
+                # failed or stale extracting: allow retry (not added to skip_urls)
         except Exception as e:
             logger.error("event_runner_dedupe_error", error=str(e))
-            
-    new_headlines = [h for h in all_headlines if h.source_url not in existing_urls]
-    
-    # 3. Extract and Write
+
+    new_headlines = [h for h in all_headlines if h.source_url not in skip_urls]
+
+    # 3. Extract and Write (transactionally via RPC)
     new_written = 0
     quarantined = 0
-    
-    # Extraction and write loop
-        
+
     for headline in new_headlines:
         try:
-            import hashlib
             doc_row = {
                 "source_url": headline.source_url,
                 "headline": headline.headline,
                 "raw_text": headline.raw_text,
                 "publication_date": headline.published_date.isoformat(),
                 "extraction_status": "extracting",
-                "extractor_version": extractor_name
+                "extractor_version": extractor_name,
+                "provenance_mode": provenance_mode,
             }
             doc_resp = supabase.table("source_documents").insert(doc_row).execute()
             if not doc_resp.data:
                 raise Exception("Failed to insert source_document")
             doc_id = doc_resp.data[0]["id"]
-            
-            events = await extractor.extract(headline)
+
+            events: List[ExtractedEvent] = await extractor.extract(headline)
+
+            events_payload = []
             for evt in events:
                 comm_id = None
                 if evt.commodity_name:
@@ -128,34 +177,64 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
                         quarantined += 1
                         continue
 
-                hash_input = f"{comm_id or ''}{evt.district or ''}{evt.event_type}{headline.published_date.isoformat()}"
-                event_hash = hashlib.md5(hash_input.encode()).hexdigest()
+                # Use occurrence date for identity; fall back to publication date with warning.
+                occurrence_date = evt.event_date
+                if occurrence_date is None:
+                    logger.warning(
+                        "event_runner_no_occurrence_date",
+                        source_url=headline.source_url,
+                        event_type=evt.event_type,
+                        fallback="publication_date",
+                    )
+                    occurrence_date = headline.published_date
 
-                row = {
-                    "source_document_id": doc_id,
+                event_hash = _canonical_event_hash(
+                    comm_id=comm_id,
+                    district=evt.district,
+                    event_type=evt.event_type,
+                    occurrence_date=occurrence_date,
+                )
+
+                events_payload.append({
                     "event_hash": event_hash,
                     "headline": headline.headline,
-                    "event_date": headline.published_date.isoformat(),
-                    "commodity_id": comm_id,
+                    "event_date": occurrence_date.isoformat(),
+                    "commodity_id": str(comm_id) if comm_id else None,
                     "district": evt.district,
                     "event_type": evt.event_type,
                     "direction": evt.direction,
                     "magnitude": evt.magnitude,
-                    "confidence": evt.confidence,
+                    "confidence": float(evt.confidence),
                     "reasoning": evt.reasoning,
-                    "raw_text": headline.raw_text
-                }
+                    "raw_text": headline.raw_text,
+                })
 
-                # Write to database
-                supabase.table("events").insert(row).execute()
-                new_written += 1
                 if evt.confidence < 0.5:
                     quarantined += 1
-            
-            supabase.table("source_documents").update({"extraction_status": "complete"}).eq("id", doc_id).execute()
-                    
+
+            # Publish atomically via RPC. The RPC:
+            #   - Acquires a FOR UPDATE lock on the document row.
+            #   - Raises if the document has any reviewed events (reviewed_by IS NOT NULL),
+            #     preventing silent overwrite of human annotations.
+            #   - Deletes stale events from a prior failed attempt.
+            #   - Inserts the complete batch with ON CONFLICT DO NOTHING.
+            #   - Marks extraction_status = 'complete'.
+            # If this raises, the document stays in 'extracting' and is retried next run.
+            rpc_resp = supabase.rpc("publish_extracted_events", {
+                "p_doc_id": doc_id,
+                "p_extractor_version": extractor_name,
+                "p_events": events_payload,
+            }).execute()
+
+            result_data = rpc_resp.data if hasattr(rpc_resp, "data") else {}
+            rpc_status = result_data.get("status") if isinstance(result_data, dict) else "complete"
+            written_count = result_data.get("written", len(events_payload)) if isinstance(result_data, dict) else len(events_payload)
+            new_written += written_count
+            logger.info("event_runner_doc_published", doc_id=doc_id, status=rpc_status, written=written_count)
+
         except Exception as e:
             logger.error("event_runner_extract_write_error", url=headline.source_url, error=str(e))
+            # Document remains in 'extracting'; will be retried if not stale.
 
     return {
         "seen": seen,
