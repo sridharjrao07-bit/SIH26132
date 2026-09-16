@@ -95,7 +95,8 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
     for source_name, source_obj in sources:
         try:
             headlines = await source_obj.fetch_headlines(since_date)
-            all_headlines.extend(headlines)
+            for hl in headlines:
+                all_headlines.append((source_name, hl))
         except EventSourceError as e:
             logger.warning("event_source_failed", source=source_name, error=str(e))
             failed_sources.append(source_name)
@@ -115,7 +116,7 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
 
     # 2. Pre-deduplicate: skip 'complete' documents. Re-queue 'failed' and
     #    stale 'extracting' documents (older than EXTRACTING_STALE_MINUTES).
-    source_urls = [h.source_url for h in all_headlines]
+    source_urls = [h.source_url for _, h in all_headlines]
     skip_urls: set = set()
     stale_cutoff = (
         datetime.now(timezone.utc) - timedelta(minutes=EXTRACTING_STALE_MINUTES)
@@ -139,19 +140,21 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
         except Exception as e:
             logger.error("event_runner_dedupe_error", error=str(e))
 
-    new_headlines = [h for h in all_headlines if h.source_url not in skip_urls]
+    new_headlines = [(src, h) for src, h in all_headlines if h.source_url not in skip_urls]
 
     # 3. Extract and Write (transactionally via RPC)
     new_written = 0
     quarantined = 0
 
-    for headline in new_headlines:
+    for source_name, headline in new_headlines:
+        doc_id = None
+        claim_token = None
         try:
             # Atomic Claim
             content_hash = hashlib.sha256((headline.headline + headline.raw_text).encode()).hexdigest()
             claim_resp = supabase.rpc("claim_source_document", {
                 "p_source_url": headline.source_url,
-                "p_source_name": headline.source_name,
+                "p_source_name": source_name,
                 "p_headline": headline.headline,
                 "p_content_text": headline.raw_text,
                 "p_published_at": headline.published_date.isoformat(),
@@ -169,17 +172,7 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
             doc_id = claim_data["document_id"]
             claim_token = claim_data["claim_token"]
 
-            try:
-                events = await extractor.extract(headline)
-            except Exception as e:
-                # Report failure
-                supabase.rpc("report_extraction_failure", {
-                    "p_doc_id": doc_id,
-                    "p_claim_token": claim_token,
-                    "p_reason": str(e)
-                }).execute()
-                logger.error("event_runner_extraction_failed", url=headline.source_url, error=str(e))
-                continue
+            events = await extractor.extract(headline)
 
             events_payload = []
             for evt in events:
@@ -241,6 +234,8 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
             if rpc_status == "failed":
                 logger.error("event_runner_publish_failed", doc_id=doc_id, reason=result_data.get("reason"))
                 continue
+            elif rpc_status != "complete":
+                raise Exception(f"Publish RPC returned invalid status: {rpc_status}")
                 
             written_count = result_data.get("written", len(events_payload)) if isinstance(result_data, dict) else len(events_payload)
             new_written += written_count
@@ -248,7 +243,15 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
 
         except Exception as e:
             logger.error("event_runner_extract_write_error", url=headline.source_url, error=str(e))
-            # Could try report_extraction_failure here too if doc_id/claim_token are in scope
+            if doc_id and claim_token:
+                try:
+                    supabase.rpc("report_extraction_failure", {
+                        "p_doc_id": doc_id,
+                        "p_claim_token": claim_token,
+                        "p_reason": str(e)
+                    }).execute()
+                except Exception as ex:
+                    logger.error("event_runner_report_failure_error", doc_id=doc_id, original_error=str(e), reporting_error=str(ex))
 
     return {
         "seen": seen,
