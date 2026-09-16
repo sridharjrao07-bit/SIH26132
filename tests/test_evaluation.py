@@ -99,37 +99,37 @@ class TestMAPEWinsorized:
 class TestDirectionalAccuracy:
     def test_correct_up(self):
         # anchor=100, preds mean=110(up), actuals mean=120(up) → 1 hit out of 1
-        h, c = directional_accuracy([100.0], [[105.0, 115.0]], [[115.0, 125.0]])
+        h, c, inc = directional_accuracy([100.0], [[105.0, 115.0]], [[115.0, 125.0]])
         assert h == 1
         assert c == 1
 
     def test_correct_down(self):
-        h, c = directional_accuracy([100.0], [[90.0]], [[80.0]])
+        h, c, inc = directional_accuracy([100.0], [[90.0]], [[80.0]])
         assert h == 1
         assert c == 1
 
     def test_wrong_direction(self):
         # pred up, actual down
-        h, c = directional_accuracy([100.0], [[110.0]], [[80.0]])
+        h, c, inc = directional_accuracy([100.0], [[110.0]], [[80.0]])
         assert h == 0
         assert c == 1
 
     def test_flat_fold_excluded(self):
         # mean actual = 100.5, change=0.5, |change|/anchor = 0.005 < 0.01 → excluded
-        h, c = directional_accuracy([100.0], [[101.0, 101.0]], [[100.0, 101.0]])
+        h, c, inc = directional_accuracy([100.0], [[101.0, 101.0]], [[100.0, 101.0]])
         assert c == 0  # flat fold excluded from denominator
         assert h == 0
 
     def test_flat_eps_boundary(self):
         # exactly at eps: |100.9 - 100| / 100 = 0.009 < 0.01 → excluded
-        _, c = directional_accuracy([100.0], [[101.0]], [[100.9]])
+        _, c, _ = directional_accuracy([100.0], [[101.0]], [[100.9]])
         assert c == 0
 
     def test_multiple_folds_mixed(self):
         # fold 1: anchor=1000, pred mean=1100(up), actual mean=900(down) → miss, considered=1
         # fold 2: anchor=1000, pred mean=900(down), actual mean=800(down) → hit, considered=1
         # fold 3: anchor=1000, pred mean=1005(up), actual mean=1003(up) → flat(0.3%<1%) → excluded
-        h, c = directional_accuracy(
+        h, c, inc = directional_accuracy(
             [1000.0, 1000.0, 1000.0],
             [[1100.0], [900.0], [1005.0]],
             [[900.0],  [800.0], [1003.0]],
@@ -138,12 +138,12 @@ class TestDirectionalAccuracy:
         assert h == 1
 
     def test_zero_anchor_returns_zero(self):
-        h, c = directional_accuracy([0.0], [[10.0]], [[20.0]])
+        h, c, inc = directional_accuracy([0.0], [[10.0]], [[20.0]])
         assert h == 0
         assert c == 0
 
     def test_empty_sequences(self):
-        h, c = directional_accuracy([], [], [])
+        h, c, inc = directional_accuracy([], [], [])
         assert h == 0
         assert c == 0
 

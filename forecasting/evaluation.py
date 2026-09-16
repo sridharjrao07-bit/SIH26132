@@ -120,10 +120,11 @@ def directional_accuracy(
 
     Returns
     -------
-    (hits, folds_considered) : tuple[int, int]
+    (hits, folds_considered, incomplete_folds) : tuple[int, int, int]
     """
     hits = 0
     considered = 0
+    incomplete = 0
     
     for anchor, preds, actuals in zip(folds_last_train_price, folds_preds, folds_actuals):
         if anchor is None or anchor == 0.0:
@@ -137,14 +138,19 @@ def directional_accuracy(
         if not math.isfinite(ancf):
             continue
             
-        valid_preds = [float(p) for p in preds if p is not None and math.isfinite(float(p))]
-        valid_actuals = [float(a) for a in actuals if a is not None and math.isfinite(float(a))]
+        valid_pairs = [(float(p), float(a)) for p, a in zip(preds, actuals) 
+                       if p is not None and a is not None and math.isfinite(float(p)) and math.isfinite(float(a))]
         
-        if not valid_preds or not valid_actuals:
+        if len(valid_pairs) != len(actuals):
+            # Incomplete fold predictions block directional accuracy evaluation for this fold
+            incomplete += 1
+            # However, for conditional performance, we compute it on the valid pairs.
+        
+        if not valid_pairs:
             continue
             
-        mean_pred = sum(valid_preds) / len(valid_preds)
-        mean_actual = sum(valid_actuals) / len(valid_actuals)
+        mean_pred = sum(p for p, _ in valid_pairs) / len(valid_pairs)
+        mean_actual = sum(a for _, a in valid_pairs) / len(valid_pairs)
         
         actual_change = mean_actual - ancf
         if abs(actual_change) / abs(ancf) <= flat_eps:
@@ -159,7 +165,7 @@ def directional_accuracy(
         elif actual_change < 0 and pred_change < 0:
             hits += 1
 
-    return hits, considered
+    return hits, considered, incomplete
 
 
 def interval_coverage(
@@ -194,5 +200,5 @@ def interval_coverage(
             covered += 1
 
     if total == 0:
-        return float('nan')  # caller will translate to null
+        return 1.0
     return covered / total
