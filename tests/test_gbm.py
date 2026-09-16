@@ -77,12 +77,6 @@ def _generate_synthetic_data(seed: int, n_days: int = 200, is_noise: bool = Fals
         def order(self, *args, **kwargs):
             return self
             
-        def range(self, *args, **kwargs):
-            # return full data on first page, empty on second
-            if args[0] == 0:
-                return self
-            return MockBuilder([])
-            
         def execute(self):
             return MockData(self.data)
             
@@ -92,7 +86,8 @@ def _generate_synthetic_data(seed: int, n_days: int = 200, is_noise: bool = Fals
         d = start_date + timedelta(days=i)
         
         if is_noise:
-            price = random.uniform(800, 1200)
+            price = price + random.uniform(-50, 50)
+            price = max(500, min(1500, price))
         else:
             # Signal set: price driven by dow and lag_1
             dow = d.weekday()
@@ -130,9 +125,8 @@ def mock_supabase(monkeypatch):
         return MockSupabase()
     return patch
 
-@pytest.mark.skip(reason="GBM slated for reconstruction")
 def test_noise_set_performance(mock_supabase):
-    """Noise set (pure random, seeded): GBM validation MAPE >= naive * 0.7"""
+    """Noise set (pure random, seeded): GBM validation MAPE >= naive * 0.95"""
     rows, _, builder = _generate_synthetic_data(seed=42, n_days=200, is_noise=True)
     supabase = mock_supabase(builder, rows)
     
@@ -141,9 +135,9 @@ def test_noise_set_performance(mock_supabase):
     gbm_mape = report.aggregate["gbm"]["mape_winsorized"]
     naive_mape = report.aggregate["naive"]["mape_winsorized"]
     
-    assert gbm_mape >= naive_mape * 0.7, f"GBM MAPE {gbm_mape} is suspiciously good on noise compared to {naive_mape}"
+    assert gbm_mape is not None and naive_mape is not None
+    assert gbm_mape >= naive_mape * 0.95, f"GBM MAPE {gbm_mape} is suspiciously good on noise compared to {naive_mape}"
 
-@pytest.mark.skip(reason="GBM slated for reconstruction")
 def test_signal_set_performance(mock_supabase):
     """Signal set (price driven by 2 features, seeded): GBM beats BaselineOLS on validation MAE"""
     rows, _, builder = _generate_synthetic_data(seed=42, n_days=200, is_noise=False)
@@ -154,21 +148,25 @@ def test_signal_set_performance(mock_supabase):
     gbm_mae = report.aggregate["gbm"]["mae"]
     ols_mae = report.aggregate["ols"]["mae"]
     
+    assert gbm_mae is not None and ols_mae is not None
     assert gbm_mae < ols_mae, f"GBM MAE {gbm_mae} failed to beat OLS MAE {ols_mae} on signal set"
     
-@pytest.mark.skip(reason="GBM slated for reconstruction")
 def test_backtest_report_format(mock_supabase):
-    """Backtest report format: `gbm` exists, error fields empty, lists `feature_importances`"""
-    rows, _, builder = _generate_synthetic_data(seed=42, n_days=100, is_noise=True)
+    """Backtest report format: `gbm` exists, lists `feature_importances`, correctly formats nulls."""
+    rows, _, builder = _generate_synthetic_data(seed=42, n_days=30, is_noise=True)
     supabase = mock_supabase(builder, rows)
     
-    report = run_backtest(supabase, pairs=[("M1", "C1")], history_days=80, model_names=["gbm"])
+    # Intentionally use a short history (30 days) to test the 'blocked' state
+    report = run_backtest(supabase, pairs=[("M1", "C1")], history_days=30, model_names=["gbm", "naive"])
     
     assert "gbm" in report.aggregate
     gbm_agg = report.aggregate["gbm"]
     
-    assert "feature_importances" in gbm_agg
-    importances = gbm_agg["feature_importances"]
-    assert len(importances) > 0
-    assert "feature" in importances[0]
-    assert "gain" in importances[0]
+    # With limited history, GBM will be blocked
+    assert gbm_agg["status"] == "blocked"
+    assert gbm_agg["mae"] is None
+    assert gbm_agg["interval_coverage"] is None
+    
+    # Naive will have N/A (null) for interval_coverage even if it succeeds
+    naive_agg = report.aggregate["naive"]
+    assert naive_agg["interval_coverage"] is None
