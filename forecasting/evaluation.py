@@ -99,7 +99,7 @@ def directional_accuracy(
     folds_preds: Sequence[Sequence[float]],
     folds_actuals: Sequence[Sequence[float]],
     flat_eps: float = 0.01,
-) -> Tuple[int, int]:
+) -> Tuple[int, int, int, list[int]]:
     """
     Count folds where the *direction* of the weekly mean price movement 
     relative to forecast_origin price was correctly predicted.
@@ -120,13 +120,14 @@ def directional_accuracy(
 
     Returns
     -------
-    (hits, folds_considered, incomplete_folds) : tuple[int, int, int]
+    (hits, folds_considered, incomplete_folds, evaluated_fold_indices) : tuple[int, int, int, list[int]]
     """
     hits = 0
     considered = 0
     incomplete = 0
+    evaluated_fold_indices = []
     
-    for anchor, preds, actuals in zip(folds_last_train_price, folds_preds, folds_actuals):
+    for i, (anchor, preds, actuals) in enumerate(zip(folds_last_train_price, folds_preds, folds_actuals)):
         if anchor is None or anchor == 0.0:
             continue
             
@@ -164,8 +165,10 @@ def directional_accuracy(
             hits += 1
         elif actual_change < 0 and pred_change < 0:
             hits += 1
+            
+        evaluated_fold_indices.append(i)
 
-    return hits, considered, incomplete
+    return hits, considered, incomplete, evaluated_fold_indices
 
 
 def interval_coverage(
