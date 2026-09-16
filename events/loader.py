@@ -1,36 +1,55 @@
 from typing import List, Dict, Any, Optional
-from datetime import date
+from datetime import date, datetime
 
 def load_published_events(
     supabase,
     commodity_id: Optional[str] = None,
     district: Optional[str] = None,
-    since_date: Optional[date] = None,
+    event_date_from: Optional[date] = None,
+    availability_before: Optional[datetime] = None,
     min_confidence: float = 0.5,
-    limit: int = 1000,
-    offset: int = 0
 ) -> List[Dict[str, Any]]:
     """
     Loads safe, verified, live events from the live_events_published view.
     
     This enforces the operational contract that only completely extracted,
     non-fixture, non-unknown events are ever supplied to models or recommendations.
-    """
-    query = supabase.table("live_events_published").select("*")
-
-    if commodity_id:
-        query = query.eq("commodity_id", commodity_id)
-    if district:
-        query = query.ilike("district", district)
-    if since_date:
-        query = query.gte("event_date", since_date.isoformat())
     
-    if min_confidence > 0:
-        query = query.gte("confidence", min_confidence)
+    It paginates automatically to return the complete eligible set.
+    """
+    all_events = []
+    limit = 1000
+    offset = 0
+    
+    while True:
+        query = supabase.table("live_events_published").select("*")
 
-    # Deterministic pagination: order by event_date desc, id desc
-    query = query.order("event_date", desc=True).order("id", desc=True)
-    query = query.range(offset, offset + limit - 1)
+        if commodity_id:
+            query = query.or_(f"commodity_id.eq.{commodity_id},commodity_id.is.null")
+        if district:
+            query = query.or_(f"district.ilike.{district},district.is.null")
+        if event_date_from:
+            query = query.gte("event_date", event_date_from.isoformat())
+            
+        if availability_before:
+            query = query.not_.is_("publication_date", "null")
+            query = query.lt("publication_date", availability_before.isoformat())
+        
+        if min_confidence > 0:
+            query = query.gte("confidence", min_confidence)
 
-    response = query.execute()
-    return response.data if response.data else []
+        # Deterministic pagination: order by event_date desc, id desc
+        query = query.order("event_date", desc=True).order("id", desc=True)
+        query = query.range(offset, offset + limit - 1)
+
+        response = query.execute()
+        data = response.data if response.data else []
+        
+        all_events.extend(data)
+        
+        if len(data) < limit:
+            break
+            
+        offset += limit
+
+    return all_events

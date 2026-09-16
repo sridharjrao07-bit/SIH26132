@@ -277,7 +277,7 @@ def run_backtest(
     try:
         weather = supabase.table("weather_daily").select("*").gte("observation_date", cutoff).execute().data or []
         from events.loader import load_published_events
-        events = load_published_events(supabase, since_date=date.today() - timedelta(days=history_days), limit=10000)
+        events = load_published_events(supabase, event_date_from=date.today() - timedelta(days=history_days))
         for market_id, commodity_id in pairs:
             resp = supabase.table("prices").select("arrival_date, modal_price, arrival_qty, source, variety").eq("market_id", market_id).eq("commodity_id", commodity_id).gte("arrival_date", cutoff).order("arrival_date", desc=False).execute()
             raw_history[(market_id, commodity_id)] = resp.data or []

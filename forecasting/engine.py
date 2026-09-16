@@ -490,7 +490,7 @@ class ForecastEngine:
             cutoff = (date.today() - timedelta(days=self.HISTORY_DAYS)).isoformat()
             weather_daily = self.supabase.table("weather_daily").select("*").gte("observation_date", cutoff).execute().data or []
             from events.loader import load_published_events
-            events = load_published_events(self.supabase, since_date=date.today() - timedelta(days=self.HISTORY_DAYS), limit=10000)
+            events = load_published_events(self.supabase, event_date_from=date.today() - timedelta(days=self.HISTORY_DAYS))
         except Exception as e:
             logger.warning("global_features_fetch_failed", error=str(e))
             
