@@ -94,8 +94,8 @@ def test_holt_winters_weekly_seasonal():
     baseline = BaselineMA(train_prices)
     base_preds = baseline.predict(7)
     
-    mae_hw = sum(abs(p[0] - a) for p, a in zip(preds, actuals)) / 7
-    mae_base = sum(abs(p[0] - a) for p, a in zip(base_preds, actuals)) / 7
+    mae_hw = sum(abs(p - a) for p, a in zip(preds, actuals)) / 7
+    mae_base = sum(abs(p - a) for p, a in zip(base_preds, actuals)) / 7
     
     assert mae_hw < mae_base
 
