@@ -122,7 +122,8 @@ def _compute_event_pressure(
                          publication_date=NULL (retroactive leakage is possible)
     """
     pressure = 0.0
-    approximate = not strict_pit  # already approximate if not strict
+    has_live = any((e.get("provenance_mode") or "unknown") == "live" for e in events)
+    approximate = (not strict_pit) and has_live
     target_date = target_date or forecast_origin
 
     for e in events:

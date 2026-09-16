@@ -50,3 +50,4 @@ ALTER TABLE public.events DROP CONSTRAINT IF EXISTS events_source_url_key;
 
 -- Enforce deterministic event identity per source document
 CREATE UNIQUE INDEX IF NOT EXISTS events_identity_idx ON public.events (source_document_id, event_hash);
+
