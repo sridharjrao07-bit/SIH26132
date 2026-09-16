@@ -62,16 +62,13 @@ def compute_sale_window(
     if recent_events is not None:
         all_recent_events = recent_events
     else:
-        evt_resp = (
-            supabase.table("events")
-            .select("headline, event_date, commodity_id, district")
-            .gte("confidence", 0.5)
-            .gte("event_date", (today - timedelta(days=7)).isoformat())
-            .order("event_date", desc=True)
-            .limit(20)
-            .execute()
+        from events.loader import load_published_events
+        all_recent_events = load_published_events(
+            supabase, 
+            commodity_id=commodity_id, 
+            since_date=today - timedelta(days=7), 
+            limit=20
         )
-        all_recent_events = evt_resp.data or []
 
     price_q = (
         supabase.table("prices")
