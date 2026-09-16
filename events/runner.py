@@ -4,7 +4,7 @@ from typing import Dict, Any
 
 from app.config import get_settings
 from .base import EventSourceError
-from .sources import PIBSource, NewsFeedSource, StateBulletinsSource
+from .sources import PIBSource, NewsFeedSource, StateBulletinsSource, SourceMode
 from .extractor import MockEventExtractor, LLMEventExtractor
 
 logger = structlog.get_logger()
@@ -37,10 +37,18 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
         
     logger.info("event_runner_starting", extractor=extractor_name, since_days=since_days)
     
+    # Use FIXTURE mode for testing, OFF if events disabled, LIVE for prod
+    if settings.app_env == "test":
+        mode = SourceMode.FIXTURE
+    elif not settings.event_job_enabled:
+        mode = SourceMode.OFF
+    else:
+        mode = SourceMode.LIVE
+        
     sources = [
-        ("pib", PIBSource()),
-        ("news", NewsFeedSource()),
-        ("state_bulletins", StateBulletinsSource())
+        ("pib", PIBSource(mode=mode)),
+        ("news", NewsFeedSource(mode=mode)),
+        ("state_bulletins", StateBulletinsSource(mode=mode))
     ]
     
     failed_sources = []

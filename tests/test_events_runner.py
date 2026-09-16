@@ -7,14 +7,17 @@ from tests.conftest import FakeSupabase
 @pytest.mark.asyncio
 async def test_runner_dedupe_and_isolation(monkeypatch):
     class FakePIB:
+        def __init__(self, mode=None): pass
         async def fetch_headlines(self, since):
             return [RawHeadline(source_url="http://pib1", headline="Export ban", published_date=date(2026, 9, 1), raw_text="Export ban")]
             
     class FakeNews:
+        def __init__(self, mode=None): pass
         async def fetch_headlines(self, since):
             raise EventSourceError("Fail!")
             
     class FakeState:
+        def __init__(self, mode=None): pass
         async def fetch_headlines(self, since):
             return [RawHeadline(source_url="http://state1", headline="Flood", published_date=date(2026, 9, 1), raw_text="Flood")]
             

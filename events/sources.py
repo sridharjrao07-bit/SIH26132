@@ -2,11 +2,17 @@ import httpx
 from datetime import date
 from typing import List
 import structlog
+from enum import Enum
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 
 from .base import EventSourceError, RawHeadline
 
 logger = structlog.get_logger()
+
+class SourceMode(Enum):
+    OFF = "off"
+    FIXTURE = "fixture"
+    LIVE = "live"
 
 def _is_transient(exc: BaseException) -> bool:
     if isinstance(exc, httpx.TimeoutException):
@@ -23,57 +29,54 @@ def _fetch_retry():
         reraise=True
     )
 
-class PIBSource:
+class BaseSource:
+    def __init__(self, mode: SourceMode = SourceMode.OFF):
+        self.mode = mode
+
+class PIBSource(BaseSource):
     @_fetch_retry()
     async def fetch_headlines(self, since: date) -> List[RawHeadline]:
-        # Dummy implementation that would be replaced with real PIB API
-        try:
+        if self.mode == SourceMode.OFF:
+            return []
+        if self.mode == SourceMode.FIXTURE:
             return [
                 RawHeadline(
-                    source_url="http://pib.gov.in/demo1",
+                    source_url="fixture:pib:demo1",
                     headline="Export ban on onion (red)",
                     published_date=since,
                     raw_text="The government has decided to lift the export ban on onion (red)."
                 )
             ]
-        except Exception as e:
-            if isinstance(e, httpx.HTTPError):
-                raise EventSourceError(f"PIB fetch failed: {e}") from e
-            logger.warning("pib_parse_empty")
-            return []
+        raise NotImplementedError("Live scraping not implemented for PIBSource")
 
-class NewsFeedSource:
+class NewsFeedSource(BaseSource):
     @_fetch_retry()
     async def fetch_headlines(self, since: date) -> List[RawHeadline]:
-        try:
+        if self.mode == SourceMode.OFF:
+            return []
+        if self.mode == SourceMode.FIXTURE:
             return [
                 RawHeadline(
-                    source_url="http://newsfeed/demo1",
+                    source_url="fixture:newsfeed:demo1",
                     headline="Flood in maize fields",
                     published_date=since,
                     raw_text="Unseasonal rainfall has led to severe flood in maize fields."
                 )
             ]
-        except Exception as e:
-            if isinstance(e, httpx.HTTPError):
-                raise EventSourceError(f"NewsFeed fetch failed: {e}") from e
-            logger.warning("news_parse_empty")
-            return []
+        raise NotImplementedError("Live scraping not implemented for NewsFeedSource")
 
-class StateBulletinsSource:
+class StateBulletinsSource(BaseSource):
     @_fetch_retry()
     async def fetch_headlines(self, since: date) -> List[RawHeadline]:
-        try:
+        if self.mode == SourceMode.OFF:
+            return []
+        if self.mode == SourceMode.FIXTURE:
             return [
                 RawHeadline(
-                    source_url="http://statebulletins/demo1",
+                    source_url="fixture:statebulletins:demo1",
                     headline="State subsidy announced for Potato",
                     published_date=since,
                     raw_text="The state agriculture department has announced a subsidy."
                 )
             ]
-        except Exception as e:
-            if isinstance(e, httpx.HTTPError):
-                raise EventSourceError(f"StateBulletins fetch failed: {e}") from e
-            logger.warning("state_bulletin_parse_empty")
-            return []
+        raise NotImplementedError("Live scraping not implemented for StateBulletinsSource")
