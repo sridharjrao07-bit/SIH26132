@@ -49,7 +49,7 @@ jobs:
       - name: Install dev deps
         run: pip install -r requirements-dev.txt
       - name: Pytest
-        run: pytest -q
+        run: pytest
 
   test-ml:
     name: test-ml (py ${{ matrix.python-version }})
@@ -69,7 +69,7 @@ jobs:
       - name: Install ML deps
         run: pip install -r requirements-forecast-ml.txt
       - name: Pytest
-        run: pytest -q
+        run: pytest
 
   audit:
     name: audit
