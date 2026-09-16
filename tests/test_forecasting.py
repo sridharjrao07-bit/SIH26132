@@ -447,7 +447,7 @@ def test_engine_global_features(fake_supabase, monkeypatch):
     for i in range(120):
         weather_seed.append({"market_id": "m1", "observation_date": (today - timedelta(days=120 - i)).isoformat(), "precipitation_sum_mm": float(i % 10)})
     fake_supabase.seed("weather_daily", weather_seed)
-    fake_supabase.seed("events", [{"event_date": (today - timedelta(days=5)).isoformat(), "event_type": "weather", "direction": "down", "magnitude": "major", "confidence": 1.0}])
+    fake_supabase.seed("events", [{"event_date": (today - timedelta(days=5)).isoformat(), "event_type": "weather", "direction": "down", "magnitude": "major", "confidence": 1.0, "provenance_mode": "live"}])
     fake_supabase.seed("markets", [{"id": "m1", "district": "Nashik"}])
     
     from forecasting.engine import ForecastEngine
