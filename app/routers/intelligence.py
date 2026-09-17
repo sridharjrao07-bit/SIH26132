@@ -17,17 +17,7 @@ def sale_window(
     supabase: Client = Depends(get_supabase),
     supabase_admin: Client = Depends(get_supabase_service_role),
 ):
-    today = date.today()
-    evt_resp = (
-        supabase_admin.table("events")
-        .select("id")
-        .gte("confidence", 0.5)
-        .gte("event_date", (today - timedelta(days=7)).isoformat())
-        .order("event_date", desc=True)
-        .limit(20)
-        .execute()
-    )
-    result = compute_sale_window(supabase, commodity_id, market_id, recent_events=evt_resp.data or [], admin_client=supabase_admin)
+    result = compute_sale_window(supabase, commodity_id, market_id)
     if not result:
         raise HTTPException(404, "no recent prices for this commodity")
     return apply_sale_language(result, lang)
