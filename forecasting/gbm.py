@@ -247,8 +247,9 @@ def train_global_gbm(
         n_estimators=150,
         learning_rate=0.05,
         num_leaves=31,
-        min_child_samples=20,
+        min_child_samples=5,
         subsample=0.9,
+        subsample_freq=1,
         random_state=42
     )
     model.fit(X_train, y_train)
@@ -325,8 +326,9 @@ def train_global_gbm(
         n_estimators=150,
         learning_rate=0.05,
         num_leaves=31,
-        min_child_samples=20,
+        min_child_samples=5,
         subsample=0.9,
+        subsample_freq=1,
         random_state=42
     )
     model.fit(X_all_final, y_all)
