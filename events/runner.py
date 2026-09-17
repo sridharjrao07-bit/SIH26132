@@ -176,8 +176,21 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
             doc_id = claim_data["document_id"]
             claim_token = claim_data["claim_token"]
 
-            # Use the authoritative content snapshot stored in the database
-            headline.raw_text = claim_data.get("raw_text", headline.raw_text)
+            # Enforce immutable extraction snapshot
+            snapshot_headline = claim_data.get("headline")
+            snapshot_raw_text = claim_data.get("raw_text")
+            snapshot_published_date = claim_data.get("publication_date")
+            snapshot_content_hash = claim_data.get("content_hash")
+
+            if snapshot_headline is None or snapshot_raw_text is None or snapshot_published_date is None or snapshot_content_hash is None:
+                raise Exception("claim_source_document returned an incomplete snapshot")
+
+            headline.headline = snapshot_headline
+            headline.raw_text = snapshot_raw_text
+            
+            # publication_date comes as ISO string
+            pub_dt = datetime.fromisoformat(snapshot_published_date.replace("Z", "+00:00"))
+            headline.published_date = pub_dt.date() if hasattr(pub_dt, "date") else pub_dt
 
             events = await extractor.extract(headline)
 

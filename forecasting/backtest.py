@@ -27,7 +27,8 @@ logger = structlog.get_logger()
 BACKTEST_PROTOCOL = (
     "walk-forward, horizon=7, 8 folds of 7 days over the last 56 days, "
     "expanding train window (everything before each fold start), one winner "
-    "row per day by source precedence"
+    "row per day by source precedence. NOTE: Uses retrospective event filtering "
+    "based on current review state."
 )
 
 HORIZON = 7
