@@ -4,6 +4,7 @@ from typing import List, Tuple, Optional, Any, Dict
 import structlog
 import math
 
+
 logger = structlog.get_logger()
 
 class ForecastModelError(Exception):
@@ -114,11 +115,19 @@ class GlobalGBM:
                 dist,
                 evt
             ]]
+            import pandas as pd
+            df_vec = pd.DataFrame(feat_vec, columns=[
+                "market_id", "commodity_id", "dow", "lag_1", "lag_7", "lag_14",
+                "arrivals_7d_avg", "momentum_14d", "rain_7d_cum_mm",
+                "district_mean_price", "event_pressure"
+            ])
+            df_vec["market_id"] = df_vec["market_id"].astype(int)
+            df_vec["commodity_id"] = df_vec["commodity_id"].astype(int)
 
             if self.model is None:
                 raise ForecastModelError("Model not trained")
 
-            p = self.model.predict(feat_vec)[0]
+            p = self.model.predict(df_vec)[0]
             sim_prices_by_date[target_date] = p
             
             # Use raw point predictions and let the shared post-processing engine handle interval math
@@ -141,8 +150,15 @@ def train_global_gbm(
     """
     try:
         import lightgbm as lgb
+        import pandas as pd
     except ImportError:
         raise ForecastModelError("Optional ML dependencies not installed")
+
+    feature_names = [
+        "market_id", "commodity_id", "dow", "lag_1", "lag_7", "lag_14",
+        "arrivals_7d_avg", "momentum_14d", "rain_7d_cum_mm",
+        "district_mean_price", "event_pressure"
+    ]
 
     from forecasting.engine import build_daily_rows
     from forecasting.features import build_feature_matrix
@@ -251,9 +267,15 @@ def train_global_gbm(
         subsample=0.9,
         random_state=42
     )
-    model.fit(X_train, y_train, categorical_feature=[0, 1])
+    df_train = pd.DataFrame(X_train, columns=feature_names)
+    df_train["market_id"] = df_train["market_id"].astype(int)
+    df_train["commodity_id"] = df_train["commodity_id"].astype(int)
+    model.fit(df_train, y_train, categorical_feature=["market_id", "commodity_id"])
     
-    val_preds = model.predict(X_val)
+    df_val = pd.DataFrame(X_val, columns=feature_names)
+    df_val["market_id"] = df_val["market_id"].astype(int)
+    df_val["commodity_id"] = df_val["commodity_id"].astype(int)
+    val_preds = model.predict(df_val)
     residuals = [a - p for a, p in zip(y_val, val_preds)]
     sigma = pstdev(residuals) if len(residuals) > 1 else 0.0
 
@@ -329,6 +351,9 @@ def train_global_gbm(
         subsample=0.9,
         random_state=42
     )
-    model.fit(X_all_final, y_all, categorical_feature=[0, 1])
+    df_all_final = pd.DataFrame(X_all_final, columns=feature_names)
+    df_all_final["market_id"] = df_all_final["market_id"].astype(int)
+    df_all_final["commodity_id"] = df_all_final["commodity_id"].astype(int)
+    model.fit(df_all_final, y_all, categorical_feature=["market_id", "commodity_id"])
 
     return GlobalGBM(model=model, sigma=sigma, market_map=market_map_final, commodity_map=commodity_map_final, events=events, strict_pit=strict_pit)
