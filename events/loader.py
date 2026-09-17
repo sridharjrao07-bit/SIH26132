@@ -15,6 +15,9 @@ def load_published_events(
     This enforces the operational contract that only completely extracted,
     non-fixture, non-unknown events are ever supplied to models or recommendations.
     
+    NOTE: The returned events represent a retrospective filtering using the 
+    current review state, not a complete point-in-time historical reconstruction.
+    
     It paginates automatically to return the complete eligible set.
     """
     all_events = []
