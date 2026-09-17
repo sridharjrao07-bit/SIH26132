@@ -2,9 +2,8 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from typing import Optional, Literal
 from supabase import Client
-from app.deps import get_supabase, get_supabase_service_role
+from app.deps import get_supabase
 from notifications.sale_window import compute_sale_window, apply_sale_language
-from datetime import date, timedelta
 
 router = APIRouter(prefix="/api/v1/sale-window", tags=["Intelligence"])
 
@@ -15,7 +14,6 @@ def sale_window(
     market_id: Optional[str] = Query(None),
     lang: Literal["en", "mr", "hi"] = Query("en"),
     supabase: Client = Depends(get_supabase),
-    supabase_admin: Client = Depends(get_supabase_service_role),
 ):
     result = compute_sale_window(supabase, commodity_id, market_id)
     if not result:

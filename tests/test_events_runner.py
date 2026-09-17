@@ -9,8 +9,6 @@ Verified contracts:
   5. Canonical hash is stable for identical inputs and distinct for different inputs.
   6. Failed source does not block successful sources.
 """
-import json
-import hashlib
 import pytest
 from datetime import date
 from events.runner import run, _canonical_event_hash
@@ -231,7 +229,7 @@ async def test_one_doc_multiple_events_published_atomically(monkeypatch):
     db = _make_db_with_rpc()
     db.seed("commodities", [{"id": "onion-uuid", "name_en": "Onion"}])
 
-    result = await run(db, since_days=2)
+    await run(db, since_days=2)
 
     assert len(db._rpc_calls) == 1, "One document → exactly one RPC call"
     payload = db._rpc_calls[0]["p_events"]

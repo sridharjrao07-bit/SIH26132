@@ -3,7 +3,6 @@ import random
 from datetime import date, timedelta
 
 from forecasting.backtest import run_backtest
-from forecasting.gbm import ForecastModelError
 
 try:
     import lightgbm  # noqa: F401  # availability check

@@ -5,9 +5,9 @@ from current market supply (arrivals) and nearby storage. Forecast is a
 tie-breaker: holding through a glut only makes sense if prices are expected
 to recover *and* a godown exists.
 """
-from datetime import date, timedelta, datetime, timezone
+from datetime import date, timedelta
 from statistics import median
-from typing import Optional, Any
+from typing import Optional
 
 from app.services.matching_engine import haversine_km
 
@@ -51,7 +51,7 @@ def compute_sale_window(
     origin_lat=None,
     origin_lng=None,
     recent_events: Optional[list] = None,
-    admin_client: Optional[Any] = None,
+    **kwargs
 ) -> Optional[dict]:
     """
     Return a sell / hold / wait recommendation from supply + nearby storage.

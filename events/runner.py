@@ -2,10 +2,10 @@ import json
 import hashlib
 import structlog
 from datetime import date, datetime, timezone, timedelta
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 from app.config import get_settings
-from .base import EventSourceError, ExtractedEvent, RawHeadline
+from .base import EventSourceError
 from .sources import PIBSource, NewsFeedSource, StateBulletinsSource, SourceMode
 from .extractor import MockEventExtractor, LLMEventExtractor
 
@@ -118,9 +118,6 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
     #    stale 'extracting' documents (older than EXTRACTING_STALE_MINUTES).
     source_urls = [h.source_url for _, h in all_headlines]
     skip_urls: set = set()
-    stale_cutoff = (
-        datetime.now(timezone.utc) - timedelta(minutes=EXTRACTING_STALE_MINUTES)
-    ).isoformat()
 
     for i in range(0, len(source_urls), 100):
         chunk = source_urls[i:i + 100]

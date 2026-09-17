@@ -151,4 +151,8 @@ def test_train_global_gbm_real():
     
     preds_m1 = model.predict(horizon=1, forecast_origin=base_series[-1][0])
     assert len(preds_m1) == 1
-    assert preds_m1[0] > 0
+    val = preds_m1[0]
+    if isinstance(val, (tuple, list)):
+        assert val[0] > 0
+    else:
+        assert val > 0
