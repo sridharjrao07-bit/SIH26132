@@ -67,6 +67,17 @@ class _FakeQuery:
     def lt(self, col, val): self._filters[f"{col}__lt"] = val; return self
     def or_(self, filter_str): self._or_filter = filter_str; return self
     def is_(self, col, val): self._filters[f"{col}__is"] = val; return self
+    
+    @property
+    def not_(self):
+        class _NotHelper:
+            def __init__(self, query):
+                self.query = query
+            def is_(self, col, val):
+                self.query._filters[f"{col}__not_is"] = val
+                return self.query
+        return _NotHelper(self)
+
     def order(self, col, desc=False, **kw):
         self._filters["__order__"] = (col, bool(desc))
         return self
@@ -316,6 +327,14 @@ class FakeSupabase:
             elif col.endswith("__is"):
                 real_col = col[:-4]
                 if val is None and row.get(real_col) is not None:
+                    return False
+                if str(val).lower() == "null" and row.get(real_col) is not None:
+                    return False
+            elif col.endswith("__not_is"):
+                real_col = col[:-8]
+                if val is None and row.get(real_col) is None:
+                    return False
+                if str(val).lower() == "null" and row.get(real_col) is None:
                     return False
             else:
                 if row.get(col) != val:

@@ -76,18 +76,23 @@ def _generate_synthetic_data(seed: int, n_days: int = 200, is_noise: bool = Fals
         def __init__(self, data):
             self.data = data
             
-        def select(self, *args, **kwargs):
-            return self
-            
-        def gte(self, *args, **kwargs):
-            return self
-            
-        def eq(self, *args, **kwargs):
-            return self
-            
-        def order(self, *args, **kwargs):
-            return self
-            
+        def select(self, *args, **kwargs): return self
+        def gte(self, *args, **kwargs): return self
+        def lte(self, *args, **kwargs): return self
+        def lt(self, *args, **kwargs): return self
+        def eq(self, *args, **kwargs): return self
+        def order(self, *args, **kwargs): return self
+        def or_(self, *args, **kwargs): return self
+        def is_(self, *args, **kwargs): return self
+        def range(self, *args, **kwargs): return self
+        @property
+        def not_(self):
+            class _NotHelper:
+                def __init__(self, query):
+                    self.query = query
+                def is_(self, col, val):
+                    return self.query
+            return _NotHelper(self)
         def execute(self):
             return MockData(self.data)
             
