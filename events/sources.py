@@ -5,7 +5,7 @@ import structlog
 from enum import Enum
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 
-from .base import EventSourceError, RawHeadline
+from .base import RawHeadline
 
 logger = structlog.get_logger()
 
