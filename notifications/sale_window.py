@@ -60,18 +60,13 @@ def compute_sale_window(
     today = date.today()
     cutoff = (today - timedelta(days=15)).isoformat()
 
-    cutoff_date_str = (today - timedelta(days=7)).isoformat()
-    now_iso = datetime.now(timezone.utc).isoformat()
-
     if recent_events is not None:
         all_recent_events = []
         if recent_events:
-            if not admin_client:
-                raise ValueError("admin_client is required to re-query recent_events")
             ids = [str(e.get("id")) for e in recent_events if e.get("id")]
             if ids:
                 resp = (
-                    admin_client.table("sale_window_headlines")
+                    supabase.table("sale_window_headlines")
                     .select("*")
                     .in_("id", ids[:50])
                     .order("event_date", desc=True)
