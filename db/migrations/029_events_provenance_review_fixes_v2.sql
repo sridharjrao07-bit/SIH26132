@@ -1,5 +1,21 @@
 -- db/migrations/029_events_provenance_review_fixes_v2.sql
 
+ALTER TABLE public.source_documents
+    ADD COLUMN IF NOT EXISTS failure_reason TEXT;
+
+ALTER TABLE public.events
+    ADD COLUMN IF NOT EXISTS source_document_id UUID REFERENCES public.source_documents(id);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'uq_events_doc_hash'
+    ) THEN
+        ALTER TABLE public.events
+            ADD CONSTRAINT uq_events_doc_hash UNIQUE (source_document_id, event_hash);
+    END IF;
+END $$;
+
 -- 1. Review Status Schema Repair
 DO $$ 
 DECLARE

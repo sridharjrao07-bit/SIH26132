@@ -7,7 +7,7 @@ This document provides exact instructions for applying, verifying, and recoverin
 For a fresh environment, apply the migrations sequentially from `db/migrations/`:
 
 ```sh
-psql -d $DATABASE_URL -f db/migrations/001_initial.sql
+psql -d $DATABASE_URL -f db/migrations/001_schema.sql
 # ... apply up to 029 sequentially
 psql -d $DATABASE_URL -f db/migrations/029_events_provenance_review_fixes_v2.sql
 ```
@@ -42,7 +42,7 @@ After deployment, verify the state by running these probes as the `postgres` use
 SELECT column_name, data_type, udt_name
 FROM information_schema.columns 
 WHERE table_name = 'events' AND column_name = 'review_status';
--- Expected: data_type='USER-DEFINED', udt_name='event_review_status'
+-- Expected: data_type='USER-DEFINED', udt_name='review_state'
 
 -- 2. Verify legacy reviews were reconciled
 SELECT review_status, count(*) 
