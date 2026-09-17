@@ -12,9 +12,6 @@ import pytest
 mock_lgb = MagicMock()
 def _mock_predict(X):
     # X is the feature matrix, return lag_1 (index 3) to prove inputs are isolated
-    import pandas as pd
-    if isinstance(X, pd.DataFrame):
-        X = X.values
     return [row[3] if not math.isnan(row[3]) else 0.0 for row in X]
 mock_lgb.LGBMRegressor.return_value.predict.side_effect = _mock_predict
 
