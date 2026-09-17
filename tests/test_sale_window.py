@@ -19,7 +19,7 @@ def test_seeded_headline_appears_in_sale_window(monkeypatch):
     }])
     
     # Seed events
-    fake_supabase.seed("events", [{
+    fake_supabase.seed("sale_window_headlines", [{
         "headline": "Onion export ban lifted by government",
         "event_date": (today - timedelta(days=2)).isoformat(),
         "commodity_id": "c1",
