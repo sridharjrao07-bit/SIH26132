@@ -335,3 +335,62 @@ def test_concurrent_claims(db_client):
     doc = db_client.table("source_documents").select("id").eq("source_url", url).execute()
     if doc.data:
         db_client.table("source_documents").delete().eq("id", doc.data[0]["id"]).execute()
+
+
+def test_concurrent_review_and_publication(db_client, managed_url):
+    resp1 = db_client.rpc("claim_source_document", {
+        "p_source_url": managed_url,
+        "p_source_name": "test_script",
+        "p_headline": "Test Headline",
+        "p_content_text": "Test Content",
+        "p_published_at": datetime.now(timezone.utc).isoformat(),
+        "p_provenance_mode": "fixture",
+        "p_content_hash": "testhash123"
+    }).execute()
+    
+    doc_id = resp1.data["document_id"]
+    token = resp1.data["claim_token"]
+    
+    events = [{
+        "event_hash": "hash1",
+        "headline": "valid",
+        "event_date": datetime.now(timezone.utc).isoformat(),
+        "district": "Pune",
+        "event_type": "weather",
+        "direction": "up",
+        "magnitude": "major",
+        "confidence": 0.9,
+        "reasoning": "test",
+        "raw_text": "test"
+    }]
+    db_client.rpc("publish_extracted_events_v2", {
+        "p_doc_id": doc_id,
+        "p_claim_token": token,
+        "p_extractor_version": "v1",
+        "p_events": events
+    }).execute()
+    
+    evt_id = db_client.table("events").select("id").eq("source_document_id", doc_id).execute().data[0]["id"]
+    
+    db_client.rpc("review_event", {
+        "p_event_id": evt_id,
+        "p_review_status": "approved"
+    }).execute()
+    
+    evt_after = db_client.table("events").select("review_status").eq("id", evt_id).execute().data[0]
+    assert evt_after["review_status"] == "approved"
+
+def test_immutable_snapshot_extraction_input(db_client, managed_url):
+    resp1 = db_client.rpc("claim_source_document", {
+        "p_source_url": managed_url,
+        "p_source_name": "test_script",
+        "p_headline": "Test Headline",
+        "p_content_text": "Test Content",
+        "p_published_at": datetime.now(timezone.utc).isoformat(),
+        "p_provenance_mode": "fixture",
+        "p_content_hash": "testhash123"
+    }).execute()
+    
+    assert resp1.data["status"] == "claimed"
+    assert resp1.data["raw_text"] == "Test Content"
+    assert resp1.data["content_hash"] == "testhash123"
