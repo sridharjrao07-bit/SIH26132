@@ -7,7 +7,7 @@ to recover *and* a godown exists.
 """
 from datetime import date, timedelta, datetime, timezone
 from statistics import median
-from typing import Optional
+from typing import Optional, Any
 
 from app.services.matching_engine import haversine_km
 
@@ -51,6 +51,7 @@ def compute_sale_window(
     origin_lat=None,
     origin_lng=None,
     recent_events: Optional[list] = None,
+    admin_client: Optional[Any] = None,
 ) -> Optional[dict]:
     """
     Return a sell / hold / wait recommendation from supply + nearby storage.
@@ -64,17 +65,19 @@ def compute_sale_window(
 
     if recent_events is not None:
         all_recent_events = []
-        for e in recent_events:
-            if e.get("provenance_mode") != "live" or _f(e.get("confidence")) is None or _f(e.get("confidence")) < 0.5:
-                continue
-            edate = e.get("event_date")
-            if edate and edate > today.isoformat():
-                continue
-            pub = e.get("publication_date")
-            if pub and pub > now_iso:
-                continue
-            if edate and edate >= cutoff_date_str:
-                all_recent_events.append(e)
+        if recent_events:
+            if not admin_client:
+                raise ValueError("admin_client is required to re-query recent_events")
+            ids = [str(e.get("id")) for e in recent_events if e.get("id")]
+            if ids:
+                resp = (
+                    admin_client.table("sale_window_headlines")
+                    .select("*")
+                    .in_("id", ids[:50])
+                    .order("event_date", desc=True)
+                    .execute()
+                )
+                all_recent_events = resp.data or []
     else:
         cutoff_date = (today - timedelta(days=7)).isoformat()
         resp = (

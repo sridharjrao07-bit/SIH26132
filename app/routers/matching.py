@@ -72,7 +72,7 @@ def lot_advice(
     
     evt_resp = (
         admin.table("events")
-        .select("headline, event_date, commodity_id, district")
+        .select("id")
         .gte("confidence", 0.5)
         .gte("event_date", (today - timedelta(days=7)).isoformat())
         .order("event_date", desc=True)
@@ -87,6 +87,7 @@ def lot_advice(
         origin_lat=profile.get("lat"),
         origin_lng=profile.get("lng"),
         recent_events=evt_resp.data or [],
+        admin_client=admin,
     )
     if window:
         window = apply_sale_language(window, lang)
