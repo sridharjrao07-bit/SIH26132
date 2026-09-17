@@ -123,14 +123,39 @@ def _make_db_with_rpc(rpc_result=None, rpc_raises=None):
     original_rpc = db.rpc
 
     def patched_rpc(fn_name, params=None):
-        if fn_name == "publish_extracted_events":
-            rpc_calls.append(params or {})
+        params = params or {}
+        if fn_name == "claim_source_document":
+            doc_id = str(_uuid.uuid4())
+            rows = db._data.setdefault("source_documents", [])
+            rows.append({
+                "id": doc_id,
+                "source_url": params.get("p_source_url", ""),
+                "extraction_status": "extracting",
+                "provenance_mode": params.get("p_provenance_mode", "live"),
+            })
+            class _ClaimR:
+                data = {
+                    "status": "claimed",
+                    "document_id": doc_id,
+                    "claim_token": str(_uuid.uuid4()),
+                    "headline": params.get("p_headline", ""),
+                    "raw_text": params.get("p_content_text", ""),
+                    "publication_date": params.get("p_published_at", "2026-09-01T00:00:00+00:00"),
+                    "content_hash": params.get("p_content_hash", "hash"),
+                }
+            return type("Q", (), {"execute": lambda s: _ClaimR()})()
+
+        if fn_name in ("publish_extracted_events", "publish_extracted_events_v2"):
+            rpc_calls.append(params)
             if rpc_raises:
                 raise rpc_raises
-            class _R:
-                data = rpc_result or {"status": "complete",
-                                      "written": len((params or {}).get("p_events", []))}
-            return type("Q", (), {"execute": lambda s: _R()})()
+            class _PubR:
+                data = rpc_result or {
+                    "status": "complete",
+                    "written": len(params.get("p_events", [])),
+                }
+            return type("Q", (), {"execute": lambda s: _PubR()})()
+
         return original_rpc(fn_name, params)
 
     db.rpc = patched_rpc
@@ -271,11 +296,11 @@ async def test_fixture_mode_tags_provenance_mode_fixture(monkeypatch):
     monkeypatch.setattr("events.runner.MockEventExtractor",
                         lambda **kw: _FakeExtractor([]))
 
-    # Force FIXTURE mode by setting app_env=test
+    # Force FIXTURE mode by setting events_source_mode="fixture"
     from app.config import get_settings
     settings = get_settings()
-    original_env = settings.app_env
-    settings.app_env = "test"
+    original_env = settings.events_source_mode
+    settings.events_source_mode = "fixture"
 
     db = _make_db_with_rpc()
     db.seed("commodities", [{"id": "onion-uuid", "name_en": "Onion"}])
@@ -283,7 +308,7 @@ async def test_fixture_mode_tags_provenance_mode_fixture(monkeypatch):
     try:
         await run(db, since_days=2)
     finally:
-        settings.app_env = original_env
+        settings.events_source_mode = original_env
 
     source_docs = db._data.get("source_documents", [])
     assert len(source_docs) == 1
