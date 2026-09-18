@@ -19,13 +19,13 @@ class DashboardSessionBody(BaseModel):
 
 
 @router.get("/dashboard", response_class=HTMLResponse)
-async def get_dashboard(request: Request):
+def get_dashboard(request: Request):
     """Public HTML shell (data is fetched securely via API)"""
     return templates.TemplateResponse(request, "dashboard.html", {"request": request})
 
 
 @router.post("/dashboard/session")
-async def dashboard_session(
+def dashboard_session(
     request: Request,
     body: DashboardSessionBody,
     response: Response,
@@ -55,20 +55,20 @@ async def dashboard_session(
 
 
 @router.delete("/dashboard/session")
-async def dashboard_logout(response: Response):
+def dashboard_logout(response: Response):
     response.delete_cookie(ADMIN_COOKIE, path="/")
     return {"status": "ok"}
 
 
 @router.get("/dashboard/api/ingestion-logs", dependencies=[Depends(require_role("admin"))])
-async def get_ingestion_logs(supabase: Client = Depends(get_supabase_service_role)):
+def get_ingestion_logs(supabase: Client = Depends(get_supabase_service_role)):
     """Admin-only API to fetch recent ingestion logs"""
     res = supabase.table("ingestion_log").select("*").order("run_at", desc=True).limit(10).execute()
     return res.data or []
 
 
 @router.get("/dashboard/api/forecast-stats", dependencies=[Depends(require_role("admin"))])
-async def get_forecast_stats(supabase: Client = Depends(get_supabase_service_role)):
+def get_forecast_stats(supabase: Client = Depends(get_supabase_service_role)):
     """Admin-only API to fetch forecast performance stats (one prices query, not N+1)."""
     forecasts = (
         supabase.table("forecasts")

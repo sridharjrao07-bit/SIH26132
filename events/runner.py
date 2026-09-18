@@ -8,6 +8,8 @@ from app.config import get_settings
 from .base import EventSourceError
 from .sources import PIBSource, NewsFeedSource, StateBulletinsSource, SourceMode
 from .extractor import MockEventExtractor, LLMEventExtractor
+from app.utils.tz import get_ist_today
+
 
 logger = structlog.get_logger()
 
@@ -45,7 +47,7 @@ def _canonical_event_hash(comm_id, district, event_type: str, occurrence_date: d
 
 async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
     settings = get_settings()
-    since_date = date.today() - timedelta(days=since_days)
+    since_date = get_ist_today() - timedelta(days=since_days)
 
     # Fetch all commodities once to map names to UUIDs and configure extractors
     try:

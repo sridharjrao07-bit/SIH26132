@@ -4,6 +4,8 @@ from datetime import date, timedelta
 from supabase import Client
 from app.deps import get_supabase
 from app.schemas import PriceResponse
+from app.utils.tz import get_ist_today
+
 
 router = APIRouter(prefix="/api/v1/prices", tags=["Prices"])
 
@@ -32,7 +34,7 @@ def get_latest_prices(
     Get the latest price records.
     By default, fetches records from the last 7 days to ensure we capture the most recent ones.
     """
-    seven_days_ago = (date.today() - timedelta(days=7)).isoformat()
+    seven_days_ago = (get_ist_today() - timedelta(days=7)).isoformat()
 
     query = supabase.table("prices").select(
         "*, markets(name, district), commodities(name_en, name_mr, name_hi)"
@@ -58,7 +60,7 @@ def get_historical_prices(
     """
     Get historical prices for a specific market and commodity over a period of time.
     """
-    start_date = (date.today() - timedelta(days=days)).isoformat()
+    start_date = (get_ist_today() - timedelta(days=days)).isoformat()
 
     res = (supabase.table("prices").select(
         "*, markets(name, district), commodities(name_en, name_mr, name_hi)"

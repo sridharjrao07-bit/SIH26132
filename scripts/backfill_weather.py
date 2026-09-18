@@ -6,6 +6,8 @@ import time
 import httpx
 from datetime import date, timedelta
 from app.deps import get_supabase_service_role
+from app.utils.tz import get_ist_today
+
 
 logger = structlog.get_logger()
 
@@ -56,7 +58,7 @@ async def backfill(days: int, markets_csv: str, sleep_time: float):
         logger.error("no_markets_found")
         sys.exit(1)
         
-    end_date = date.today() - timedelta(days=1) # Open-Meteo archive usually is 2-5 days behind, we try yesterday
+    end_date = get_ist_today() - timedelta(days=1) # Open-Meteo archive usually is 2-5 days behind, we try yesterday
     start_date = end_date - timedelta(days=days - 1) # total 'days' including end_date
     
     logger.info("starting_weather_backfill", start_date=start_date.isoformat(), end_date=end_date.isoformat(), markets=len(market_list))

@@ -12,9 +12,12 @@ from ingestion.data_gov_in import DataGovInAdapter
 from forecasting.runner import run_forecast_job
 from events.runner import run as run_events
 
+import uuid
+
 logger = structlog.get_logger()
 settings = get_settings()
 
+SCHEDULER_ID = f"scheduler_{uuid.uuid4().hex[:8]}"
 
 def get_supabase_client():
     """
@@ -24,7 +27,7 @@ def get_supabase_client():
     return create_client(settings.supabase_url, settings.supabase_service_role_key)
 
 
-def _claim(supabase, job_key: str, holder: str = "scheduler", ttl_minutes: int = 45):
+def _claim(supabase, job_key: str, holder: str = SCHEDULER_ID, ttl_minutes: int = 45):
     # Default 45 min > worst-case ingest/alert runtime so TTL-steal cannot
     # double-send SMS while the first holder is still in gateway.send_sms.
     return supabase.rpc(
@@ -33,8 +36,9 @@ def _claim(supabase, job_key: str, holder: str = "scheduler", ttl_minutes: int =
     ).execute()
 
 
-def _release(supabase, job_key: str, holder: str = "scheduler"):
+def _release(supabase, job_key: str, holder: str = SCHEDULER_ID):
     supabase.rpc("release_job_lock", {"p_job_key": job_key, "p_holder": holder}).execute()
+
 
 
 async def run_alert_job():

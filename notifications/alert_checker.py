@@ -6,6 +6,8 @@ from supabase import Client
 from forecasting.engine import build_daily_series, build_district_daily_series
 from .sms_gateway import get_sms_gateway, resolve_template
 from .sale_window import format_alert_sms
+from app.utils.tz import get_ist_today
+
 
 logger = structlog.get_logger()
 
@@ -27,7 +29,7 @@ def _hours_ago(h: float) -> str:
 
 
 def _days_ago_date(n: int) -> str:
-    return (date.today() - timedelta(days=n)).isoformat()
+    return (get_ist_today() - timedelta(days=n)).isoformat()
 
 
 def _parse_ts(value) -> Optional[datetime]:

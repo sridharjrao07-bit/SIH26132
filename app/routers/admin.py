@@ -13,13 +13,15 @@ from app.services.marketplace import expire_stale_offers, recompute_buyer_reliab
 
 from forecasting.engine import ForecastEngine
 from notifications.alert_checker import AlertChecker
+from app.utils.tz import get_ist_today
+
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
 @router.post("/forecast/run", dependencies=[Depends(require_role("admin"))])
-async def trigger_forecast(supabase: Client = Depends(get_supabase_service_role)):
+def trigger_forecast(supabase: Client = Depends(get_supabase_service_role)):
     """Admin-only on-demand trigger for forecasting (bypasses cron)."""
     lock_res = supabase.rpc(
         "claim_job_lock",
@@ -30,7 +32,7 @@ async def trigger_forecast(supabase: Client = Depends(get_supabase_service_role)
 
     try:
         engine = ForecastEngine(supabase)
-        summary = await asyncio.to_thread(engine.run)
+        summary = engine.run()
         return {"status": "success", "summary": summary}
     except HTTPException:
         raise
@@ -50,7 +52,7 @@ class _BacktestBody(BaseModel):
 
 
 @router.post("/forecast/backtest", dependencies=[Depends(require_role("admin"))])
-async def trigger_forecast_backtest(
+def trigger_forecast_backtest(
     body: _BacktestBody = _BacktestBody(),
     supabase: Client = Depends(get_supabase_service_role),
 ):
@@ -75,7 +77,7 @@ async def trigger_forecast_backtest(
 
     # Resolve all active pairs from the last history_days window
     from datetime import date, timedelta
-    cutoff = (date.today() - timedelta(days=body.history_days)).isoformat()
+    cutoff = (get_ist_today() - timedelta(days=body.history_days)).isoformat()
     try:
         raw_pairs = []
         step = 1000
@@ -101,9 +103,7 @@ async def trigger_forecast_backtest(
     pairs = list({(r["market_id"], r["commodity_id"]) for r in raw_pairs})
 
     try:
-        report = await asyncio.to_thread(
-            run_backtest, supabase, pairs, body.history_days, model_names
-        )
+        report = run_backtest(supabase, pairs, body.history_days, model_names)
     except ValueError as exc:
         raise HTTPException(422, str(exc))
     except Exception:
@@ -114,7 +114,7 @@ async def trigger_forecast_backtest(
 
 
 @router.post("/alert-check/run", dependencies=[Depends(require_role("admin"))])
-async def trigger_alert_check(supabase: Client = Depends(get_supabase_service_role)):
+def trigger_alert_check(supabase: Client = Depends(get_supabase_service_role)):
     """Admin-only on-demand trigger for alert checker (bypasses cron)."""
     lock_res = supabase.rpc(
         "claim_job_lock",
@@ -125,7 +125,7 @@ async def trigger_alert_check(supabase: Client = Depends(get_supabase_service_ro
 
     try:
         checker = AlertChecker(supabase)
-        summary = await asyncio.to_thread(checker.run)
+        summary = checker.run()
         return {"status": "success", "summary": summary}
     except HTTPException:
         raise
@@ -237,11 +237,11 @@ def admin_rescore_buyers(supabase: Client = Depends(get_supabase_service_role)):
 
 
 @router.post("/events/ingest", dependencies=[Depends(require_role("admin"))])
-async def admin_events_ingest(supabase: Client = Depends(get_supabase_service_role)):
+def admin_events_ingest(supabase: Client = Depends(get_supabase_service_role)):
     """Run event runner to fetch news/bulletins and extract events."""
     from events.runner import run as run_events
     try:
-        report = await run_events(supabase, since_days=2)
+        report = asyncio.run(run_events(supabase, since_days=2))
         return {"status": "success", "report": report}
     except Exception:
         logger.exception("admin_events_ingest_failed")

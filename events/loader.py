@@ -1,5 +1,7 @@
 from typing import List, Dict, Any, Optional
 from datetime import date, datetime, timezone
+from app.utils.tz import get_ist_today
+
 
 def load_published_events(
     supabase,
@@ -32,7 +34,7 @@ def load_published_events(
         if district:
             query = query.or_(f"district.ilike.{district},district.is.null")
             
-        today_iso = date.today().isoformat()
+        today_iso = get_ist_today().isoformat()
         if event_date_from:
             query = query.gte("event_date", event_date_from.isoformat())
         query = query.lte("event_date", today_iso)

@@ -5,6 +5,8 @@ from supabase import Client
 
 from app.deps import get_supabase
 from app.schemas import ForecastResponse
+from app.utils.tz import get_ist_today
+
 
 router = APIRouter(prefix="/api/v1/forecasts", tags=["Forecasts"])
 
@@ -34,8 +36,8 @@ def get_forecasts(
     Returns the next `days` of forward predictions with status='ok'.
     Stale and insufficient_data rows are excluded (use /summary for degraded state).
     """
-    today    = date.today().isoformat()
-    end_date = (date.today() + timedelta(days=days - 1)).isoformat()
+    today    = get_ist_today().isoformat()
+    end_date = (get_ist_today() + timedelta(days=days - 1)).isoformat()
 
     res = (
         supabase.table("forecasts")
@@ -48,8 +50,23 @@ def get_forecasts(
         .order("forecast_date", desc=False)
         .execute()
     )
+    
+    rows = list(res.data or [])
+    # Re-sort to put newest generated_at first to handle revision history
+    rows.sort(key=lambda r: str(r.get("generated_at") or ""), reverse=True)
+    
+    seen_dates = set()
+    deduped = []
+    for r in rows:
+        fdate = r.get("forecast_date")
+        if fdate not in seen_dates:
+            seen_dates.add(fdate)
+            deduped.append(r)
+            
+    # Sort back by forecast_date ascending
+    deduped.sort(key=lambda r: str(r.get("forecast_date") or ""))
 
-    return [_flatten_forecast(dict(row)) for row in (res.data or [])]
+    return [_flatten_forecast(dict(row)) for row in deduped]
 
 
 @router.get("/summary", response_model=List[ForecastResponse])

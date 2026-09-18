@@ -11,6 +11,8 @@ from typing import Optional, Tuple
 import structlog
 
 from forecasting.engine import build_daily_series, build_district_daily_series
+from app.utils.tz import get_ist_today
+
 
 logger = structlog.get_logger()
 
@@ -34,7 +36,7 @@ def latest_price_for_user(
          average of source-precedence winners per market.
       3. Returns (None, None) if no data found in either path.
     """
-    cutoff = (date.today() - timedelta(days=history_days)).isoformat()
+    cutoff = (get_ist_today() - timedelta(days=history_days)).isoformat()
     market_id   = None
     market_name = None
 

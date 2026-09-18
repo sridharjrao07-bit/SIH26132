@@ -4,6 +4,8 @@ from datetime import timedelta, date
 from supabase import create_client
 from app.config import get_settings
 from notifications.alert_checker import AlertChecker
+from app.utils.tz import get_ist_today
+
 
 settings = get_settings()
 supabase = create_client(settings.supabase_url, settings.supabase_service_role_key)
@@ -45,8 +47,8 @@ async def run_demo():
     markets = supabase.table("markets").select("id").eq("is_active", True).limit(1).execute()
     market_id = markets.data[0]["id"]
     
-    yesterday = (date.today() - timedelta(days=1)).isoformat()
-    today = date.today().isoformat()
+    yesterday = (get_ist_today() - timedelta(days=1)).isoformat()
+    today = get_ist_today().isoformat()
     
     supabase.table("prices").upsert([
         {

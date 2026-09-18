@@ -96,13 +96,13 @@ async def handle_sms_webhook(request: Request, supabase: Client = Depends(get_su
         raise HTTPException(400, "invalid json")
     if not isinstance(payload, dict):
         raise HTTPException(400, "invalid json")
-    return await _process_inbound(payload, supabase)
+    return await asyncio.to_thread(_process_inbound, payload, supabase)
 
 
 @router.post("/simulate", dependencies=[Depends(require_role("admin"))])
-async def simulate_inbound(payload: Dict[str, Any], supabase: Client = Depends(get_supabase_service_role)):
+def simulate_inbound(payload: Dict[str, Any], supabase: Client = Depends(get_supabase_service_role)):
     """Admin-only endpoint to demonstrate the two-way webhook without real SMS provider"""
-    return await _process_inbound(payload, supabase)
+    return _process_inbound(payload, supabase)
 
 
 def _alias_keys(message: str):
@@ -121,7 +121,7 @@ def _lookup_profile(supabase: Client, sender: str) -> dict:
     return rows[0] if rows else {}
 
 
-async def _process_inbound(payload: dict, supabase: Client):
+def _process_inbound(payload: dict, supabase: Client):
     sender = normalize_phone(payload.get("sender"))
     raw_msg = (payload.get("message") or "").strip()
 

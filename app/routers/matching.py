@@ -7,6 +7,8 @@ from app.auth import get_current_user
 from app.services.matching_engine import rank_buyers
 from app.services.marketplace import logistics_next_step
 from notifications.sale_window import compute_sale_window, apply_sale_language
+from app.utils.tz import get_ist_today
+
 
 router = APIRouter(prefix="/api/v1/lots", tags=["Matching"])
 
@@ -66,7 +68,7 @@ def lot_advice(
 ):
     """Sell Now / Hold plus the best local buyer — not a price dump."""
     from datetime import date, timedelta
-    today = date.today()
+    today = get_ist_today()
     lot, profile = _load_lot_and_profile(as_user, lot_id, user_id)
     lang = lang or profile.get("preferred_language") or "en"
     

@@ -28,7 +28,7 @@ def _call_rpc(supabase: Client, fn: str, params: dict):
         raise json_for_api_error(exc) from exc
 
 
-@router.post("/register")
+@router.post("/register", status_code=201)
 def register_buyer(
     req: BuyerRegisterRequest,
     uid: str = Depends(get_current_user),
@@ -40,7 +40,12 @@ def register_buyer(
     enforces the one-profile-per-user constraint.  verified is always False
     at registration; admin must call /buyers/{id}/verify to flip it.
     """
-    params = req.model_dump(exclude_unset=True)
+    params = {
+        "p_name": req.name,
+        "p_type": req.type,
+        "p_phone": req.phone,
+        "p_district": req.district,
+    }
     return _call_rpc(user_client, "buyer_register", params)
 
 

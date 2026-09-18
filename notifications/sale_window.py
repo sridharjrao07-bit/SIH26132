@@ -10,6 +10,8 @@ from statistics import median
 from typing import Optional
 
 from app.services.matching_engine import haversine_km
+from app.utils.tz import get_ist_today
+
 
 NEARBY_STORAGE_KM = 40.0
 HIGH_ARRIVAL_QTL = 1000.0
@@ -57,7 +59,7 @@ def compute_sale_window(
     Return a sell / hold / wait recommendation from supply + nearby storage.
     Returns None when there is no recent price (caller decides 404 vs silent).
     """
-    today = date.today()
+    today = get_ist_today()
     cutoff = (today - timedelta(days=15)).isoformat()
 
     if recent_events is not None:

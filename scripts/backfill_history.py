@@ -8,6 +8,8 @@ from app.config import get_settings
 from app.deps import get_supabase_service_role
 from ingestion.data_gov_in import DataGovInAdapter
 from ingestion.runner import _norm_key
+from app.utils.tz import get_ist_today
+
 
 logger = structlog.get_logger()
 
@@ -83,7 +85,7 @@ async def backfill(days: int, markets_csv: str, commodities_csv: str, sleep_time
         sys.exit(1)
         
     # Generate dates
-    end_date = date.today()
+    end_date = get_ist_today()
     start_date = end_date - timedelta(days=days)
     dates_to_fetch = [start_date + timedelta(days=i) for i in range(days + 1)]
     
