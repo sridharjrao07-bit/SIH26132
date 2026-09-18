@@ -1,5 +1,3 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field, model_validator
 """Runtime configuration (12-factor env vars).
 
 Design rules for this module
@@ -26,6 +24,9 @@ Design rules for this module
    Unknown keys are silently dropped by pydantic-settings before the model
    sees them, so ``extra="forbid"`` would raise on every unrelated .env line.
 """
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field
 from typing import List, Literal
 from functools import lru_cache
 

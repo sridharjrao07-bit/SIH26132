@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from typing import List
-from datetime import date, timedelta, datetime, timezone
+from datetime import timedelta, datetime, timezone
 from supabase import Client
 
 from app.deps import get_supabase

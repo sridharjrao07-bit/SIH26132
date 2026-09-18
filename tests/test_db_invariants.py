@@ -19,8 +19,6 @@ pass before a PR is merged.
 from __future__ import annotations
 
 import pytest
-from unittest.mock import MagicMock, patch, call
-from fastapi.testclient import TestClient
 from postgrest.exceptions import APIError
 
 

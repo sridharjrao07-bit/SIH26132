@@ -1,6 +1,6 @@
 import sys
 import asyncio
-from datetime import timedelta, date
+from datetime import timedelta
 from supabase import create_client
 from app.config import get_settings
 from notifications.alert_checker import AlertChecker
