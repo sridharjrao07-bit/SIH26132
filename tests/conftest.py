@@ -158,6 +158,27 @@ class FakeSupabase:
                     return _ExecuteResult(data=store._rpc_transition_grievance(params))
                 if fn_name == "lots_for_buyer_supply":
                     return _ExecuteResult(data=store._rpc_lots_for_buyer_supply(params))
+                # PR-3 marketplace RPCs
+                if fn_name == "lot_create":
+                    return _ExecuteResult(data=store._rpc_lot_create(params))
+                if fn_name == "lot_withdraw":
+                    return _ExecuteResult(data=store._rpc_lot_withdraw(params))
+                if fn_name == "lot_grade_update":
+                    return _ExecuteResult(data=store._rpc_lot_grade_update(params))
+                if fn_name == "fpo_aggregate_lots":
+                    return _ExecuteResult(data=store._rpc_fpo_aggregate_lots(params))
+                if fn_name == "offer_create":
+                    return _ExecuteResult(data=store._rpc_offer_create(params))
+                if fn_name == "offer_decide":
+                    return _ExecuteResult(data=store._rpc_offer_decide(params))
+                if fn_name == "payment_create":
+                    return _ExecuteResult(data=store._rpc_payment_create(params))
+                if fn_name == "payment_mark_paid":
+                    return _ExecuteResult(data=store._rpc_payment_mark_paid(params))
+                if fn_name == "buyer_register":
+                    return _ExecuteResult(data=store._rpc_buyer_register(params))
+                if fn_name == "buyer_verify":
+                    return _ExecuteResult(data=store._rpc_buyer_verify(params))
                 return _ExecuteResult(data=True)
 
         return _RpcQuery()
@@ -257,6 +278,220 @@ class FakeSupabase:
             raise HTTPException(409, f"grievance is already {cur}")
         grievance["status"] = p_new_status
         return dict(grievance)
+
+    # ── PR-3 RPC emulators ────────────────────────────────────────────────────
+
+    def _rpc_lot_create(self, params: dict) -> dict:
+        import uuid as _uuid
+        row = {
+            "id": str(_uuid.uuid4()),
+            "user_id": params.get("_test_user_id", "test-user"),  # injected by test fixtures
+            "fpo_id": params.get("p_fpo_id"),
+            "commodity_id": params.get("p_commodity_id"),
+            "market_id": params.get("p_market_id"),
+            "quantity_qtl": params.get("p_quantity_qtl"),
+            "grade": params.get("p_grade") or "General",
+            "quality_notes": params.get("p_quality_notes"),
+            "harvest_date": params.get("p_harvest_date"),
+            "asking_price": params.get("p_asking_price"),
+            "status": "open",
+        }
+        self._data.setdefault("lots", []).append(row)
+        return dict(row)
+
+    def _rpc_lot_withdraw(self, params: dict) -> dict:
+        from fastapi import HTTPException
+        lot_id = params.get("p_lot_id")
+        for lot in self._data.get("lots", []):
+            if lot.get("id") == lot_id:
+                if lot.get("status") in ("sold", "withdrawn"):
+                    raise HTTPException(409, f"cannot withdraw a {lot['status']} lot")
+                lot["status"] = "withdrawn"
+                return dict(lot)
+        raise HTTPException(404, "lot not found or access denied")
+
+    def _rpc_lot_grade_update(self, params: dict) -> dict:
+        from fastapi import HTTPException
+        lot_id = params.get("p_lot_id")
+        for lot in self._data.get("lots", []):
+            if lot.get("id") == lot_id:
+                if lot.get("status") in ("sold", "withdrawn"):
+                    raise HTTPException(409, f"cannot regrade a {lot['status']} lot")
+                lot["grade"] = params.get("p_grade", lot["grade"])
+                if params.get("p_quality_notes") is not None:
+                    lot["quality_notes"] = params["p_quality_notes"]
+                return dict(lot)
+        raise HTTPException(404, "lot not found or access denied")
+
+    def _rpc_fpo_aggregate_lots(self, params: dict) -> dict:
+        import uuid as _uuid
+        from fastapi import HTTPException
+        # Role check — emulate has_role_for(v_user_id, 'fpo')
+        caller_uid = params.get("_test_user_id", "test-user")
+        profiles = self._data.get("user_profiles", [])
+        profile = next((p for p in profiles if p.get("id") == caller_uid), None)
+        if not profile or profile.get("role") != "fpo":
+            raise HTTPException(403, "fpo_aggregate_lots requires the fpo role")
+        lot_ids = params.get("p_lot_ids", [])
+        commodity = None
+        total = 0.0
+        price_sum = 0.0
+        price_cnt = 0
+        members = []
+        for lid in lot_ids:
+            for lot in self._data.get("lots", []):
+                if lot.get("id") == lid:
+                    if lot.get("status") != "open":
+                        raise HTTPException(409, f"lot {lid} is not open")
+                    if commodity is None:
+                        commodity = lot["commodity_id"]
+                    elif commodity != lot["commodity_id"]:
+                        raise HTTPException(400, "all lots must share the same commodity")
+                    total += float(lot.get("quantity_qtl") or 0)
+                    if lot.get("asking_price"):
+                        price_sum += float(lot["asking_price"]); price_cnt += 1
+                    members.append(lot)
+                    break
+        for lot in members:
+            lot["status"] = "matched"
+        asking = params.get("p_asking_price") or (price_sum / price_cnt if price_cnt else None)
+        pooled = {
+            "id": str(_uuid.uuid4()),
+            "user_id": params.get("_test_user_id", "test-user"),
+            "fpo_id": params.get("_test_user_id", "test-user"),
+            "commodity_id": commodity,
+            "market_id": params.get("p_market_id"),
+            "quantity_qtl": total,
+            "grade": "General",
+            "quality_notes": f"FPO aggregate of {len(members)} lots",
+            "asking_price": asking,
+            "status": "open",
+        }
+        self._data.setdefault("lots", []).append(pooled)
+        return dict(pooled)
+
+    def _rpc_offer_create(self, params: dict) -> dict:
+        import uuid as _uuid
+        from fastapi import HTTPException
+        lot_id = params.get("p_lot_id")
+        lot = next((l for l in self._data.get("lots", []) if l.get("id") == lot_id), None)
+        if not lot:
+            raise HTTPException(404, "lot not found or not owned by caller")
+        if lot.get("status") not in ("open", "offered"):
+            raise HTTPException(409, f"lot is not open for offers (status: {lot.get('status')})")
+        qty = float(params.get("p_quantity_qtl", 0))
+        if qty > float(lot.get("quantity_qtl") or 0):
+            raise HTTPException(400, "offer quantity exceeds lot quantity")
+        row = {
+            "id": str(_uuid.uuid4()),
+            "lot_id": lot_id,
+            "buyer_id": params.get("p_buyer_id"),
+            "user_id": params.get("_test_user_id", "test-user"),
+            "price_per_qtl": params.get("p_price_per_qtl"),
+            "quantity_qtl": params.get("p_quantity_qtl"),
+            "status": "pending",
+            "created_at": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
+            "updated_at": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
+        }
+        self._data.setdefault("offers", []).append(row)
+        if lot.get("status") == "open":
+            lot["status"] = "offered"
+        return dict(row)
+
+    def _rpc_offer_decide(self, params: dict) -> dict:
+        from fastapi import HTTPException
+        offer_id = params.get("p_offer_id")
+        decision = params.get("p_decision")
+        offer = next((o for o in self._data.get("offers", []) if o.get("id") == offer_id), None)
+        if not offer:
+            raise HTTPException(404, "offer not found")
+        if offer.get("status") != "pending":
+            raise HTTPException(409, f"cannot decide on a {offer.get('status')} offer")
+        lot = next((l for l in self._data.get("lots", []) if l.get("id") == offer.get("lot_id")), None)
+        if decision == "accepted":
+            offer["status"] = "accepted"
+            for o in self._data.get("offers", []):
+                if o.get("lot_id") == offer.get("lot_id") and o.get("id") != offer_id and o.get("status") == "pending":
+                    o["status"] = "rejected"
+            if lot:
+                lot["status"] = "matched"
+        else:
+            offer["status"] = "rejected"
+            pending = [o for o in self._data.get("offers", []) if o.get("lot_id") == offer.get("lot_id") and o.get("status") == "pending"]
+            if not pending and lot and lot.get("status") == "offered":
+                lot["status"] = "open"
+        return dict(offer)
+
+    def _rpc_payment_create(self, params: dict) -> dict:
+        import uuid as _uuid
+        from fastapi import HTTPException
+        offer_id = params.get("p_offer_id")
+        offer = next((o for o in self._data.get("offers", []) if o.get("id") == offer_id), None)
+        if not offer:
+            raise HTTPException(404, "offer not found")
+        if offer.get("status") != "accepted":
+            raise HTTPException(409, f"payments require an accepted offer, current status: {offer.get('status')}")
+        existing = next((p for p in self._data.get("payments", []) if p.get("offer_id") == offer_id and p.get("status") in ("pending", "paid")), None)
+        if existing:
+            return dict(existing)
+        row = {
+            "id": str(_uuid.uuid4()),
+            "offer_id": offer_id,
+            "user_id": params.get("_test_user_id", "test-user"),
+            "amount": params.get("p_amount"),
+            "status": "pending",
+            "reference": params.get("p_reference"),
+        }
+        # Use _dispatch so that monkeypatch tests can intercept the INSERT
+        result = self._dispatch(
+            table="payments", op="insert", payload=row,
+            conflict=None, filters={}, select_cols="*"
+        )
+        return dict(result.data[0]) if result.data else dict(row)
+
+
+    def _rpc_payment_mark_paid(self, params: dict) -> dict:
+        from fastapi import HTTPException
+        from datetime import datetime, timezone
+        payment_id = params.get("p_payment_id")
+        payment = next((p for p in self._data.get("payments", []) if p.get("id") == payment_id), None)
+        if not payment:
+            raise HTTPException(404, "payment not found")
+        if payment.get("status") in ("failed", "disputed"):
+            raise HTTPException(409, f"cannot mark a {payment['status']} payment as paid")
+        if payment.get("status") == "paid":
+            return dict(payment)
+        payment["status"] = "paid"
+        payment["paid_at"] = datetime.now(timezone.utc).isoformat()
+        offer = next((o for o in self._data.get("offers", []) if o.get("id") == payment.get("offer_id")), None)
+        if offer:
+            lot = next((l for l in self._data.get("lots", []) if l.get("id") == offer.get("lot_id")), None)
+            if lot:
+                lot["status"] = "sold"
+        return dict(payment)
+
+    def _rpc_buyer_register(self, params: dict) -> dict:
+        import uuid as _uuid
+        row = {
+            "id": str(_uuid.uuid4()),
+            "name": params.get("p_name"),
+            "type": params.get("p_type"),
+            "phone": params.get("p_phone"),
+            "district": params.get("p_district"),
+            "verified": False,
+            "owner_user_id": params.get("_test_user_id", "test-user"),
+        }
+        self._data.setdefault("buyers", []).append(row)
+        return dict(row)
+
+    def _rpc_buyer_verify(self, params: dict) -> dict:
+        from fastapi import HTTPException
+        buyer_id = params.get("p_buyer_id")
+        buyer = next((b for b in self._data.get("buyers", []) if b.get("id") == buyer_id), None)
+        if not buyer:
+            raise HTTPException(404, "buyer not found")
+        buyer["verified"] = True
+        return dict(buyer)
 
     def _dispatch(self, *, table, op, payload, conflict, filters, select_cols):
         self.calls.append(dict(
@@ -533,7 +768,12 @@ class RlsFakeSupabase(FakeSupabase):
         return _FakeQuery(self, name)
 
     def rpc(self, fn_name: str, params: dict = None):
-        return self._base.rpc(fn_name, params)
+        # Inject the current authenticated user so RPC emulators can simulate
+        # auth.uid() server-side behaviour.
+        merged = dict(params or {})
+        if self._uid:
+            merged["_test_user_id"] = self._uid
+        return self._base.rpc(fn_name, merged)
 
     def _dispatch(self, *, table, op, payload, conflict, filters, select_cols):
         res = self._base._dispatch(

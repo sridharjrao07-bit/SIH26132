@@ -1,13 +1,29 @@
-import uuid
+"""Lots router — all mutations via ACID RPCs (migration 032).
+
+READ operations still use the Supabase table API (SELECT is not revoked).
+WRITE operations (create, withdraw, grade) call security-definer RPCs that
+own the write privilege and enforce ownership + state-machine in one transaction.
+"""
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Optional
 from supabase import Client
 from app.deps import get_supabase_as_user
 from app.auth import get_current_user
+from app.errors import json_for_api_error
 from app.schemas.marketplace import LotCreate, LotAggregate, LotGradeUpdate
 from app.services.marketplace import lot_ledger
+from postgrest.exceptions import APIError
 
 router = APIRouter(prefix="/api/v1/lots", tags=["Lots"])
+
+
+def _call_rpc(supabase: Client, fn: str, params: dict):
+    """Call a Postgres RPC and surface any PostgREST error as HTTP."""
+    try:
+        res = supabase.rpc(fn, params).execute()
+        return res.data
+    except APIError as exc:
+        raise json_for_api_error(exc) from exc
 
 
 @router.post("/")
@@ -16,23 +32,18 @@ def create_lot(
     user_id: str = Depends(get_current_user),
     supabase: Client = Depends(get_supabase_as_user),
 ):
-    row = {
-        "id": str(uuid.uuid4()),
-        "user_id": user_id,
-        "fpo_id": body.fpo_id,
-        "commodity_id": body.commodity_id,
-        "market_id": body.market_id,
-        "quantity_qtl": body.quantity_qtl,
-        "grade": body.grade or "General",
-        "quality_notes": body.quality_notes,
-        "harvest_date": body.harvest_date.isoformat() if body.harvest_date else None,
-        "asking_price": body.asking_price,
-        "status": "open",
+    """Create a lot via the lot_create RPC (user_id = auth.uid() server-side)."""
+    params = {
+        "p_commodity_id": body.commodity_id,
+        "p_quantity_qtl": body.quantity_qtl,
+        "p_grade": body.grade or "General",
+        "p_quality_notes": body.quality_notes,
+        "p_harvest_date": body.harvest_date.isoformat() if body.harvest_date else None,
+        "p_asking_price": body.asking_price,
+        "p_market_id": body.market_id,
+        "p_fpo_id": body.fpo_id,
     }
-    res = supabase.table("lots").insert(row).execute()
-    if not res.data:
-        raise HTTPException(400, "could not create lot")
-    return res.data[0]
+    return _call_rpc(supabase, "lot_create", params)
 
 
 @router.post("/aggregate")
@@ -41,54 +52,17 @@ def aggregate_lots(
     user_id: str = Depends(get_current_user),
     supabase: Client = Depends(get_supabase_as_user),
 ):
-    """FPO rolls member lots into one pooled lot for matching."""
-    profile = (
-        supabase.table("user_profiles").select("role").eq("id", user_id).execute().data or []
-    )
-    if not profile or profile[0].get("role") != "fpo":
-        raise HTTPException(403, "requires fpo role")
+    """FPO pools member lots into one via the fpo_aggregate_lots RPC.
 
-    rows = (
-        supabase.table("lots").select("*").in_("id", body.lot_ids).execute().data or []
-    )
-    by_id = {r.get("id"): r for r in rows}
-    members = []
-    for lid in body.lot_ids:
-        lot = by_id.get(lid)
-        if not lot:
-            raise HTTPException(404, f"lot not found: {lid}")
-        if lot.get("status") != "open":
-            raise HTTPException(409, f"lot {lid} is not open")
-        members.append(lot)
-
-    commodity_ids = {m["commodity_id"] for m in members}
-    if len(commodity_ids) != 1:
-        raise HTTPException(400, "all lots must share the same commodity")
-
-    qty = sum(float(m["quantity_qtl"]) for m in members)
-    asking = body.asking_price
-    if asking is None:
-        priced = [float(m["asking_price"]) for m in members if m.get("asking_price") is not None]
-        asking = (sum(priced) / len(priced)) if priced else None
-
-    pooled = {
-        "id": str(uuid.uuid4()),
-        "user_id": user_id,
-        "fpo_id": user_id,
-        "commodity_id": members[0]["commodity_id"],
-        "market_id": body.market_id or members[0].get("market_id"),
-        "quantity_qtl": qty,
-        "grade": members[0].get("grade") or "General",
-        "quality_notes": f"FPO aggregate of {len(members)} lots",
-        "asking_price": asking,
-        "status": "open",
+    The RPC validates the caller has the 'fpo' role and that all lots are open
+    and share a commodity — no application-layer role check needed here.
+    """
+    params = {
+        "p_lot_ids": body.lot_ids,
+        "p_market_id": body.market_id,
+        "p_asking_price": body.asking_price,
     }
-    res = supabase.table("lots").insert(pooled).execute()
-    if not res.data:
-        raise HTTPException(400, "could not create pooled lot")
-    for m in members:
-        supabase.table("lots").update({"status": "matched", "fpo_id": user_id}).eq("id", m["id"]).execute()
-    return res.data[0]
+    return _call_rpc(supabase, "fpo_aggregate_lots", params)
 
 
 @router.get("/")
@@ -98,17 +72,19 @@ def list_lots(
     supabase: Client = Depends(get_supabase_as_user),
 ):
     """Own lots plus lots aggregated under this user as an FPO."""
+    allowed = {"open", "offered", "matched", "sold", "withdrawn"}
+    if status and status not in allowed:
+        raise HTTPException(422, "invalid status")
+
     own_q = supabase.table("lots").select("*").eq("user_id", user_id)
     fpo_q = supabase.table("lots").select("*").eq("fpo_id", user_id)
-    allowed = {"open", "offered", "matched", "sold", "withdrawn"}
     if status:
-        if status not in allowed:
-            raise HTTPException(422, "invalid status")
         own_q = own_q.eq("status", status)
         fpo_q = fpo_q.eq("status", status)
+
     own = own_q.order("created_at", desc=True).limit(100).execute().data or []
     as_fpo = fpo_q.order("created_at", desc=True).limit(100).execute().data or []
-    by_id = {}
+    by_id: dict = {}
     for row in own + as_fpo:
         by_id[row.get("id")] = row
     return list(by_id.values())[:100]
@@ -152,22 +128,13 @@ def grade_lot(
     user_id: str = Depends(get_current_user),
     supabase: Client = Depends(get_supabase_as_user),
 ):
-    """Record FAQ / General / Special after a visual or mandi assay."""
-    rows = supabase.table("lots").select("*").eq("id", lot_id).execute().data or []
-    if not rows:
-        raise HTTPException(404, "lot not found")
-    lot = rows[0]
-    if lot.get("user_id") != user_id and lot.get("fpo_id") != user_id:
-        raise HTTPException(404, "lot not found")
-    if lot.get("status") in ("sold", "withdrawn"):
-        raise HTTPException(409, "cannot regrade a sold or withdrawn lot")
-    payload = {"grade": body.grade}
-    if body.quality_notes is not None:
-        payload["quality_notes"] = body.quality_notes
-    res = supabase.table("lots").update(payload).eq("id", lot_id).execute()
-    if not res.data:
-        raise HTTPException(404, "lot not found")
-    return res.data[0]
+    """Grade a lot via the lot_grade_update RPC."""
+    params = {
+        "p_lot_id": lot_id,
+        "p_grade": body.grade,
+        "p_quality_notes": body.quality_notes,
+    }
+    return _call_rpc(supabase, "lot_grade_update", params)
 
 
 @router.patch("/{lot_id}/withdraw")
@@ -176,13 +143,5 @@ def withdraw_lot(
     user_id: str = Depends(get_current_user),
     supabase: Client = Depends(get_supabase_as_user),
 ):
-    res = (
-        supabase.table("lots")
-        .update({"status": "withdrawn"})
-        .eq("id", lot_id)
-        .eq("user_id", user_id)
-        .execute()
-    )
-    if not res.data:
-        raise HTTPException(404, "lot not found or access denied")
-    return res.data[0]
+    """Withdraw a lot via the lot_withdraw RPC."""
+    return _call_rpc(supabase, "lot_withdraw", {"p_lot_id": lot_id})

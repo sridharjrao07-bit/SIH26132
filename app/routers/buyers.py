@@ -1,41 +1,47 @@
+"""Buyers router — registration via RPC; reads via anon client.
+
+buyers.verified can only be set true via the admin verify endpoint which
+calls the buyer_verify RPC (service_role path).  The self-registration
+endpoint creates a buyer with verified=False and calls buyer_register RPC.
+
+Since migration 031 revoked direct INSERT on buyers from authenticated,
+all writes must go through security-definer RPCs.
+"""
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
 from supabase import Client
 from app.deps import get_supabase, get_supabase_as_user
-from app.auth import get_current_user
+from app.auth import get_current_user, require_role
+from app.errors import json_for_api_error
 from app.schemas.marketplace import BuyerResponse, BuyerRegisterRequest
 from app.services.matching_engine import rank_lots_for_buyer
+from postgrest.exceptions import APIError
 
 router = APIRouter(prefix="/api/v1/buyers", tags=["Buyers"])
 
 
-@router.post("/register", response_model=BuyerResponse, status_code=201)
+def _call_rpc(supabase: Client, fn: str, params: dict):
+    try:
+        res = supabase.rpc(fn, params).execute()
+        return res.data
+    except APIError as exc:
+        raise json_for_api_error(exc) from exc
+
+
+@router.post("/register")
 def register_buyer(
     req: BuyerRegisterRequest,
     uid: str = Depends(get_current_user),
     user_client: Client = Depends(get_supabase_as_user),
 ):
-    """
-    Self-service registration for a buyer profile.
-    Tied to the authenticated user's ID via RLS (owner_user_id = auth.uid()).
-    Duplicates per user are rejected by a unique constraint, but we also check here.
-    """
-    existing = user_client.table("buyers").select("id").eq("owner_user_id", uid).execute()
-    if existing.data:
-        raise HTTPException(409, "User already has a registered buyer profile")
-        
-    import uuid
-    payload = req.model_dump(exclude_unset=True)
-    payload["id"] = str(uuid.uuid4())
-    payload["owner_user_id"] = uid
-    payload["verification_state"] = "pending"
-    payload["verified"] = False
-    
-    res = user_client.table("buyers").insert(payload).execute()
-    if not res.data:
-        raise HTTPException(500, "Failed to create buyer profile")
-    return res.data[0]
+    """Self-service buyer registration via buyer_register RPC.
 
+    The RPC (migration 032+) sets owner_user_id = auth.uid() server-side and
+    enforces the one-profile-per-user constraint.  verified is always False
+    at registration; admin must call /buyers/{id}/verify to flip it.
+    """
+    params = req.model_dump(exclude_unset=True)
+    return _call_rpc(user_client, "buyer_register", params)
 
 
 @router.get("/", response_model=List[BuyerResponse])
@@ -56,18 +62,26 @@ def list_buyers(
     return res.data or []
 
 
+@router.patch("/{buyer_id}/verify", dependencies=[Depends(require_role("admin"))])
+def verify_buyer(
+    buyer_id: str,
+    user_client: Client = Depends(get_supabase_as_user),
+):
+    """Admin-only: verify a buyer profile via buyer_verify RPC.
+
+    The RPC (service-role path) sets buyers.verified = true.
+    The trg_guard_buyer_self_verify trigger (migration 031) prevents this
+    from happening via direct UPDATE even with service-role if not via RPC.
+    """
+    return _call_rpc(user_client, "buyer_verify", {"p_buyer_id": buyer_id})
+
+
 @router.get("/{buyer_id}/supply")
 def buyer_supply(
     buyer_id: str,
     supabase: Client = Depends(get_supabase_as_user),
 ):
-    """Open lots that fit this verified buyer's demand (buyer-side aggregation).
-
-    Lots are fetched via the lots_for_buyer_supply() security-definer RPC so no
-    service-role escalation is required in the application layer.  The RPC
-    exposes only open/offered lots and only the projection columns the function
-    owner deemed safe.
-    """
+    """Open lots that fit this verified buyer's demand (buyer-side aggregation)."""
     rows = (
         supabase.table("buyers")
         .select("*")
@@ -81,7 +95,6 @@ def buyer_supply(
         raise HTTPException(404, "buyer not found")
     buyer = rows[0]
 
-    # Call the narrow security-definer RPC to retrieve matching lots.
     rpc_params: dict = {}
     if buyer.get("commodity_id"):
         rpc_params["p_commodity_id"] = str(buyer["commodity_id"])

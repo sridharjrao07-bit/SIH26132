@@ -1,17 +1,27 @@
-import uuid
-from datetime import datetime, timezone
+"""Offers router — all mutations via ACID RPCs (migration 032).
+
+CREATE  → offer_create  (locks lot, validates qty, marks lot='offered')
+DECIDE  → offer_decide  (accept/reject atomically, handles sibling offers + lot status)
+LIST    → direct SELECT (no write; RLS enforces visibility)
+"""
 from fastapi import APIRouter, Depends, HTTPException
 from supabase import Client
 from app.deps import get_supabase_as_user
 from app.auth import get_current_user
+from app.errors import json_for_api_error
 from app.schemas.marketplace import OfferCreate, OfferUpdate
-from app.services.marketplace import (
-    offer_is_stale,
-    with_expiry,
-    _reopen_lot_if_idle,
-)
+from app.services.marketplace import with_expiry
+from postgrest.exceptions import APIError
 
 router = APIRouter(prefix="/api/v1/offers", tags=["Offers"])
+
+
+def _call_rpc(supabase: Client, fn: str, params: dict):
+    try:
+        res = supabase.rpc(fn, params).execute()
+        return res.data
+    except APIError as exc:
+        raise json_for_api_error(exc) from exc
 
 
 @router.post("/")
@@ -20,33 +30,19 @@ def create_offer(
     user_id: str = Depends(get_current_user),
     supabase: Client = Depends(get_supabase_as_user),
 ):
-    # Farmer (lot owner) creates a digital offer *to* a verified buyer.
-    # Buyers do not POST here; matching is local-first then the farmer confirms.
-    lot = supabase.table("lots").select("id,user_id,status,quantity_qtl").eq("id", body.lot_id).execute().data
-    if not lot or lot[0]["user_id"] != user_id:
-        raise HTTPException(404, "lot not found")
-    if lot[0]["status"] not in ("open", "offered"):
-        raise HTTPException(409, "lot is not open for offers")
-    if body.quantity_qtl > float(lot[0]["quantity_qtl"]):
-        raise HTTPException(400, "offer quantity exceeds lot quantity")
+    """Create an offer via the offer_create RPC.
 
-    now = datetime.now(timezone.utc).isoformat()
-    row = {
-        "id": str(uuid.uuid4()),
-        "lot_id": body.lot_id,
-        "buyer_id": body.buyer_id,
-        "user_id": user_id,
-        "price_per_qtl": body.price_per_qtl,
-        "quantity_qtl": body.quantity_qtl,
-        "status": "pending",
-        "created_at": now,
-        "updated_at": now,
+    The RPC uses FOR UPDATE on the lot row to prevent concurrent double-offers
+    and atomically marks the lot as 'offered' if it was still 'open'.
+    """
+    params = {
+        "p_lot_id":        body.lot_id,
+        "p_buyer_id":      body.buyer_id,
+        "p_price_per_qtl": body.price_per_qtl,
+        "p_quantity_qtl":  body.quantity_qtl,
     }
-    res = supabase.table("offers").insert(row).execute()
-    if not res.data:
-        raise HTTPException(400, "could not create offer")
-    supabase.table("lots").update({"status": "offered"}).eq("id", body.lot_id).execute()
-    return with_expiry(res.data[0])
+    data = _call_rpc(supabase, "offer_create", params)
+    return with_expiry(data) if isinstance(data, dict) else data
 
 
 @router.get("/")
@@ -72,39 +68,20 @@ def update_offer(
     user_id: str = Depends(get_current_user),
     supabase: Client = Depends(get_supabase_as_user),
 ):
-    rows = (
-        supabase.table("offers")
-        .select("*")
-        .eq("id", offer_id)
-        .eq("user_id", user_id)
-        .execute()
-        .data
-        or []
-    )
-    if not rows:
-        raise HTTPException(404, "offer not found or access denied")
-    current = rows[0]
+    """Accept or reject an offer via the offer_decide RPC.
 
-    if current.get("status") == "pending" and offer_is_stale(current):
-        supabase.table("offers").update({"status": "expired"}).eq("id", offer_id).execute()
-        _reopen_lot_if_idle(supabase, current.get("lot_id"))
-        raise HTTPException(409, "offer expired")
+    The RPC handles the full decision atomically:
+      - accept: rejects all sibling pending offers, advances lot to 'matched'
+      - reject: reverts lot to 'open' if no other pending offers remain
 
-    if body.status == "accepted" and current.get("status") != "pending":
-        raise HTTPException(409, f"cannot accept a {current.get('status')} offer")
+    The expiry check (offer_is_stale) is no longer done here — the RPC's
+    FOR UPDATE + status != 'pending' guard is the authoritative check.
+    """
+    if body.status not in ("accepted", "rejected"):
+        raise HTTPException(422, f"status must be accepted or rejected, got {body.status!r}")
 
-    res = (
-        supabase.table("offers")
-        .update({"status": body.status})
-        .eq("id", offer_id)
-        .eq("user_id", user_id)
-        .execute()
-    )
-    if not res.data:
-        raise HTTPException(404, "offer not found or access denied")
-    offer = res.data[0]
-    if body.status == "accepted":
-        supabase.table("lots").update({"status": "matched"}).eq("id", offer["lot_id"]).execute()
-    elif body.status in ("rejected", "expired"):
-        _reopen_lot_if_idle(supabase, offer["lot_id"])
-    return with_expiry(offer)
+    data = _call_rpc(supabase, "offer_decide", {
+        "p_offer_id": offer_id,
+        "p_decision": body.status,
+    })
+    return with_expiry(data) if isinstance(data, dict) else data

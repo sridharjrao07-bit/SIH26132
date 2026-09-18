@@ -1,27 +1,29 @@
-import uuid
+"""Payments router — all mutations via ACID RPCs (migrations 013 and 032).
+
+CREATE  → payment_create     (idempotent; amount validated by DB trigger)
+PAID    → payment_mark_paid  (closes lot atomically)
+FAILED  → transition_payment_status (existing RPC from migration 013)
+DISPUTED→ transition_payment_status (existing RPC from migration 013)
+LIST    → direct SELECT (no write; RLS enforces visibility)
+"""
 from fastapi import APIRouter, Depends, HTTPException
 from supabase import Client
 from app.deps import get_supabase_as_user, get_supabase_service_role
 from app.auth import get_current_user
+from app.errors import json_for_api_error
 from app.schemas.marketplace import PaymentCreate
 from app.services.marketplace import recompute_buyer_reliability
+from postgrest.exceptions import APIError
 
 router = APIRouter(prefix="/api/v1/payments", tags=["Payments"])
 
 
-def _own_payment(supabase, payment_id: str, user_id: str):
-    rows = (
-        supabase.table("payments")
-        .select("*")
-        .eq("id", payment_id)
-        .eq("user_id", user_id)
-        .execute()
-        .data
-        or []
-    )
-    if not rows:
-        raise HTTPException(404, "payment not found")
-    return rows[0]
+def _call_rpc(supabase: Client, fn: str, params: dict):
+    try:
+        res = supabase.rpc(fn, params).execute()
+        return res.data
+    except APIError as exc:
+        raise json_for_api_error(exc) from exc
 
 
 def _rescore_offer_buyer(user_db: Client, service_db: Client, offer_id: str) -> None:
@@ -39,49 +41,22 @@ def create_payment(
     user_id: str = Depends(get_current_user),
     supabase: Client = Depends(get_supabase_as_user),
 ):
-    offer = supabase.table("offers").select("*").eq("id", body.offer_id).execute().data
-    if not offer or offer[0]["user_id"] != user_id:
-        raise HTTPException(404, "offer not found")
-    if offer[0]["status"] != "accepted":
-        raise HTTPException(409, "payments require an accepted offer")
+    """Create a payment via the payment_create RPC.
 
-    existing = (
-        supabase.table("payments")
-        .select("*")
-        .eq("offer_id", body.offer_id)
-        .eq("user_id", user_id)
-        .execute()
-        .data
-        or []
-    )
-    for row in existing:
-        if row.get("status") not in ("pending", "paid"):
-            continue
-        if body.reference and row.get("reference") == body.reference:
-            return row
-        if row.get("status") == "paid":
-            raise HTTPException(409, "offer already has a paid payment")
-        return row
-
-    row = {
-        "id": str(uuid.uuid4()),
-        "offer_id": body.offer_id,
-        "user_id": user_id,
-        "amount": body.amount,
-        "status": "pending",
-        "reference": body.reference,
-    }
+    The RPC is idempotent — if a pending/paid payment already exists for the
+    offer it returns that row instead of inserting a duplicate.  The DB trigger
+    trg_check_payment_amount (migration 031) validates amount at the boundary.
+    """
     try:
-        res = supabase.table("payments").insert(row).execute()
-        if not res.data:
-            raise HTTPException(400, "could not create payment")
-        return res.data[0]
-    except Exception as e:
-        if "23505" in str(e) or "duplicate key" in str(e).lower():
-            re_existing = supabase.table("payments").select("*").eq("offer_id", body.offer_id).eq("user_id", user_id).execute()
-            for r in (re_existing.data or []):
-                if r.get("status") in ("pending", "paid"):
-                    return r
+        return _call_rpc(supabase, "payment_create", {
+            "p_offer_id":  body.offer_id,
+            "p_amount":    body.amount,
+            "p_reference": body.reference,
+        })
+    except HTTPException:
+        raise
+    except Exception:
+        # Mask all other exceptions — never leak DB internals to the client.
         raise HTTPException(400, "could not create payment")
 
 
@@ -108,29 +83,14 @@ def mark_paid(
     supabase: Client = Depends(get_supabase_as_user),
     service: Client = Depends(get_supabase_service_role),
 ):
-    # Belt-and-braces ownership check before calling RPC (gives 404 not 403).
-    current = _own_payment(supabase, payment_id, user_id)
-    # Ownership-asserting RPC: validates state machine + updates status atomically.
-    res = supabase.rpc(
-        "transition_payment_status",
-        {"p_user_id": user_id, "p_payment_id": payment_id, "p_new_status": "paid"},
-    ).execute()
-    if not res.data:
-        raise HTTPException(404, "payment not found")
-    payment = res.data if isinstance(res.data, dict) else res.data[0] if isinstance(res.data, list) else res.data
-    offer = supabase.table("offers").select("lot_id").eq("id", payment["offer_id"]).execute().data
-    if offer:
-        lot_id = offer[0]["lot_id"]
-        lot_res = supabase.table("lots").update({"status": "sold"}).eq("id", lot_id).execute()
-        if not lot_res.data:
-            # Rollback: revert payment status
-            supabase.rpc(
-                "transition_payment_status",
-                {"p_user_id": user_id, "p_payment_id": payment_id,
-                 "p_new_status": current.get("status") or "pending"},
-            ).execute()
-            raise HTTPException(503, "could not close lot; payment not marked paid")
-    _rescore_offer_buyer(supabase, service, payment["offer_id"])
+    """Mark payment as paid AND close the lot via payment_mark_paid RPC.
+
+    The RPC is atomic: lot status advances to 'sold' in the same transaction
+    as the payment status change.  No multi-step rollback needed.
+    """
+    payment = _call_rpc(supabase, "payment_mark_paid", {"p_payment_id": payment_id})
+    if isinstance(payment, dict):
+        _rescore_offer_buyer(supabase, service, payment.get("offer_id", ""))
     return payment
 
 
@@ -141,15 +101,13 @@ def mark_failed(
     supabase: Client = Depends(get_supabase_as_user),
     service: Client = Depends(get_supabase_service_role),
 ):
-    _own_payment(supabase, payment_id, user_id)  # 404 guard
-    res = supabase.rpc(
-        "transition_payment_status",
-        {"p_user_id": user_id, "p_payment_id": payment_id, "p_new_status": "failed"},
-    ).execute()
-    if not res.data:
-        raise HTTPException(404, "payment not found")
-    payment = res.data if isinstance(res.data, dict) else res.data[0] if isinstance(res.data, list) else res.data
-    _rescore_offer_buyer(supabase, service, payment["offer_id"])
+    payment = _call_rpc(supabase, "transition_payment_status", {
+        "p_user_id":    user_id,
+        "p_payment_id": payment_id,
+        "p_new_status": "failed",
+    })
+    if isinstance(payment, dict):
+        _rescore_offer_buyer(supabase, service, payment.get("offer_id", ""))
     return payment
 
 
@@ -160,13 +118,11 @@ def mark_disputed(
     supabase: Client = Depends(get_supabase_as_user),
     service: Client = Depends(get_supabase_service_role),
 ):
-    _own_payment(supabase, payment_id, user_id)  # 404 guard
-    res = supabase.rpc(
-        "transition_payment_status",
-        {"p_user_id": user_id, "p_payment_id": payment_id, "p_new_status": "disputed"},
-    ).execute()
-    if not res.data:
-        raise HTTPException(404, "payment not found")
-    payment = res.data if isinstance(res.data, dict) else res.data[0] if isinstance(res.data, list) else res.data
-    _rescore_offer_buyer(supabase, service, payment["offer_id"])
+    payment = _call_rpc(supabase, "transition_payment_status", {
+        "p_user_id":    user_id,
+        "p_payment_id": payment_id,
+        "p_new_status": "disputed",
+    })
+    if isinstance(payment, dict):
+        _rescore_offer_buyer(supabase, service, payment.get("offer_id", ""))
     return payment
