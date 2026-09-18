@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from typing import List, Optional
-from datetime import date, timedelta
+from datetime import timedelta
 from supabase import Client
 from app.deps import get_supabase
 from app.schemas import PriceResponse

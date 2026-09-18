@@ -45,6 +45,13 @@ def register_buyer(
         "p_type": req.type,
         "p_phone": req.phone,
         "p_district": req.district,
+        "p_commodity_id": req.commodity_id,
+        "p_demand_qty_qtl": req.demand_qty_qtl,
+        "p_max_price": req.max_price,
+        "p_quality_requirements": req.quality_requirements,
+        "p_payment_reliability": req.payment_reliability,
+        "p_lat": req.lat,
+        "p_lng": req.lng,
     }
     return _call_rpc(user_client, "buyer_register", params)
 

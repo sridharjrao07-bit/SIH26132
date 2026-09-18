@@ -76,7 +76,7 @@ def trigger_forecast_backtest(
         )
 
     # Resolve all active pairs from the last history_days window
-    from datetime import date, timedelta
+    from datetime import timedelta
     cutoff = (get_ist_today() - timedelta(days=body.history_days)).isoformat()
     try:
         raw_pairs = []

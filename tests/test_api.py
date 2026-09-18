@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from datetime import date, datetime, timezone
 
 from app.main import app
+from notifications.sale_window import get_ist_today
 from tests.conftest import (
     MARKET_ID_LASALGAON,
     MARKET_ID_PIMPALGAON,
@@ -158,7 +159,7 @@ def test_ingestion_logs_farmer_gets_403(override_supabase, fake_supabase):
 
 def test_get_forecasts_returns_ok_rows_only(override_supabase, fake_supabase):
     """M7: status=ok filter — stale rows must not appear"""
-    today = date.today().isoformat()
+    today = get_ist_today().isoformat()
     fake_supabase._data["forecasts"] = [
         {
             "id": "f-ok",

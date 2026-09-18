@@ -67,7 +67,7 @@ def lot_advice(
     admin: Client = Depends(get_supabase_service_role),
 ):
     """Sell Now / Hold plus the best local buyer — not a price dump."""
-    from datetime import date, timedelta
+    from datetime import timedelta
     today = get_ist_today()
     lot, profile = _load_lot_and_profile(as_user, lot_id, user_id)
     lang = lang or profile.get("preferred_language") or "en"

@@ -3,7 +3,7 @@ import argparse
 import sys
 import structlog
 import time
-from datetime import date, timedelta
+from datetime import timedelta
 from app.config import get_settings
 from app.deps import get_supabase_service_role
 from ingestion.data_gov_in import DataGovInAdapter

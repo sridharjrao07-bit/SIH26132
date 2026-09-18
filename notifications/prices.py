@@ -5,7 +5,7 @@ Provides a single authoritative function for resolving the latest market price
 for a given commodity + user, reusing the same nearest-market logic and
 source-precedence series builder as alert_checker._check_crossing.
 """
-from datetime import date, timedelta
+from datetime import timedelta
 from typing import Optional, Tuple
 
 import structlog

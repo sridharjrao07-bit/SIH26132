@@ -4,6 +4,7 @@ from datetime import date, datetime, timezone
 from fastapi.testclient import TestClient
 
 from app.main import app
+from notifications.sale_window import get_ist_today
 from tests.conftest import (
     MARKET_ID_LASALGAON,
     MARKET_ID_PIMPALGAON,
@@ -285,7 +286,7 @@ def test_fpo_lists_member_lots(override_supabase, fake_supabase):
 
 
 def test_sale_window_hold_without_storage_becomes_sell(override_supabase, fake_supabase):
-    today = date.today().isoformat()
+    today = get_ist_today().isoformat()
     fake_supabase.seed("prices", [{
         "market_id": MARKET_ID_LASALGAON,
         "commodity_id": COMMODITY_ID_ONION,
@@ -311,7 +312,7 @@ def test_sale_window_hold_without_storage_becomes_sell(override_supabase, fake_s
 
 
 def test_sale_window_hold_when_storage_listed(override_supabase, fake_supabase):
-    today = date.today().isoformat()
+    today = get_ist_today().isoformat()
     fake_supabase.seed("prices", [{
         "market_id": MARKET_ID_LASALGAON,
         "commodity_id": COMMODITY_ID_ONION,
@@ -657,7 +658,7 @@ def test_lot_advice_sell_now_names_best_local_buyer(override_supabase, fake_supa
 
 
 def test_sale_window_hold_through_glut_when_storage_nearby(override_supabase, fake_supabase):
-    today = date.today().isoformat()
+    today = get_ist_today().isoformat()
     fake_supabase.seed("prices", [{
         "market_id": MARKET_ID_LASALGAON,
         "commodity_id": COMMODITY_ID_ONION,

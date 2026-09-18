@@ -5,7 +5,7 @@ from current market supply (arrivals) and nearby storage. Forecast is a
 tie-breaker: holding through a glut only makes sense if prices are expected
 to recover *and* a godown exists.
 """
-from datetime import date, timedelta
+from datetime import timedelta
 from statistics import median
 from typing import Optional
 
