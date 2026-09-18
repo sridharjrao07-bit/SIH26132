@@ -48,24 +48,23 @@ def test_rls_canary_cross_tenant_isolation(override_supabase, fake_supabase):
     # The admin uses the service_role client usually, but in our case, ADMIN_USER_ID bypasses RlsFakeSupabase filters
     # Let's just check the response
     assert len([g for g in res_admin.json() if g["id"] == "grievance-cross-tenant-1"]) == 1
-from app.startup_checks import _check_auth_enforcement
 from app.config import Settings
 import pytest
 from app.deps import get_supabase_as_user
 from fastapi import HTTPException
 
 def test_auth_mode_app_startup_rejection_in_prod():
-    settings = Settings(app_env="production", auth_db_enforcement="app", kb_allow_app_mode=False)
+    settings = Settings(app_env="production", auth_db_enforcement="app", kb_allow_app_mode=False, supabase_jwt_issuer="https://test.supabase.co/auth/v1", inbound_hmac_secret="test_secret")
     with pytest.raises(RuntimeError, match="STARTUP REJECTED"):
-        _check_auth_enforcement(settings)
+        settings.check_runtime()
 
 def test_auth_mode_app_startup_allows_dev():
     settings = Settings(app_env="development", auth_db_enforcement="app", kb_allow_app_mode=False)
-    _check_auth_enforcement(settings) # Should not raise
+    settings.check_runtime() # Should not raise
 
 def test_auth_mode_app_startup_allows_prod_with_override():
-    settings = Settings(app_env="production", auth_db_enforcement="app", kb_allow_app_mode=True)
-    _check_auth_enforcement(settings) # Should not raise
+    settings = Settings(app_env="production", auth_db_enforcement="app", kb_allow_app_mode=True, supabase_jwt_issuer="https://test.supabase.co/auth/v1", inbound_hmac_secret="test_secret")
+    settings.check_runtime() # Should not raise
 
 def test_deps_get_supabase_as_user_raises_401_no_token():
     with pytest.raises(HTTPException) as exc:

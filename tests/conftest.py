@@ -454,9 +454,15 @@ class FakeSupabase:
         from fastapi import HTTPException
         from datetime import datetime, timezone
         payment_id = params.get("p_payment_id")
+        test_uid = params.get("_test_user_id")
         payment = next((p for p in self._data.get("payments", []) if p.get("id") == payment_id), None)
+        
         if not payment:
             raise HTTPException(404, "payment not found")
+        # RLS emulation for SECURITY DEFINER: only the owner can see the payment in the first place.
+        if test_uid and payment.get("user_id") != test_uid and test_uid != "22222222-2222-2222-2222-222222222222":
+            raise HTTPException(404, "payment not found")
+            
         if payment.get("status") in ("failed", "disputed"):
             raise HTTPException(409, f"cannot mark a {payment['status']} payment as paid")
         if payment.get("status") == "paid":
@@ -471,7 +477,14 @@ class FakeSupabase:
         return dict(payment)
 
     def _rpc_buyer_register(self, params: dict) -> dict:
+        from fastapi import HTTPException
         import uuid as _uuid
+        
+        uid = params.get("_test_user_id", "test-user")
+        existing = [b for b in self._data.get("buyers", []) if b.get("owner_user_id") == uid]
+        if existing:
+            raise HTTPException(409, "User already has a registered buyer profile")
+            
         row = {
             "id": str(_uuid.uuid4()),
             "name": params.get("p_name"),
@@ -479,7 +492,8 @@ class FakeSupabase:
             "phone": params.get("p_phone"),
             "district": params.get("p_district"),
             "verified": False,
-            "owner_user_id": params.get("_test_user_id", "test-user"),
+            "verification_state": "pending",
+            "owner_user_id": uid,
         }
         self._data.setdefault("buyers", []).append(row)
         return dict(row)

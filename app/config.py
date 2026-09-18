@@ -86,7 +86,7 @@ class Settings(BaseSettings):
     rate_limit_enabled: bool = Field(default=True)
 
     # ── Forecasting & Events ──────────────────────────────────────────────────
-    forecast_model: Literal["auto", "lgbm", "prophet", "naive"] = Field(default="auto")
+    forecast_model: Literal["auto", "feature_ols", "gbm", "holt_winters"] = Field(default="auto")
 
     event_job_enabled: bool = Field(default=False)
     event_llm: Literal["off", "openai", "gemini"] = Field(default="off")
