@@ -28,6 +28,7 @@ PostgREST 1,000-row cap avoided by:
 import math
 import structlog
 import time
+import collections
 from datetime import date, datetime, timedelta, timezone
 from statistics import pstdev
 from typing import Dict, List, Optional, Tuple, Any
@@ -35,6 +36,8 @@ from typing import Dict, List, Optional, Tuple, Any
 from supabase import Client
 from app.config import get_settings
 from forecasting.models import FeatureOLSModel, HoltWintersModel
+from app.utils.tz import get_ist_today
+
 
 logger = structlog.get_logger()
 
@@ -121,7 +124,7 @@ def get_daily_series(rows: List[dict]) -> List[Tuple[date, float]]:
     return build_daily_series(rows)
 
 
-# ── Models ─────────────────────────────────────────────────────────────────────
+# ── Models ────────────────────────────────────────────────────────────────     
 
 MODELS = {} # Populated below after class definitions
 
@@ -276,6 +279,7 @@ def _make_forecast_rows(
     as_of:        Optional[date] = None,
     features:     Optional[List[Any]] = None,
     pretrained_model: Optional[Any] = None,
+    model_registry: Optional[Dict[str, str]] = None,
 ) -> List[dict]:
     """
     Build forecast dicts for one (market, commodity) pair.
@@ -288,7 +292,7 @@ def _make_forecast_rows(
     """
     n         = len(series)
     last_date = series[-1][0] if series else None
-    as_of     = as_of or date.today()
+    as_of     = as_of or get_ist_today()
 
     # n = 0: skip entirely — no data at all
     if n == 0 or last_date is None:
@@ -307,6 +311,7 @@ def _make_forecast_rows(
             "upper_bound":     None,
             "confidence":      None,
             "method":          "none",
+            "model_id":        (model_registry or {}).get("auto"),
             "observations":    n,
             "status":          "insufficient_data",
             "generated_at":    datetime.now(timezone.utc).isoformat(),
@@ -375,6 +380,16 @@ def _make_forecast_rows(
             else:
                 features_used = ["market_id", "commodity_id", "dow", "lag_1", "lag_7", "lag_14", "arrivals_7d_avg", "momentum_14d", "rain_7d_cum_mm", "district_mean_price", "event_pressure"]
             
+        
+        # Maps methods to the model registry key
+        mapped_model = requested_model
+        if mapped_model == "auto":
+            mapped_model = method
+            if mapped_model == "moving_avg":
+                mapped_model = "auto"
+            elif mapped_model == "blend":
+                mapped_model = "auto"
+                
         rows.append({
             "market_id":       market_id,
             "commodity_id":    commodity_id,
@@ -384,6 +399,7 @@ def _make_forecast_rows(
             "upper_bound":     upper,
             "confidence":      confidence,
             "method":          method,
+            "model_id":        (model_registry or {}).get(mapped_model),
             "observations":    n,
             "status":          "ok",
             "model_version":   "1.0",
@@ -413,10 +429,15 @@ class ForecastEngine:
 
     def __init__(self, supabase: Client):
         self.supabase = supabase
+        self.model_registry = {}
 
-    # ── Private helpers ────────────────────────────────────────────────────────
+    # ── Private helpers ────────────────────────────────────────────────        
 
     def _load_sanity_bands(self) -> Dict[str, Tuple[float, float]]:
+        # Load registry as well
+        models_resp = self.supabase.table("forecast_models").select("id, name").execute()
+        self.model_registry = {m["name"]: m["id"] for m in (models_resp.data or [])}
+        
         resp = self.supabase.table("commodities").select("id, sanity_min, sanity_max").execute()
         return {
             row["id"]: (float(row["sanity_min"]), float(row["sanity_max"]))
@@ -434,7 +455,7 @@ class ForecastEngine:
         """
         pairs:  set = set()
         offset: int = 0
-        cutoff = (date.today() - timedelta(days=self.HISTORY_DAYS)).isoformat()
+        cutoff = (get_ist_today() - timedelta(days=self.HISTORY_DAYS)).isoformat()
         while True:
             resp = (
                 self.supabase.table("prices")
@@ -452,20 +473,37 @@ class ForecastEngine:
             offset += self.PAGE_SIZE
         return list(pairs)
 
-    def _fetch_history(self, market_id: str, commodity_id: str) -> List[dict]:
-        cutoff = (date.today() - timedelta(days=self.HISTORY_DAYS)).isoformat()
-        resp = (
-            self.supabase.table("prices")
-            .select("arrival_date, modal_price, source, variety")
-            .eq("market_id",    market_id)
-            .eq("commodity_id", commodity_id)
-            .gte("arrival_date", cutoff)
-            .order("arrival_date", desc=False)
-            .execute()
-        )
-        return resp.data or []
+    def _fetch_all_history(self) -> Dict[Tuple[str, str], List[dict]]:
+        """
+        Fetch historical prices for all pairs in bulk to avoid N+1 queries.
+        Paginate the fetch to bypass the PostgREST 1000 row limit.
+        """
+        cutoff = (get_ist_today() - timedelta(days=self.HISTORY_DAYS)).isoformat()
+        
+        history_map = collections.defaultdict(list)
+        offset = 0
+        PAGE_SIZE = 1000
+        
+        while True:
+            resp = (
+                self.supabase.table("prices")
+                .select("market_id, commodity_id, arrival_date, modal_price, source, variety")
+                .gte("arrival_date", cutoff)
+                .order("arrival_date", desc=False)
+                .range(offset, offset + PAGE_SIZE - 1)
+                .execute()
+            )
+            if not resp.data:
+                break
+            for row in resp.data:
+                history_map[(row["market_id"], row["commodity_id"])].append(row)
+            if len(resp.data) < PAGE_SIZE:
+                break
+            offset += PAGE_SIZE
+            
+        return history_map
 
-    # ── Public entry point ─────────────────────────────────────────────────────
+    # ── Public entry point ────────────────────────────────────────────────     
 
     def run(self) -> dict:
         """
@@ -487,10 +525,10 @@ class ForecastEngine:
         weather_daily = []
         events = []
         try:
-            cutoff = (date.today() - timedelta(days=self.HISTORY_DAYS)).isoformat()
+            cutoff = (get_ist_today() - timedelta(days=self.HISTORY_DAYS)).isoformat()
             weather_daily = self.supabase.table("weather_daily").select("*").gte("observation_date", cutoff).execute().data or []
             from events.loader import load_published_events
-            events = load_published_events(self.supabase, event_date_from=date.today() - timedelta(days=self.HISTORY_DAYS))
+            events = load_published_events(self.supabase, event_date_from=get_ist_today() - timedelta(days=self.HISTORY_DAYS))
         except Exception as e:
             logger.warning("global_features_fetch_failed", error=str(e))
             
@@ -501,18 +539,11 @@ class ForecastEngine:
             if m_id:
                 weather_by_market.setdefault(m_id, []).append(w)
 
-        # Pre-fetch history if gbm is requested
+        # Bulk fetch all history
+        pairs_history = self._fetch_all_history()
+
         requested_model = get_settings().forecast_model
         global_gbm = None
-        pairs_history = {}
-        
-        for market_id, commodity_id in pairs:
-            try:
-                pairs_history[(market_id, commodity_id)] = self._fetch_history(market_id, commodity_id)
-            except Exception as e:
-                logger.warning("history_fetch_failed", market_id=market_id, commodity_id=commodity_id, error=str(e))
-                pairs_history[(market_id, commodity_id)] = []
-
         if requested_model == "gbm":
             try:
                 from forecasting.gbm import train_global_gbm
@@ -537,8 +568,9 @@ class ForecastEngine:
                     try:
                         from forecasting.features import build_feature_matrix
                         market_weather = weather_by_market.get(market_id, [])
+                        winning_rows = [row for _, row in build_daily_rows(history)]
                         features = build_feature_matrix(
-                            history, 
+                            winning_rows, 
                             weather=market_weather, 
                             events=events, 
                             district_prices=[], 
@@ -548,7 +580,7 @@ class ForecastEngine:
                         logger.warning("feature_build_failed", error=str(e))
                 
                 rows    = _make_forecast_rows(
-                    market_id, commodity_id, series, sanity, features=features, pretrained_model=global_gbm
+                    market_id, commodity_id, series, sanity, features=features, pretrained_model=global_gbm, model_registry=self.model_registry
                 )
 
                 if not rows:
@@ -557,7 +589,7 @@ class ForecastEngine:
 
                 self.supabase.table("forecasts").upsert(
                     rows,
-                    on_conflict="market_id, commodity_id, forecast_date",
+                    on_conflict="market_id, commodity_id, forecast_date, model_id, generated_at",
                 ).execute()
                 total_rows += len(rows)
 

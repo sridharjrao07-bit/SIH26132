@@ -71,6 +71,25 @@ class AgmarknetAdapter(IngestionSourceAdapter):
                     min_price = float(item.get("Min Prize", 0)) if item.get("Min Prize") else None
                     max_price = float(item.get("Max Prize", 0)) if item.get("Max Prize") else None
 
+                    arrival_qty = None
+                    for qty_key in ("Arrival (Tonnes)", "Arrival (Tonnes) ", "Arrivals", "Arrival"):
+                        raw_qty = item.get(qty_key)
+                        if raw_qty in (None, ""):
+                            continue
+                        try:
+                            # Usually scraped values could have commas or text
+                            clean_qty = str(raw_qty).replace(",", "").strip()
+                            q = float(clean_qty)
+                            if q >= 0:
+                                # If the key explicitly mentions Tonnes, multiply by 10 for Quintals
+                                if "Tonnes" in qty_key:
+                                    arrival_qty = q * 10
+                                else:
+                                    arrival_qty = q
+                                break
+                        except (TypeError, ValueError):
+                            continue
+
                     record = RawPriceRecord(
                         market_name=item.get("City", "").strip() or market_to_query,
                         commodity_name=item.get("Commodity", "").strip(),
@@ -79,6 +98,7 @@ class AgmarknetAdapter(IngestionSourceAdapter):
                         max_price=max_price,
                         modal_price=modal_price,
                         unit="quintal",
+                        arrival_qty=arrival_qty,
                         variety="General",
                         grade="General",
                         source=self.source_name,

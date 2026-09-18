@@ -21,6 +21,8 @@ from forecasting.evaluation import (
 )
 
 import structlog
+import collections
+from app.utils.tz import get_ist_today
 logger = structlog.get_logger()
 
 # Verbatim protocol string — referenced in tests and FORECASTING.md
@@ -269,7 +271,7 @@ def run_backtest(
     if "naive" not in model_names:
         model_names.append("naive")
         
-    cutoff = (date.today() - timedelta(days=history_days)).isoformat()
+    cutoff = (get_ist_today() - timedelta(days=history_days)).isoformat()
     
     # 1. Fetch data globally
     raw_history = {}
@@ -278,10 +280,28 @@ def run_backtest(
     try:
         weather = supabase.table("weather_daily").select("*").gte("observation_date", cutoff).execute().data or []
         from events.loader import load_published_events
-        events = load_published_events(supabase, event_date_from=date.today() - timedelta(days=history_days))
-        for market_id, commodity_id in pairs:
-            resp = supabase.table("prices").select("arrival_date, modal_price, arrival_qty, source, variety").eq("market_id", market_id).eq("commodity_id", commodity_id).gte("arrival_date", cutoff).order("arrival_date", desc=False).execute()
-            raw_history[(market_id, commodity_id)] = resp.data or []
+        events = load_published_events(supabase, event_date_from=get_ist_today() - timedelta(days=history_days))
+        
+        raw_history = collections.defaultdict(list)
+        offset = 0
+        PAGE_SIZE = 1000
+        while True:
+            resp = (
+                supabase.table("prices")
+                .select("market_id, commodity_id, arrival_date, modal_price, arrival_qty, source, variety")
+                .gte("arrival_date", cutoff)
+                .order("arrival_date", desc=False)
+                .range(offset, offset + PAGE_SIZE - 1)
+                .execute()
+            )
+            if not resp.data:
+                break
+            for row in resp.data:
+                if (row["market_id"], row["commodity_id"]) in pairs:
+                    raw_history[(row["market_id"], row["commodity_id"])].append(row)
+            if len(resp.data) < PAGE_SIZE:
+                break
+            offset += PAGE_SIZE
     except Exception as e:
         logger.error("backtest_data_fetch_failed", error=str(e))
         return BacktestReport(datetime.now(timezone.utc).isoformat(), BACKTEST_PROTOCOL, HORIZON, history_days, evaluation_scope, False, [], {})
@@ -294,28 +314,11 @@ def run_backtest(
         if len(s) == 0:
             continue
             
-        by_date = {}
-        for r in rows:
-            d_str = r["arrival_date"]
-            d = date.fromisoformat(d_str) if isinstance(d_str, str) else d_str
-            by_date.setdefault(d, []).append(r)
-            
-        history_dicts = []
-        for d, p in s:
-            day_rows = by_date.get(d, [])
-            if day_rows:
-                from forecasting.engine import _source_rank
-                best_rank   = min(_source_rank(r.get("source", "")) for r in day_rows)
-                candidates  = [r for r in day_rows if _source_rank(r.get("source", "")) == best_rank]
-                general     = [r for r in candidates if (r.get("variety") or "General") == "General"]
-                chosen      = general[0] if general else candidates[0]
-                qty = chosen.get("arrival_qty") or 0.0
-            else:
-                qty = 0.0
-            history_dicts.append({"arrival_date": d.isoformat(), "modal_price": p, "arrival_qty": float(qty)})
+        from forecasting.engine import build_daily_rows
+        winning_rows = [row for _, row in build_daily_rows(rows)]
             
         feat = build_feature_matrix(
-            series=history_dicts,
+            series=winning_rows,
             weather=[w for w in weather if w.get("market_id") == m],
             events=events,
             district_prices=[],
