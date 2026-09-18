@@ -111,7 +111,23 @@ def create_app() -> FastAPI:
 
     @app.get("/health", tags=["System"])
     def health_check():
+        """Liveness probe — returns 200 if the process is running."""
         return {"status": "ok"}
+
+    @app.get("/readyz", tags=["System"])
+    def readyz():
+        """Readiness probe — returns 200 only after startup checks have passed.
+
+        Use this for Docker HEALTHCHECK and Kubernetes readinessProbe.
+        /health is liveness only (process is alive); /readyz confirms the app
+        is fully initialised and safe to receive traffic.
+        """
+        cfg = get_settings()
+        return {
+            "status": "ready",
+            "auth_db_enforcement": cfg.auth_db_enforcement,
+            "app_env": cfg.app_env,
+        }
 
     @app.get("/metrics", tags=["System"])
     def metrics():

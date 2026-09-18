@@ -1,8 +1,16 @@
-# Local API only. Postgres lives on hosted Supabase — do not add a local DB
-# unless you are running a full self-hosted stack.
+# Local development stack. Postgres lives on hosted Supabase — do not add a
+# local DB unless you are running a full self-hosted stack.
 #
-#   copy .env.example .env   # then fill real keys
+#   cp .env.example .env   # fill real keys
 #   docker compose up --build
+#
+# Services
+# --------
+#   api         — HTTP workers; RUN_SCHEDULER=0 (stateless, scalable)
+#   api-worker  — Scheduler process; RUN_SCHEDULER=1 (exactly one replica)
+#
+# In production, run api-worker as a single-replica deployment and api as
+# N replicas behind a load balancer.
 
 services:
   api:
@@ -13,7 +21,7 @@ services:
     env_file:
       - .env
     environment:
-      RUN_SCHEDULER: ${RUN_SCHEDULER:-0}
+      RUN_SCHEDULER: "0"
       RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-1}
     restart: unless-stopped
     healthcheck:
@@ -22,9 +30,23 @@ services:
           "CMD",
           "python",
           "-c",
-          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')",
         ]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 20s
+
+  api-worker:
+    image: krishi-bazaar:local
+    depends_on:
+      api:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      RUN_SCHEDULER: "1"
+      RATE_LIMIT_ENABLED: "0"
+    restart: unless-stopped
+    # No published ports — the worker does not serve HTTP traffic.
+    # It only drives APScheduler + job_locks.

@@ -1,4 +1,6 @@
 from typing import Optional
+from datetime import datetime, timedelta, timezone
+import threading
 
 import jwt
 from jwt import InvalidTokenError
@@ -7,6 +9,38 @@ from .config import get_settings
 from .deps import get_supabase_service_role
 
 ADMIN_COOKIE = "kb_admin"
+
+# ── Role cache ────────────────────────────────────────────────────────────────
+# require_role() makes a synchronous DB round-trip on every call which adds
+# ~20-50 ms of latency to every authenticated admin endpoint.  We cache the
+# (user_id → role) mapping in-process with a short TTL so that role changes
+# propagate within 60 seconds while avoiding per-request DB hits.
+#
+# Thread-safety: the dict is protected by a Lock.  Cache entries are
+# (role: str, expires_at: datetime).  Expired entries are evicted lazily.
+
+_role_cache: dict[str, tuple[str, datetime]] = {}
+_role_cache_lock = threading.Lock()
+_ROLE_CACHE_TTL = timedelta(seconds=60)
+
+
+def _get_cached_role(user_id: str) -> Optional[str]:
+    """Return cached role if present and not expired, else None."""
+    with _role_cache_lock:
+        entry = _role_cache.get(user_id)
+        if entry is None:
+            return None
+        role, expires_at = entry
+        if datetime.now(tz=timezone.utc) >= expires_at:
+            del _role_cache[user_id]
+            return None
+        return role
+
+
+def _set_cached_role(user_id: str, role: str) -> None:
+    expires_at = datetime.now(tz=timezone.utc) + _ROLE_CACHE_TTL
+    with _role_cache_lock:
+        _role_cache[user_id] = (role, expires_at)
 
 
 def decode_access_token(token: str) -> str:
@@ -52,12 +86,34 @@ def get_current_user(
 
 
 def require_role(*roles: str):
-    """Dependency that checks the authenticated user has one of the given roles."""
+    """Dependency that checks the authenticated user has one of the given roles.
+
+    Uses a 60-second in-process cache to avoid a DB round-trip on every
+    authenticated request.  Role changes propagate within one TTL window.
+    """
     allowed = tuple(roles)
 
     def dep(supabase=Depends(get_supabase_service_role), user_id=Depends(get_current_user)):
-        row = (supabase.table("user_profiles").select("role")
-               .eq("id", user_id).execute().data)
-        if not row or row[0]["role"] not in allowed:
+        # Fast path: check cache first.
+        cached = _get_cached_role(user_id)
+        if cached is not None:
+            if cached not in allowed:
+                raise HTTPException(403, f"requires role in {list(allowed)}")
+            return
+
+        # Slow path: hit the DB and populate the cache.
+        row = (
+            supabase.table("user_profiles")
+            .select("role")
+            .eq("id", user_id)
+            .execute()
+            .data
+        )
+        if not row:
             raise HTTPException(403, f"requires role in {list(allowed)}")
+        role = row[0]["role"]
+        _set_cached_role(user_id, role)
+        if role not in allowed:
+            raise HTTPException(403, f"requires role in {list(allowed)}")
+
     return dep

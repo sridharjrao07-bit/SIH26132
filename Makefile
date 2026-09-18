@@ -1,4 +1,4 @@
-.PHONY: install install-dev lint test run compose-up compose-down audit
+.PHONY: install install-dev lint test run compose-up compose-down audit db-apply db-apply-dry
 
 PY ?= python
 export RUN_SCHEDULER ?= 0
@@ -27,3 +27,9 @@ compose-up:
 
 compose-down:
 	docker compose down
+
+db-apply:
+	$(PY) scripts/apply_migrations.py
+
+db-apply-dry:
+	$(PY) scripts/apply_migrations.py --dry-run
