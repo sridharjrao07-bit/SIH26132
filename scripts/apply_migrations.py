@@ -45,26 +45,27 @@ except ImportError:
     sys.exit(1)
 
 MIGRATIONS_DIR = Path(__file__).parent.parent / "db" / "migrations"
-MIGRATION_PATTERN = re.compile(r"^(\d{3})_.*\.sql$")
+MIGRATION_PATTERN = re.compile(r"^(\d{3})([a-z]?)_.*\.sql$")
 
 CREATE_LEDGER_SQL = """
 CREATE TABLE IF NOT EXISTS schema_migrations (
     id          SERIAL PRIMARY KEY,
-    version     INTEGER NOT NULL UNIQUE,
-    filename    TEXT    NOT NULL,
+    version     INTEGER NOT NULL,
+    filename    TEXT    NOT NULL UNIQUE,
     applied_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE schema_migrations DROP CONSTRAINT IF EXISTS schema_migrations_version_key;
 """
 
 
-def get_migration_files() -> list[tuple[int, Path]]:
-    """Return (version, path) pairs sorted by version ascending."""
+def get_migration_files() -> list[tuple[int, str, Path]]:
+    """Return (version, suffix, path) tuples sorted by version then suffix."""
     files = []
     for f in MIGRATIONS_DIR.iterdir():
         m = MIGRATION_PATTERN.match(f.name)
         if m:
-            files.append((int(m.group(1)), f))
-    files.sort(key=lambda x: x[0])
+            files.append((int(m.group(1)), m.group(2), f))
+    files.sort(key=lambda x: (x[0], x[1]))
     return files
 
 
@@ -75,8 +76,8 @@ def apply_migrations(db_url: str, dry_run: bool = False, from_version: int = 0) 
     try:
         with conn.cursor() as cur:
             cur.execute(CREATE_LEDGER_SQL)
-            cur.execute("SELECT COALESCE(MAX(version), 0) FROM schema_migrations")
-            (max_applied,) = cur.fetchone()
+            cur.execute("SELECT filename FROM schema_migrations")
+            applied_files = {row[0] for row in cur.fetchall()}
             
         if dry_run:
             conn.rollback()
@@ -85,14 +86,14 @@ def apply_migrations(db_url: str, dry_run: bool = False, from_version: int = 0) 
 
         migrations = get_migration_files()
         pending = [
-            (v, p) for v, p in migrations if v > max_applied and v >= from_version
+            (v, s, p) for v, s, p in migrations if p.name not in applied_files and v >= from_version
         ]
 
         if not pending:
-            print(f"Nothing to apply (highest applied: {max_applied}).")
+            print("Nothing to apply.")
             return
 
-        for version, path in pending:
+        for version, suffix, path in pending:
             sql = path.read_text(encoding="utf-8")
             if dry_run:
                 print(f"[DRY RUN] Would apply: {path.name}")
