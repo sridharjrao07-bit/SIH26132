@@ -234,11 +234,13 @@ def admin_rescore_buyers(supabase: Client = Depends(get_supabase_service_role)):
 
 
 @router.post("/events/ingest", dependencies=[Depends(require_role("admin"))])
-async def admin_events_ingest(supabase: Client = Depends(get_supabase_service_role)):
+def admin_events_ingest(supabase: Client = Depends(get_supabase_service_role)):
     """Run event runner to fetch news/bulletins and extract events."""
+    import asyncio
+
     from events.runner import run as run_events
     try:
-        report = await run_events(supabase, since_days=2)
+        report = asyncio.run(run_events(supabase, since_days=2))
         return {"status": "success", "report": report}
     except Exception:
         logger.exception("admin_events_ingest_failed")

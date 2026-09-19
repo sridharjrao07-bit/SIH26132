@@ -1,12 +1,15 @@
 import datetime
+import math
 import random
 import sys
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from app.deps import get_supabase_service_role  # noqa: E402
 from app.utils.tz import get_ist_today  # noqa: E402
+
 
 def main():
     supabase = get_supabase_service_role()
@@ -33,7 +36,6 @@ def main():
     for i in range(150, 0, -1):
         d = today - datetime.timedelta(days=i)
         
-        import math
         day_index = 150 - i
         trend = day_index * 2.0
         seasonality = math.sin(day_index * 2 * math.pi / 7) * 200

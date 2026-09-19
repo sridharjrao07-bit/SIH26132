@@ -3,18 +3,18 @@ name = "krishi-bazaar"
 version = "2.0.0"
 description = "SIH26132 market linkage and price discovery API (backend only)"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 license = { text = "MIT" }
 
 [tool.ruff]
 # Runtime is Python 3.12 (Dockerfile / CI).
-target-version = "py313"
+target-version = "py312"
 line-length = 100
 src = ["app", "ingestion", "forecasting", "notifications", "tests", "demo", "scripts"]
 exclude = [".venv", "venv", "build", "dist", "docs/archive"]
 
 [tool.ruff.lint]
-select = ["E", "F", "W"]
+select = ["E", "F", "W", "I"]
 ignore = [
     "E501",  # existing modules exceed 100 cols; do not churn them for style
     "E702",  # FakeSupabase fluent one-liners in tests/conftest.py

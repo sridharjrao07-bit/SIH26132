@@ -6,7 +6,7 @@ This document provides a comprehensive, deep-dive architectural explanation of t
 
 ## 1. High-Level Architecture & Stack
 
-- **Framework**: FastAPI (Python 3.12+). Selected for asynchronous capabilities and Pydantic validation.
+- **Framework**: FastAPI (Python 3.12). Selected for asynchronous capabilities and Pydantic validation.
 - **Database**: PostgreSQL (hosted via Supabase).
 - **Authentication**: JWT-based via Supabase Auth.
 - **Data Access Layer**: Supabase Python Client (PostgREST wrapper).
