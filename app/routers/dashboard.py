@@ -2,6 +2,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from app.auth import ADMIN_COOKIE, decode_access_token, require_role
+from app.config import get_settings
 from app.deps import get_supabase_service_role
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
@@ -12,6 +13,7 @@ from supabase import Client
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 templates = Jinja2Templates(directory=str(PROJECT_ROOT / "templates"))
 
+settings = get_settings()
 router = APIRouter(tags=["dashboard"])
 
 
@@ -48,7 +50,7 @@ def dashboard_session(
         value=token,
         httponly=True,
         samesite="strict",
-        secure=request.url.scheme == "https",
+        secure=settings.app_env != "development",
         max_age=3600,
         path="/",
     )
