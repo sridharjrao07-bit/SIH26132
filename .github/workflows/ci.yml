@@ -19,6 +19,62 @@ env:
   DATA_GOV_IN_API_KEY: placeholder
 
 jobs:
+  commit-hygiene:
+    name: commit hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+        with:
+          fetch-depth: 0
+      - name: Check commit dates and emails
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            RANGE="origin/${{ github.base_ref }}..HEAD"
+          elif [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            # New branch push, check only the new commit
+            RANGE="HEAD^..HEAD"
+          else
+            RANGE="${{ github.event.before }}..${{ github.sha }}"
+          fi
+          
+          for c in $(git rev-list "$RANGE"); do
+            ad=$(git log -1 --format="%at" $c)
+            cd=$(git log -1 --format="%ct" $c)
+            email=$(git log -1 --format="%ae" $c)
+            diff=$((ad-cd))
+            if [ ${diff#-} -gt 86400 ]; then
+              echo "::error::Commit $c has author date differing from committer date by more than a day."
+              exit 1
+            fi
+            if ! grep -qxiF "$email" .github/allowed-authors; then
+              echo "::error::Commit $c has unapproved author email: $email"
+              exit 1
+            fi
+          done
+
+  test-db:
+    name: database integration (postgres 16)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: postgres, POSTGRES_DB: krishi_test }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    env:
+      SUPABASE_DB_URL: postgresql://postgres:postgres@localhost:5432/krishi_test
+      ENABLE_DB_INTEGRATION_TESTS: "1"
+    steps:
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+      - uses: actions/setup-python@337b0725b8770380d7cde73cfef696f1295727eb
+        with: { python-version: "3.12", allow-prereleases: true }
+      - run: pip install -r requirements-dev.txt
+      - run: python scripts/apply_migrations.py
+      - run: pytest -m db -q --strict-markers -rs | tee db.log; grep -qE "[1-9][0-9]* skipped" db.log && { echo "::error::db job must not skip"; exit 1; } || true
+      - run: pytest tests/test_privileges.py tests/test_db_rpc.py -q --strict-markers -rs | tee priv.log; grep -qE "[1-9][0-9]* skipped" priv.log && { echo "::error::db job must not skip"; exit 1; } || true
+
   lint:
     name: lint
     runs-on: ubuntu-latest
@@ -31,7 +87,7 @@ jobs:
       - name: Install dev deps
         run: pip install -r requirements-dev.txt
       - name: Ruff
-        run: ruff check app ingestion forecasting notifications tests demo scripts
+        run: ruff check .
 
   test:
     name: test (py ${{ matrix.python-version }})
