@@ -138,6 +138,8 @@ class FakeSupabase:
             def execute(_self):
                 rpc_result = store._rpc_handlers.get(fn_name)
                 if rpc_result is not None:
+                    if isinstance(rpc_result, Exception):
+                        raise rpc_result
                     if callable(rpc_result):
                         return _ExecuteResult(data=rpc_result(params))
                     return _ExecuteResult(data=rpc_result)
@@ -180,7 +182,19 @@ class FakeSupabase:
                     return _ExecuteResult(data=store._rpc_buyer_register(params))
                 if fn_name == "buyer_verify":
                     return _ExecuteResult(data=store._rpc_buyer_verify(params))
-                return _ExecuteResult(data=True)
+                if fn_name == "mark_stale_forecasts":
+                    return _ExecuteResult(data=True)
+                if fn_name == "nearby_markets":
+                    return _ExecuteResult(data=store._rpc_nearby_markets(params))
+                if fn_name == "nearest_market":
+                    return _ExecuteResult(data=store._rpc_nearest_market(params))
+                if fn_name == "claim_source_document":
+                    return _ExecuteResult(data=store._rpc_claim_source_document(params))
+                if fn_name == "publish_extracted_events_v2":
+                    return _ExecuteResult(data=store._rpc_publish_extracted_events_v2(params))
+                if fn_name == "report_extraction_failure":
+                    return _ExecuteResult(data=store._rpc_report_extraction_failure(params))
+                raise AssertionError(f"FakeSupabase: unhandled rpc '{fn_name}'")
 
         return _RpcQuery()
 
@@ -216,7 +230,78 @@ class FakeSupabase:
         """Pre-configure what an rpc() call returns."""
         self._rpc_handlers[fn_name] = result
 
+    def set_rpc_error(self, fn_name: str, error: Exception):
+        """Pre-configure what an rpc() call raises."""
+        self._rpc_handlers[fn_name] = error
+
     # ── RPC emulators ─────────────────────────────────────────────────────────
+
+    def _rpc_nearby_markets(self, params: dict) -> list:
+        from app.services.matching_engine import haversine_km
+        lat, lng = params.get("lat"), params.get("lng")
+        radius = params.get("radius_km", 50)
+        res = []
+        for m in self._data.get("markets", []):
+            if not m.get("is_active"): continue
+            dist = haversine_km(lat, lng, m.get("lat"), m.get("lng"))
+            if dist is not None and dist <= radius:
+                m_copy = dict(m)
+                m_copy["distance_km"] = dist
+                res.append(m_copy)
+        res.sort(key=lambda x: x["distance_km"])
+        return res[:5]
+
+    def _rpc_nearest_market(self, params: dict) -> list:
+        from app.services.matching_engine import haversine_km
+        lat, lng = params.get("lat"), params.get("lng")
+        best = None
+        min_d = 999999
+        for m in self._data.get("markets", []):
+            if not m.get("is_active"): continue
+            dist = haversine_km(lat, lng, m.get("lat"), m.get("lng"))
+            if dist is not None and dist < min_d:
+                min_d = dist
+                best = dict(m)
+                best["distance_km"] = dist
+        return [best] if best else []
+
+    def _rpc_claim_source_document(self, params: dict) -> dict:
+        import uuid as _uuid
+        doc_id = str(_uuid.uuid4())
+        claim_token = str(_uuid.uuid4())
+        doc = {
+            "id": doc_id,
+            "source_url": params.get("p_source_url"),
+            "source_name": params.get("p_source_name"),
+            "headline": params.get("p_headline"),
+            "raw_text": params.get("p_content_text"),
+            "publication_date": params.get("p_published_at"),
+            "provenance_mode": params.get("p_provenance_mode"),
+            "content_hash": params.get("p_content_hash"),
+            "extraction_status": "extracting",
+            "lease_expires_at": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat()
+        }
+        self._data.setdefault("source_documents", []).append(doc)
+        return {
+            "status": "claimed",
+            "document_id": doc_id,
+            "claim_token": claim_token,
+            "headline": doc["headline"],
+            "raw_text": doc["raw_text"],
+            "publication_date": doc["publication_date"],
+            "content_hash": doc["content_hash"]
+        }
+
+    def _rpc_publish_extracted_events_v2(self, params: dict) -> dict:
+        doc_id = params.get("p_doc_id")
+        events = params.get("p_events", [])
+        for evt in events:
+            evt["source_document_id"] = doc_id
+            self._data.setdefault("events", []).append(evt)
+        return {"status": "complete", "written": len(events)}
+
+    def _rpc_report_extraction_failure(self, params: dict) -> dict:
+        return {"status": "reported"}
 
     def _rpc_lots_for_buyer_supply(self, params: dict) -> list:
         """Emulate lots_for_buyer_supply SECURITY DEFINER: open/offered lots, commodity filter."""
