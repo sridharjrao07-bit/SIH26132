@@ -28,7 +28,7 @@ DESIGN NOTES
 - Routes are enumerated from `app.openapi()`, which is a documented public API.
   FastAPI 0.141 wraps `include_router()` results in an internal
   `_IncludedRouter` object that is not an `APIRoute` and does not expose
-  `.routes`, so walking `app.routes` silently yields only 67 operations across 56 paths.
+  `.routes`, so walking `app.routes` silently yields only 3 handlers, while the API exposes 67 operations across 56 paths.
 - Path parameters are substituted with a fixed UUID. A 404 for a nonexistent
   row is a pass — the point is that routing, dependency injection and the
   handler body did not blow up.
@@ -59,27 +59,55 @@ def _resolve_schema(schema: dict, components: dict) -> dict:
         return components.get(ref_path, {})
     return schema
 
+def _generate_dummy_value(schema: dict, components: dict):
+    schema = _resolve_schema(schema, components)
+    if "anyOf" in schema:
+        for option in schema["anyOf"]:
+            opt = _resolve_schema(option, components)
+            if opt.get("type") != "null":
+                schema = opt
+                break
+    elif "oneOf" in schema:
+        for option in schema["oneOf"]:
+            opt = _resolve_schema(option, components)
+            if opt.get("type") != "null":
+                schema = opt
+                break
+
+    if "enum" in schema and len(schema["enum"]) > 0:
+        return schema["enum"][0]
+
+    stype = schema.get("type")
+    if stype == "string":
+        fmt = schema.get("format")
+        if fmt == "date":
+            return "2026-09-14"
+        if fmt == "date-time":
+            return "2026-09-14T12:00:00Z"
+        return "test-string"
+    elif stype == "integer":
+        return 1
+    elif stype == "number":
+        return 1.0
+    elif stype == "boolean":
+        return True
+    elif stype == "array":
+        items_schema = schema.get("items", {})
+        if items_schema:
+            val = _generate_dummy_value(items_schema, components)
+            return [val] if val is not None else []
+        return []
+    elif stype == "object":
+        payload = {}
+        for prop, prop_schema in schema.get("properties", {}).items():
+            payload[prop] = _generate_dummy_value(prop_schema, components)
+        return payload
+    return "test"
+
 def _generate_dummy_payload(schema: dict, components: dict) -> dict:
     schema = _resolve_schema(schema, components)
     if schema.get("type") == "object":
-        payload = {}
-        for prop, prop_schema in schema.get("properties", {}).items():
-            prop_schema = _resolve_schema(prop_schema, components)
-            if prop_schema.get("type") == "string":
-                payload[prop] = "test-string"
-            elif prop_schema.get("type") == "integer":
-                payload[prop] = 1
-            elif prop_schema.get("type") == "number":
-                payload[prop] = 1.0
-            elif prop_schema.get("type") == "boolean":
-                payload[prop] = True
-            elif prop_schema.get("type") == "array":
-                payload[prop] = []
-            elif prop_schema.get("type") == "object":
-                payload[prop] = _generate_dummy_payload(prop_schema, components)
-            else:
-                payload[prop] = "test"
-        return payload
+        return _generate_dummy_value(schema, components)
     return {}
 
 # A syntactically valid UUID for {path_param} substitution.
@@ -153,7 +181,6 @@ def test_route_never_returns_unhandled_5xx(method: str, path: str, override_supa
         openapi_schema = app.openapi()
         components = openapi_schema.get("components", {}).get("schemas", {})
         paths = openapi_schema.get("paths", {})
-        op = paths.get(path.replace(FAKE_UUID, "{lot_id}").replace(FAKE_UUID, "{buyer_id}").replace(FAKE_UUID, "{grievance_id}").replace(FAKE_UUID, "{job_key}"), {}).get(method.lower(), {})
         
         # A safer way to find the actual operation in OpenAPI schema, avoiding FAKE_UUID string replacements if possible
         # We can just look up the original raw path. But the test parameter is the concrete path.

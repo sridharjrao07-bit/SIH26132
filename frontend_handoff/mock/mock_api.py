@@ -50,9 +50,9 @@ import re
 import sys
 import time
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, quote, urlparse
+from urllib.parse import parse_qs, urlparse
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Fixture data (stable IDs so you can hardcode them while developing)
@@ -921,7 +921,7 @@ def _lot_aggregate(r: Req):
 
 @route("POST", r"/api/v1/offers/")
 def _offer_create(r: Req):
-    u = r.require_auth()
+    r.require_auth()
     b = r.body or {}
     lot = next((l for l in STORE["lots"] if l["id"] == b.get("lot_id")), None)
     if not lot:
@@ -1416,7 +1416,7 @@ def _forecast_stats(r: Req):
 @route("POST", r"/api/v1/sms/simulate")
 def _sms_simulate(r: Req):
     r.require_role("admin")
-    msg = (r.body or {}).get("message", "PYAJ")
+    (r.body or {}).get("message", "PYAJ")
     window = _sale_window(COMMODITIES[0]["id"], None, "mr") or {}
     return {"status": "replied", "recommendation": window.get("recommendation"),
             "message": f"KB: कांदा आज ₹{int(window.get('latest_price') or 0)}. {window.get('reason', '')}"}
