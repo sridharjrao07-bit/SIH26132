@@ -1,9 +1,11 @@
-import structlog
 import asyncio
-import sys
 import os
-from typing import List
+import sys
 from datetime import datetime
+from typing import List
+
+import structlog
+
 from .base import IngestionSourceAdapter, RawPriceRecord, SourceFetchError
 
 logger = structlog.get_logger()

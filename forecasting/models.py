@@ -1,7 +1,9 @@
-import structlog
-from statistics import pstdev
 from datetime import date
+from statistics import pstdev
 from typing import List, Optional
+
+import structlog
+
 from forecasting.features import FeatureRow
 
 logger = structlog.get_logger()

@@ -9,10 +9,8 @@ from datetime import timedelta
 from typing import Optional, Tuple
 
 import structlog
-
-from forecasting.engine import build_daily_series, build_district_daily_series
 from app.utils.tz import get_ist_today
-
+from forecasting.engine import build_daily_series, build_district_daily_series
 
 logger = structlog.get_logger()
 

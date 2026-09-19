@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field
-from typing import Optional, List, Literal
 from datetime import date, datetime
+from typing import List, Literal, Optional
+
+from pydantic import BaseModel, Field
 
 
 class BuyerResponse(BaseModel):

@@ -1,15 +1,15 @@
-import asyncio
 import argparse
+import asyncio
 import sys
-import structlog
 import time
 from datetime import timedelta
+
+import structlog
 from app.config import get_settings
 from app.deps import get_supabase_service_role
+from app.utils.tz import get_ist_today
 from ingestion.data_gov_in import DataGovInAdapter
 from ingestion.runner import _norm_key
-from app.utils.tz import get_ist_today
-
 
 logger = structlog.get_logger()
 
@@ -115,8 +115,8 @@ async def backfill(days: int, markets_csv: str, commodities_csv: str, sleep_time
                 try:
                     raw_records = await adapter.fetch_prices(district=district, commodity=commodity, date=dt)
                 except Exception as e:
-                    from ingestion.base import SourceFetchError
                     import httpx
+                    from ingestion.base import SourceFetchError
                     is_transient = False
                     if isinstance(e, SourceFetchError) and getattr(e, "__cause__", None) is not None:
                         cause = e.__cause__

@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, Query
-from typing import List, Optional
 from datetime import timedelta
-from supabase import Client
+from typing import List, Optional
+
 from app.deps import get_supabase
 from app.schemas import PriceResponse
 from app.utils.tz import get_ist_today
-
+from fastapi import APIRouter, Depends, Query
+from supabase import Client
 
 router = APIRouter(prefix="/api/v1/prices", tags=["Prices"])
 

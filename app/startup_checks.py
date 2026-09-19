@@ -72,8 +72,8 @@ def _check_imports() -> None:
 
 
 def _check_concurrency() -> None:
-    import sys
     import os
+    import sys
 
     workers_str = os.environ.get("WEB_CONCURRENCY", "1")
     try:

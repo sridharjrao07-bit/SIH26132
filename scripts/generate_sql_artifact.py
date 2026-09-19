@@ -1,6 +1,7 @@
 """Concatenates db/migrations/*.sql into a single artifact markdown file for offline review."""
-import os
 import glob
+import os
+
 
 def generate_sql_artifact():
     artifact_path = r"C:\Users\sridh\.gemini\antigravity-ide\brain\8b0d4197-0cbb-468e-8dd3-b8a91acddedd\arena_database_migrations.md"

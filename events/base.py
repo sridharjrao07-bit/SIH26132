@@ -1,7 +1,9 @@
-from datetime import date
-from pydantic import BaseModel, Field
-from typing import Optional, List
 from abc import ABC, abstractmethod
+from datetime import date
+from typing import List, Optional
+
+from pydantic import BaseModel, Field
+
 
 class EventSourceError(Exception):
     """Raised when an event source fails to fetch or parse headlines."""

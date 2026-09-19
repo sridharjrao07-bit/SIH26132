@@ -7,15 +7,14 @@ diagnosable without running the production engine.
 from __future__ import annotations
 
 import math
-import pytest
 
+import pytest
 from forecasting.evaluation import (
-    mae,
-    mape_winsorized,
     directional_accuracy,
     interval_coverage,
+    mae,
+    mape_winsorized,
 )
-
 
 # ---------------------------------------------------------------------------
 # mae

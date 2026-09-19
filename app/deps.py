@@ -20,12 +20,14 @@ PostgREST runs under the right JWT), but we reuse the underlying httpx
 connection pool via a module-level ``httpx.Client`` with a connection limit.
 This avoids opening a new TCP connection to Supabase on every request.
 """
-from fastapi import Header, HTTPException
-from supabase import create_client, Client, ClientOptions
 from functools import lru_cache
-from .config import get_settings
-import structlog
+
 import httpx
+import structlog
+from fastapi import Header, HTTPException
+from supabase import Client, ClientOptions, create_client
+
+from .config import get_settings
 
 _log = structlog.get_logger()
 

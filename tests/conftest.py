@@ -4,10 +4,11 @@ conftest.py — shared fixtures for the Krishi Bazaar ingestion test suite.
 from __future__ import annotations
 
 import os
-import pytest
 import time
 from datetime import date, datetime, timezone
 from typing import Any, List, Optional
+
+import pytest
 
 # Set required env vars so pydantic-settings doesn't crash on import during test collection
 os.environ.setdefault("SUPABASE_URL", "https://placeholder.supabase.co")
@@ -325,6 +326,7 @@ class FakeSupabase:
 
     def _rpc_fpo_aggregate_lots(self, params: dict) -> dict:
         import uuid as _uuid
+
         from fastapi import HTTPException
         # Role check — emulate has_role_for(v_user_id, 'fpo')
         caller_uid = params.get("_test_user_id", "test-user")
@@ -372,6 +374,7 @@ class FakeSupabase:
 
     def _rpc_offer_create(self, params: dict) -> dict:
         import uuid as _uuid
+
         from fastapi import HTTPException
         lot_id = params.get("p_lot_id")
         lot = next((l for l in self._data.get("lots", []) if l.get("id") == lot_id), None)
@@ -424,6 +427,7 @@ class FakeSupabase:
 
     def _rpc_payment_create(self, params: dict) -> dict:
         import uuid as _uuid
+
         from fastapi import HTTPException
         offer_id = params.get("p_offer_id")
         offer = next((o for o in self._data.get("offers", []) if o.get("id") == offer_id), None)
@@ -451,8 +455,9 @@ class FakeSupabase:
 
 
     def _rpc_payment_mark_paid(self, params: dict) -> dict:
-        from fastapi import HTTPException
         from datetime import datetime, timezone
+
+        from fastapi import HTTPException
         payment_id = params.get("p_payment_id")
         test_uid = params.get("_test_user_id")
         payment = next((p for p in self._data.get("payments", []) if p.get("id") == payment_id), None)
@@ -477,8 +482,9 @@ class FakeSupabase:
         return dict(payment)
 
     def _rpc_buyer_register(self, params: dict) -> dict:
-        from fastapi import HTTPException
         import uuid as _uuid
+
+        from fastapi import HTTPException
         
         uid = params.get("_test_user_id", "test-user")
         existing = [b for b in self._data.get("buyers", []) if b.get("owner_user_id") == uid]
@@ -831,8 +837,8 @@ class RlsFakeSupabase(FakeSupabase):
 
 @pytest.fixture(autouse=True)
 def override_supabase(fake_supabase):
+    from app.deps import get_supabase, get_supabase_as_user, get_supabase_service_role
     from app.main import app
-    from app.deps import get_supabase, get_supabase_service_role, get_supabase_as_user
     from app.routers import sms as sms_mod
     from fastapi import Header
 

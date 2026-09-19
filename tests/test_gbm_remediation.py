@@ -1,12 +1,13 @@
-from unittest.mock import patch, MagicMock
-
-from tests.conftest import FakeSupabase, MARKET_ID_LASALGAON, COMMODITY_ID_ONION
-from tests.test_backtest import _make_price_rows, _trended_series
-from forecasting.backtest import run_backtest
-import sys
 import math
 import os
+import sys
+from unittest.mock import MagicMock, patch
+
 import pytest
+from forecasting.backtest import run_backtest
+
+from tests.conftest import COMMODITY_ID_ONION, MARKET_ID_LASALGAON, FakeSupabase
+from tests.test_backtest import _make_price_rows, _trended_series
 
 # Create a fake lightgbm module so we can test the real train_global_gbm logic in isolation
 mock_lgb = MagicMock()

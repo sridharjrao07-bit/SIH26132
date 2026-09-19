@@ -6,14 +6,14 @@ FAILED  → transition_payment_status (existing RPC from migration 013)
 DISPUTED→ transition_payment_status (existing RPC from migration 013)
 LIST    → direct SELECT (no write; RLS enforces visibility)
 """
-from fastapi import APIRouter, Depends, HTTPException
-from supabase import Client
-from app.deps import get_supabase_as_user, get_supabase_service_role
 from app.auth import get_current_user
+from app.deps import get_supabase_as_user, get_supabase_service_role
 from app.errors import json_for_api_error
 from app.schemas.marketplace import PaymentCreate
 from app.services.marketplace import recompute_buyer_reliability
+from fastapi import APIRouter, Depends, HTTPException
 from postgrest.exceptions import APIError
+from supabase import Client
 
 router = APIRouter(prefix="/api/v1/payments", tags=["Payments"])
 

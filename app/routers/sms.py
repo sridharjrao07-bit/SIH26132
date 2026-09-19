@@ -1,20 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
-from typing import Dict, Any, List
 import asyncio
 import threading
 import time
-import structlog
-from supabase import Client
+from typing import Any, Dict, List
 
+import structlog
 from app.auth import require_role
-from notifications.inbound_verifier import InboundVerifier
+from app.deps import get_supabase_service_role
+from app.rate_limit import limiter, webhook_limit
+from app.services.matching_engine import rank_buyers
+from fastapi import APIRouter, Depends, HTTPException, Request
 from notifications.alert_checker import normalize_phone
-from notifications.sms_gateway import get_sms_gateway, resolve_template
+from notifications.inbound_verifier import InboundVerifier
 from notifications.prices import latest_price_for_user
 from notifications.sale_window import compute_sale_window, format_sale_sms
-from app.deps import get_supabase_service_role
-from app.services.matching_engine import rank_buyers
-from app.rate_limit import limiter, webhook_limit
+from notifications.sms_gateway import get_sms_gateway, resolve_template
+from supabase import Client
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/sms", tags=["sms"])

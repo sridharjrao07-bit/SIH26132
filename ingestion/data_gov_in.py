@@ -1,9 +1,16 @@
-import httpx
 import logging
-import structlog
+from datetime import date, datetime
 from typing import List, Optional
-from datetime import datetime, date
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception, before_sleep_log
+
+import httpx
+import structlog
+from tenacity import (
+    before_sleep_log,
+    retry,
+    retry_if_exception,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from .base import IngestionSourceAdapter, RawPriceRecord, SourceFetchError
 

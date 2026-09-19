@@ -1,8 +1,10 @@
 import math
-from forecasting.models import FeatureOLSModel, HoltWintersModel
+
 from forecasting.engine import LinearRegressionModel as BaselineOLS
 from forecasting.engine import MovingAverageModel as BaselineMA
 from forecasting.features import FeatureRow
+from forecasting.models import FeatureOLSModel, HoltWintersModel
+
 
 def test_feature_ols_beats_baseline():
     # Signal series: price[t+1] ≈ a − b·arrivals[t] + noise

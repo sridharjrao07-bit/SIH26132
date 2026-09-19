@@ -1,9 +1,10 @@
-import httpx
 from datetime import date
-from typing import List
-import structlog
 from enum import Enum
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
+from typing import List
+
+import httpx
+import structlog
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from .base import RawHeadline
 

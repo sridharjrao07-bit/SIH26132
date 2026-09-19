@@ -12,22 +12,22 @@ from datetime import date, timedelta
 from typing import List, Tuple
 
 import pytest
-from fastapi.testclient import TestClient
-
 from app.main import app
-from tests.conftest import (
-    MARKET_ID_LASALGAON,
-    COMMODITY_ID_ONION,
-    ADMIN_USER_ID,
-    FARMER_USER_ID,
-    mint_jwt,
-    FakeSupabase,
-)
+from fastapi.testclient import TestClient
 from forecasting.backtest import (
     BACKTEST_PROTOCOL,
     MODEL_REGISTRY,
     NaiveLastWeekSameDay,
     run_backtest,
+)
+
+from tests.conftest import (
+    ADMIN_USER_ID,
+    COMMODITY_ID_ONION,
+    FARMER_USER_ID,
+    MARKET_ID_LASALGAON,
+    FakeSupabase,
+    mint_jwt,
 )
 
 client = TestClient(app, raise_server_exceptions=False)

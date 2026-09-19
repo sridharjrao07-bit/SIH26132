@@ -1,8 +1,10 @@
 import math
+from typing import Dict, Optional, Tuple
+
 import structlog
-from typing import Optional, Tuple, Dict
-from .base import RawPriceRecord
 from app.config import get_settings
+
+from .base import RawPriceRecord
 
 logger = structlog.get_logger()
 

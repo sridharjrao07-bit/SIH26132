@@ -10,29 +10,29 @@ They do not require a live Supabase instance (FakeSupabase via conftest).
 """
 from __future__ import annotations
 
-import hmac
 import hashlib
+import hmac
 import inspect
 import os
 import time
-from pathlib import Path
 from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 
-import pytest
-from fastapi.testclient import TestClient
 import jwt
-
+import pytest
 from app.main import app
-from notifications.alert_checker import normalize_phone
-from notifications.prices import latest_price_for_user
-from notifications.sms_gateway import get_sms_gateway, MockSMSGateway, MSG91Gateway
+from fastapi.testclient import TestClient
 from forecasting.engine import _make_forecast_rows
 from ingestion.data_gov_in import DataGovInAdapter
+from notifications.alert_checker import normalize_phone
+from notifications.prices import latest_price_for_user
+from notifications.sms_gateway import MockSMSGateway, MSG91Gateway, get_sms_gateway
+
 from tests.conftest import (
-    MARKET_ID_LASALGAON,
+    ADMIN_USER_ID,
     COMMODITY_ID_ONION,
     FARMER_USER_ID,
-    ADMIN_USER_ID,
+    MARKET_ID_LASALGAON,
     mint_jwt,
 )
 
@@ -383,8 +383,9 @@ def test_sms_simulate_empty_payload_ignored(override_supabase, fake_supabase):
 async def test_webhook_replay_within_window_is_rejected(monkeypatch):
     monkeypatch.setenv("INBOUND_HMAC_SECRET", "audit-secret")
     from importlib import reload
-    from fastapi import HTTPException
+
     import notifications.inbound_verifier as iv_mod
+    from fastapi import HTTPException
     reload(iv_mod)
 
     verifier = iv_mod.InboundVerifier()
@@ -490,7 +491,7 @@ def test_data_gov_in_adapter_parses_arrival_qty():
 
 
 def test_ingestion_job_takes_distributed_lock():
-    from app.services.jobs import run_ingestion_job, run_alert_job, _claim
+    from app.services.jobs import _claim, run_alert_job, run_ingestion_job
     assert "_claim" in inspect.getsource(run_ingestion_job)
     assert "_claim" in inspect.getsource(run_alert_job)
     assert "claim_job_lock" in inspect.getsource(_claim)
@@ -516,8 +517,9 @@ def test_settings_constructor_accepts_field_names():
 def test_inbound_verifier_uses_settings_when_env_empty(monkeypatch):
     monkeypatch.delenv("INBOUND_HMAC_SECRET", raising=False)
     monkeypatch.setenv("APP_ENV", "development")
-    from types import SimpleNamespace
     from importlib import reload
+    from types import SimpleNamespace
+
     import notifications.inbound_verifier as iv_mod
     monkeypatch.setattr(
         "app.config.get_settings",
@@ -536,7 +538,7 @@ def test_inbound_verifier_uses_settings_when_env_empty(monkeypatch):
 # ── Alert checker behaviour ───────────────────────────────────────────────────
 
 def test_sustained_gte_breach_does_not_fire_without_fresh_cross(fake_supabase, tmp_path):
-    from tests.test_alerts import make_profile, make_alert, make_prices, make_checker
+    from tests.test_alerts import make_alert, make_checker, make_prices, make_profile
     fake_supabase.seed("user_profiles", [make_profile()])
     fake_supabase.seed("alerts", [make_alert(threshold=2200.0, condition="gte", last_notified_at=None)])
     fake_supabase.seed(
@@ -549,7 +551,7 @@ def test_sustained_gte_breach_does_not_fire_without_fresh_cross(fake_supabase, t
 
 
 def test_invalid_phone_skips_sms(fake_supabase):
-    from tests.test_alerts import make_profile, make_alert, make_prices, make_checker
+    from tests.test_alerts import make_alert, make_checker, make_prices, make_profile
     fake_supabase.seed("user_profiles", [make_profile(phone="123")])
     fake_supabase.seed("alerts", [make_alert()])
     fake_supabase.seed(

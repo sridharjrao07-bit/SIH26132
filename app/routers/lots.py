@@ -4,15 +4,16 @@ READ operations still use the Supabase table API (SELECT is not revoked).
 WRITE operations (create, withdraw, grade) call security-definer RPCs that
 own the write privilege and enforce ownership + state-machine in one transaction.
 """
-from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Optional
-from supabase import Client
-from app.deps import get_supabase_as_user
+
 from app.auth import get_current_user
+from app.deps import get_supabase_as_user
 from app.errors import json_for_api_error
-from app.schemas.marketplace import LotCreate, LotAggregate, LotGradeUpdate
+from app.schemas.marketplace import LotAggregate, LotCreate, LotGradeUpdate
 from app.services.marketplace import lot_ledger
+from fastapi import APIRouter, Depends, HTTPException, Query
 from postgrest.exceptions import APIError
+from supabase import Client
 
 router = APIRouter(prefix="/api/v1/lots", tags=["Lots"])
 

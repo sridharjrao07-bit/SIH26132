@@ -1,16 +1,16 @@
 """Marketplace / market-linkage API tests (SIH26132 expected solution)."""
 from datetime import date, datetime, timezone
 
-from fastapi.testclient import TestClient
-
 from app.main import app
+from fastapi.testclient import TestClient
 from notifications.sale_window import get_ist_today
+
 from tests.conftest import (
-    MARKET_ID_LASALGAON,
-    MARKET_ID_PIMPALGAON,
     COMMODITY_ID_ONION,
     COMMODITY_ID_TOMATO,
     FARMER_USER_ID,
+    MARKET_ID_LASALGAON,
+    MARKET_ID_PIMPALGAON,
     FakeSupabase,
     mint_jwt,
 )
@@ -221,7 +221,8 @@ def test_docs_available_in_development():
 
 def test_sms_reply_includes_sale_window(override_supabase, fake_supabase, tmp_path, monkeypatch):
     from notifications.sms_gateway import MockSMSGateway
-    from tests.conftest import mint_jwt, ADMIN_USER_ID
+
+    from tests.conftest import ADMIN_USER_ID, mint_jwt
 
     monkeypatch.setattr(
         "app.routers.sms.get_sms_gateway",
@@ -431,6 +432,7 @@ def test_fpo_aggregate_lots(override_supabase, fake_supabase):
 
 def test_stale_offer_expires_and_cannot_be_accepted(override_supabase, fake_supabase):
     from datetime import timedelta
+
     from tests.conftest import ADMIN_USER_ID
     past = (datetime.now(timezone.utc) - timedelta(hours=72)).isoformat()
     fake_supabase.seed("lots", [{
@@ -715,7 +717,7 @@ def test_sale_window_exposes_sell_now_action(override_supabase, fake_supabase):
 
 
 def test_format_sale_and_alert_sms_fit_ucs2():
-    from notifications.sale_window import format_sale_sms, format_alert_sms
+    from notifications.sale_window import format_alert_sms, format_sale_sms
     mr_sale = format_sale_sms("mr", "कांदा", 2100, "Lasalgaon", "sell")
     hi_sale = format_sale_sms("hi", "प्याज", 2100, "Lasalgaon", "hold")
     mr_alert = format_alert_sms("mr", "कांदा", 2300, 2200, "direct")
@@ -841,6 +843,7 @@ def test_lot_ledger_is_a_transaction_trail(override_supabase, fake_supabase):
 
 def test_sms_names_best_local_buyer_when_lot_open(override_supabase, fake_supabase, tmp_path, monkeypatch):
     from notifications.sms_gateway import MockSMSGateway
+
     from tests.conftest import ADMIN_USER_ID
     monkeypatch.setattr(
         "app.routers.sms.get_sms_gateway",

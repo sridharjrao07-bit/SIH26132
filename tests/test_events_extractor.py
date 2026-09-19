@@ -1,7 +1,9 @@
-import pytest
 from datetime import date
+
+import pytest
 from events.base import RawHeadline
-from events.extractor import MockEventExtractor, LLMEventExtractor
+from events.extractor import LLMEventExtractor, MockEventExtractor
+
 
 @pytest.fixture
 def mock_extractor():
@@ -49,8 +51,9 @@ async def test_mock_extractor_no_match(mock_extractor):
     events = await mock_extractor.extract(headline)
     assert events == []
 
-import respx
 import httpx
+import respx
+
 
 @pytest.mark.asyncio
 @respx.mock

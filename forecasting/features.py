@@ -37,7 +37,7 @@ same-day leakage. winner-row construction is identical to build_daily_series.
 import math
 from dataclasses import dataclass
 from datetime import date, timedelta
-from typing import List, Dict, Optional, Any
+from typing import Any, Dict, List, Optional
 
 
 @dataclass(frozen=True)

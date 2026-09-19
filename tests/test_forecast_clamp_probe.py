@@ -1,5 +1,7 @@
 from datetime import date, timedelta
+
 from forecasting.engine import _make_forecast_rows
+
 
 def test_clamped_center_keeps_bounds_sane():
     series = [(date(2025, 1, 1) + timedelta(days=i), 5000 - 800 * i) for i in range(20)]

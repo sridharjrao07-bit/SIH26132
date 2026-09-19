@@ -1,6 +1,9 @@
 from datetime import date, timedelta
-from tests.conftest import FakeSupabase
+
 from notifications.sale_window import compute_sale_window
+
+from tests.conftest import FakeSupabase
+
 
 def test_seeded_headline_appears_in_sale_window(monkeypatch):
     """Verify that seeded headlines correctly appear in compute_sale_window output."""

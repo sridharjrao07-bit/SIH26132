@@ -1,7 +1,7 @@
-import pytest
 import random
 from datetime import date, timedelta
 
+import pytest
 from forecasting.backtest import run_backtest
 
 try:

@@ -1,11 +1,17 @@
 import uuid
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, Query
-from typing import Optional, List
-from supabase import Client
-from app.deps import get_supabase, get_supabase_as_user
+from typing import List, Optional
+
 from app.auth import get_current_user
-from app.schemas.marketplace import StorageFacilityResponse, StorageBookCreate, StorageBookUpdate, StorageBookingResponse
+from app.deps import get_supabase, get_supabase_as_user
+from app.schemas.marketplace import (
+    StorageBookCreate,
+    StorageBookingResponse,
+    StorageBookUpdate,
+    StorageFacilityResponse,
+)
+from fastapi import APIRouter, Depends, HTTPException, Query
+from supabase import Client
 
 router = APIRouter(prefix="/api/v1/storage", tags=["Storage"])
 

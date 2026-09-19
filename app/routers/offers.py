@@ -4,14 +4,14 @@ CREATE  → offer_create  (locks lot, validates qty, marks lot='offered')
 DECIDE  → offer_decide  (accept/reject atomically, handles sibling offers + lot status)
 LIST    → direct SELECT (no write; RLS enforces visibility)
 """
-from fastapi import APIRouter, Depends, HTTPException
-from supabase import Client
-from app.deps import get_supabase_as_user
 from app.auth import get_current_user
+from app.deps import get_supabase_as_user
 from app.errors import json_for_api_error
 from app.schemas.marketplace import OfferCreate, OfferUpdate
 from app.services.marketplace import with_expiry
+from fastapi import APIRouter, Depends, HTTPException
 from postgrest.exceptions import APIError
+from supabase import Client
 
 router = APIRouter(prefix="/api/v1/offers", tags=["Offers"])
 

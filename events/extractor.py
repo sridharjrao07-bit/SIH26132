@@ -1,12 +1,13 @@
 import json
 import logging
-import structlog
 from typing import List
-from pydantic import ValidationError
-import httpx
 
-from .base import EventExtractor, RawHeadline, ExtractedEvent
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
+import httpx
+import structlog
+from pydantic import ValidationError
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
+
+from .base import EventExtractor, ExtractedEvent, RawHeadline
 
 logger = structlog.get_logger()
 RETRY_LOGGER = logging.getLogger("tenacity.retry")

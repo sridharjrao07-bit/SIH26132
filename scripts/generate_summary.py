@@ -1,6 +1,7 @@
 """Generates a markdown project summary (out2.txt style) for offline documentation or judge handout."""
 import os
 
+
 def generate_summary(output_file):
     with open(output_file, 'w', encoding='utf-8') as out:
         out.write("# Krishi Bazaar (SIH26132) - Comprehensive Project Summary\n\n")

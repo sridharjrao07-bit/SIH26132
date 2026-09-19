@@ -1,42 +1,40 @@
+from contextlib import asynccontextmanager
 from json import JSONDecodeError
 
-from fastapi import FastAPI, Request, HTTPException
+import structlog
+from app.config import get_settings
+from app.errors import json_for_api_error
+from app.rate_limit import limiter
+from app.routers import (
+    admin_router,
+    alerts_router,
+    buyers_router,
+    commodities_router,
+    dashboard_router,
+    forecasts_router,
+    grievances_router,
+    intelligence_router,
+    logistics_router,
+    lots_router,
+    markets_router,
+    matching_router,
+    offers_router,
+    payments_router,
+    prices_router,
+    profile_router,
+    sms_router,
+    storage_router,
+)
+from app.security import SecurityHeadersMiddleware
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from contextlib import asynccontextmanager
-import structlog
-from slowapi.errors import RateLimitExceeded
+from postgrest.exceptions import APIError
 from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from postgrest.exceptions import APIError
-
-from app.errors import json_for_api_error
-
-from app.config import get_settings
-from app.rate_limit import limiter
-from app.security import SecurityHeadersMiddleware
-from app.routers import (
-    markets_router,
-    commodities_router,
-    prices_router,
-    forecasts_router,
-    alerts_router,
-    sms_router,
-    admin_router,
-    dashboard_router,
-    buyers_router,
-    lots_router,
-    offers_router,
-    payments_router,
-    grievances_router,
-    logistics_router,
-    storage_router,
-    matching_router,
-    profile_router,
-    intelligence_router,
-)
 
 logger = structlog.get_logger()
 
@@ -65,7 +63,7 @@ async def lifespan(app: FastAPI):
     warmup_verifier()
     scheduler = None
     if settings.run_scheduler:
-        from app.services.jobs import setup_scheduler, schedule_startup_catchup
+        from app.services.jobs import schedule_startup_catchup, setup_scheduler
         scheduler = setup_scheduler()
         if scheduler:
             scheduler.start()

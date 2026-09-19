@@ -1,11 +1,11 @@
-import sys
 import asyncio
+import sys
 from datetime import timedelta
-from supabase import create_client
-from app.config import get_settings
-from notifications.alert_checker import AlertChecker
-from app.utils.tz import get_ist_today
 
+from app.config import get_settings
+from app.utils.tz import get_ist_today
+from notifications.alert_checker import AlertChecker
+from supabase import create_client
 
 settings = get_settings()
 supabase = create_client(settings.supabase_url, settings.supabase_service_role_key)
@@ -84,9 +84,10 @@ async def run_demo():
     # 7. Webhook Simulation
     print("6. Simulating SMS reply ('कांदा')...")
     
-    import httpx
     # Mint admin token
     from pathlib import Path
+
+    import httpx
     sys.path.append(str(Path(__file__).resolve().parent.parent))
     from demo.mint_admin_token import mint_admin_token
     

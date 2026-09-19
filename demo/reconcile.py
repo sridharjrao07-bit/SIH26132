@@ -16,11 +16,12 @@ Requires only stdlib + httpx (already in requirements.txt).
 Set DATA_GOV_IN_API_KEY in your .env before running.
 """
 
-import sys
 import json
-import urllib.request
+import sys
 import urllib.parse
+import urllib.request
 from pathlib import Path
+
 
 # ── Load .env manually (no dotenv dependency needed) ──────────────────────────
 def load_env():

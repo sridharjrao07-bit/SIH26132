@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from typing import Optional, Literal
-from pydantic import BaseModel, Field
 from datetime import datetime
+from typing import Literal, Optional
 
-from app.deps import get_supabase_as_user
 from app.auth import get_current_user
+from app.deps import get_supabase_as_user
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 from supabase import Client
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])
