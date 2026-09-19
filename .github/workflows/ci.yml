@@ -117,12 +117,7 @@ jobs:
           # Fail on any skip reason we have not explicitly accepted.
           unexpected="$(grep -E '^SKIPPED' test.log \
             | sed 's/.*py:[0-9]*: //' | sort -u \
-            | grep -vF \
-                -e 'ENABLE_DB_INTEGRATION_TESTS not set' \
-                -e 'Live Supabase tests require KB_LIVE_SUPABASE=1' \
-                -e 'lightgbm not installed' \
-                -e "could not import 'lightgbm'" \
-                -e 'No real DB URL provided' || true)"
+            | grep -vFf ci/allowed-skips.txt || true)"
           if [ -n "$unexpected" ]; then
             echo "::error::unaccepted skip reasons:"; echo "$unexpected"; exit 1
           fi
