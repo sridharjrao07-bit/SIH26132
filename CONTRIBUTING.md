@@ -14,10 +14,10 @@ This repository is the **FastAPI + Supabase API** for SIH26132. The farmer/buyer
 
 ## Python
 
-**3.12+ supported.** The full suite is CI-tested on Python 3.12 and 3.14. Use whichever is available:
+**3.12+ supported.** The full suite is CI-tested on Python 3.12. Use whichever is available:
 
 ```bat
-py -3.14 -m venv .venv   # or py -3.12
+py -3.12 -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements-dev.txt
 copy .env.example .env

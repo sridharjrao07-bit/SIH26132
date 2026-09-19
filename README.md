@@ -36,14 +36,14 @@ Demo seed: 5 Nashik APMCs × Onion, Tomato, Soybean, Maize. Expand via [`docs/ON
 
 ## Prerequisites
 
-- **Python 3.12, 3.13, or 3.14** (verified in CI matrix)
+- **Python 3.12** (verified in CI matrix)
 - A Supabase project (SQL applied per [`docs/SQL_APPLY.md`](docs/SQL_APPLY.md))
 - Optional: Docker + Compose for a one-command API
 
 ## Local setup (Windows)
 
 ```bat
-py -3.14 -m venv .venv
+py -3.12 -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements-dev.txt
 copy .env.example .env
@@ -52,7 +52,7 @@ copy .env.example .env
 ## Local setup (Unix / macOS)
 
 ```bash
-python3.14 -m venv .venv
+python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-dev.txt
 cp .env.example .env
@@ -199,4 +199,4 @@ Runtime config is environment variables, not a `config/` directory.
 
 ## CI
 
-Every push/PR: Ruff, pytest (Python 3.12-3.14), `pip-audit` on production deps, secret-pattern grep. See `.github/workflows/ci.yml`.
+Every push/PR: Ruff, pytest (Python 3.12), `pip-audit` on production deps, secret-pattern grep. See `.github/workflows/ci.yml`.
