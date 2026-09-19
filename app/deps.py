@@ -12,17 +12,9 @@ Client tiers
 
 IMPORTANT: ``get_supabase_as_user`` is **never** @lru_cached — caching a
 user-scoped client is a cross-user data-leak vector.
-
-Connection efficiency
----------------------
-In "rls" mode each request gets a *new* Supabase client instance (required so
-PostgREST runs under the right JWT), but we reuse the underlying httpx
-connection pool via a module-level ``httpx.Client`` with a connection limit.
-This avoids opening a new TCP connection to Supabase on every request.
 """
 from functools import lru_cache
 
-import httpx
 import structlog
 from fastapi import Header, HTTPException
 from supabase import Client, ClientOptions, create_client
@@ -31,19 +23,11 @@ from .config import get_settings
 
 _log = structlog.get_logger()
 
-# Shared connection pool for RLS-mode per-request clients.
-# The transport is reused across client instances; only the Authorization
-# header changes per request.
-_rls_transport = httpx.HTTPTransport(limits=httpx.Limits(max_connections=20, max_keepalive_connections=10))
-
-
 def get_supabase_as_user(authorization: str = Header(None)) -> Client:
     """Return a Supabase client scoped to the authenticated caller.
 
     In "rls" mode a fresh per-request client is created so PostgREST
     executes as the *authenticated* Postgres role and RLS policies apply.
-    The underlying TCP connection pool is shared across requests to avoid
-    connection churn.
 
     In "app" mode the cached service-role client is returned with a
     loud warning so the security gap is visible in logs.
