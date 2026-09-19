@@ -82,6 +82,7 @@ def get_forecast_stats(supabase: Client = Depends(get_supabase_service_role)):
     price_rows = (
         supabase.table("prices")
         .select("market_id, commodity_id, arrival_date, modal_price")
+        .order("arrival_date", desc=True)
         .limit(2000)
         .execute()
         .data
