@@ -84,6 +84,18 @@ begin
             using errcode = 'P0004';
     end if;
 
+    -- P1-3: a caller may only attribute a lot to an FPO they actually belong to.
+    if p_fpo_id is not null
+       and p_fpo_id is distinct from v_user_id
+       and not exists (
+            select 1 from public.fpo_members
+             where fpo_id    = p_fpo_id
+               and member_id = v_user_id
+       ) then
+        raise exception 'lot_create: caller is not a member of FPO %', p_fpo_id
+            using errcode = 'P0001';
+    end if;
+
     insert into public.lots (
         user_id, fpo_id, commodity_id, market_id,
         quantity_qtl, grade, quality_notes, harvest_date, asking_price, status
@@ -557,7 +569,10 @@ begin
                 using errcode = 'P0003';
         end if;
 
-        if v_lot.fpo_id != v_user_id then
+        -- NULL-safe: lots.fpo_id is nullable (008_marketplace.sql:119, on delete set null).
+        -- Plain `!=` evaluates to NULL for farmer lots (fpo_id IS NULL), so the IF is
+        -- never taken and the lot is silently accepted. IS DISTINCT FROM returns TRUE.
+        if v_lot.fpo_id is distinct from v_user_id then
             raise exception 'lot % does not belong to your FPO', v_lid
                 using errcode = 'P0001';
         end if;
