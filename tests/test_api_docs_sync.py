@@ -49,4 +49,5 @@ def test_api_contract_paths():
     if missing:
         raise AssertionError(f"Endpoints documented in API_CONTRACT.md but missing in app.openapi(): {set(missing)}")
     
+    # bump this if you intentionally remove documented endpoints
     assert len(set(matches)) >= 25, f"Expected at least 25 unique matches, found {len(set(matches))}"
