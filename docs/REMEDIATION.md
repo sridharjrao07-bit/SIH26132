@@ -48,4 +48,5 @@ Between 2026-09-07T16:54:40Z and 16:54:45Z, a batch of commits (`61875e7`, `e7f5
 
 | Item | Reason |
 |---|---|
+| Role-cache invalidation hook (P2-10) | **Accepted, not deferred.** `require_role` caches roles in-process for 60 s and role changes happen out-of-band (`admin_set_role` is a Postgres RPC invoked from SQL tooling; no endpoint mutates roles), so an invalidation hook would have no caller. A demotion therefore takes up to one TTL to bite; the window, its bounds and the revisit trigger are documented in `docs/SECURITY_MODEL.md` §Role-Cache Propagation Window and pinned by `tests/test_role_cache_window.py`. |
 | Live PGRST301 Validation | Deferred. We lack live credentials in the current environment to execute `tests/test_rls_live.py`. **Risk Accepted**: If the hosted project rejects the tokens (due to JWT issuer/secret mismatch), every authenticated endpoint will return 500 in `rls` mode while all offline tests stay green. |

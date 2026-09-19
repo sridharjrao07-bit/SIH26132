@@ -22,6 +22,11 @@ ADMIN_COOKIE = "kb_admin"
 
 _role_cache: dict[str, tuple[str, datetime]] = {}
 _role_cache_lock = threading.Lock()
+# Accepted, documented staleness window: a role change (a demotion via the
+# admin_set_role RPC, or direct SQL) reaches already-cached sessions only once
+# this TTL elapses.  There is deliberately no invalidation hook: no in-app
+# endpoint mutates roles, so a hook would have no caller and would rot.
+# See docs/SECURITY_MODEL.md, "Role-Cache Propagation Window".
 _ROLE_CACHE_TTL = timedelta(seconds=60)
 
 
