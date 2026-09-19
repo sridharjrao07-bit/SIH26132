@@ -42,7 +42,7 @@ This document maps the specific findings from the recent hackathon judge review 
 
 ## 5. P0-4 Historical Batch Integrity Disclosure
 
-Please refer to the P0-4 post-mortem disclosure (see backend audit companion document) for details regarding the historical commit batches (e.g. `61875e7`, `e7f5205`) that were generated synthetically to simulate sprint activity. This repository now runs rigorous commit-hygiene checks to prevent recurrence.
+Between 2026-09-07T16:54:40Z and 16:54:45Z, a batch of commits (`61875e7`, `e7f5205`, `71b17e3`, `ed3656a`, `2651fcb`, `fb37d36`, `3eecfcf`, `6d85356`, `cbc4f71`) was generated synthetically to simulate sprint activity. A tenth cited hash, `128fc4b`, does not exist in the repository at all. To address this, commit authorship is now checked against an allowlist and for author/committer date drift. Commit pacing is not machine-checked.
 
 ## 6. Deferred
 

@@ -687,9 +687,30 @@ def test_sms_outbound_cap(override_supabase, fake_supabase, tmp_path, monkeypatc
 def test_dashboard_session_cookie(override_supabase, fake_supabase):
     token = mint_jwt(ADMIN_USER_ID)
     try:
+        # Development mode (default in CI due to APP_ENV)
         resp = client.post("/dashboard/session", json={"token": token})
         assert resp.status_code == 200
         assert "kb_admin" in resp.cookies
+        assert "Secure" not in resp.headers.get("set-cookie", "")
+        
+        # Production mode
+        from app.main import app
+        from app.config import get_settings, Settings
+        import os
+        
+        def get_prod_settings():
+            return Settings(
+                supabase_url=os.environ.get("SUPABASE_URL", "http://fake.supabase"),
+                supabase_service_key=os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "fake_key"),
+                database_url=os.environ.get("DATABASE_URL", "postgresql://fake"),
+                app_env="production"
+            )
+            
+        app.dependency_overrides[get_settings] = get_prod_settings
+        resp2 = client.post("/dashboard/session", json={"token": token})
+        assert "Secure" in resp2.headers.get("set-cookie", "")
+        app.dependency_overrides.clear()
+        
         logs = client.get("/dashboard/api/ingestion-logs")
         assert logs.status_code == 200
         client.delete("/dashboard/session")

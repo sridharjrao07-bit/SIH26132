@@ -15,6 +15,7 @@ os.environ.setdefault("APP_ENV", "development")
 
 from app.main import app
 
+
 def generate_markdown() -> str:
     openapi = app.openapi()
     lines = []
