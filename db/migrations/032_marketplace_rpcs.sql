@@ -557,6 +557,11 @@ begin
                 using errcode = 'P0003';
         end if;
 
+        if v_lot.fpo_id != v_user_id then
+            raise exception 'lot % does not belong to your FPO', v_lid
+                using errcode = 'P0001';
+        end if;
+
         if v_commodity is null then
             v_commodity := v_lot.commodity_id;
         elsif v_commodity != v_lot.commodity_id then
