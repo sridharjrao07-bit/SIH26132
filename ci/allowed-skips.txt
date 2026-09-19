@@ -1,0 +1,5 @@
+ENABLE_DB_INTEGRATION_TESTS not set
+Live Supabase tests require KB_LIVE_SUPABASE=1
+lightgbm not installed
+could not import 'lightgbm'
+No real DB URL provided
