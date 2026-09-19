@@ -54,6 +54,7 @@ def main():
             "max_price": round(current_price * 1.1, 2),
             "arrival_qty": round(random.uniform(50, 500), 2),
             "variety": "Other",
+            "grade": "General",
             "source": "demo_seed"
         })
         

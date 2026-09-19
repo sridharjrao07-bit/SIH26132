@@ -4,7 +4,7 @@ This document provides exact instructions for applying, verifying, and recoverin
 
 ## Clean Installation
 
-The primary, safe method to apply migrations is using the ledger-driven Python script. It automatically tracks applied migrations in the `_migrations` table and applies only the pending ones.
+The primary, safe method to apply migrations is using the ledger-driven Python script. It automatically tracks applied migrations in the `schema_migrations` table and applies only the pending ones.
 
 ```sh
 # Using Make (preferred)
@@ -21,7 +21,7 @@ If you cannot run the Python script (e.g. missing dependencies), you can apply t
 ```sh
 psql -d $DATABASE_URL -f db/migrations/001_schema.sql
 # ... apply up to 034 sequentially
-psql -d $DATABASE_URL -f db/migrations/034_add_event_sentiment.sql
+psql -d $DATABASE_URL -f db/migrations/034_fix_indexes.sql
 ```
 
 ## Upgrade and Recovery Paths

@@ -128,13 +128,13 @@ The platform supports an inbound SMS webhook (e.g. MSG91) to provide offline far
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/api/v1/sms/webhook` | Receives inbound SMS. Requires valid HMAC signature (`X-Msg91-Signature` header matching `INBOUND_HMAC_SECRET`). |
+| POST | `/api/v1/sms/webhook` | Receives inbound SMS. Requires valid HMAC signature (`X-Signature` header matching `INBOUND_HMAC_SECRET`). |
 | POST | `/api/v1/sms/simulate` | For judges/testing. Simulates an inbound SMS without HMAC validation. Returns the exact SMS text the farmer would receive. |
 
 **Simulation Body:**
 ```json
 {
   "sender": "919876543210",
-  "text": "PYAJ"
+  "message": "PYAJ"
 }
 ```
