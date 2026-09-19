@@ -33,77 +33,81 @@ python demo/mint_admin_token.py --sub <user_profiles uuid> --hours 2
 
 The API verifies that JWT itself. It does **not** forward it to PostgREST (hosted JWT signing keys reject locally minted HS256).
 
-## Public (no token)
+<!-- BEGIN GENERATED: endpoint reference — do not edit; run `make docs` -->
 
-| Method | Path | Notes |
+## Endpoints
+
+| Method | Path | Summary |
 |---|---|---|
-| GET | `/health` | `{"status":"ok"}` |
-| GET | `/api/v1/markets/` | `?district=` |
-| GET | `/api/v1/markets/nearby?lat=&lng=&radius_km=50` | |
-| GET | `/api/v1/commodities/` | no sanity bands |
-| GET | `/api/v1/prices/latest?limit=` | `limit` 1–500 |
-| GET | `/api/v1/prices/historical?market_id=&commodity_id=&days=30` | `days` 1–365 |
-| GET | `/api/v1/forecasts?market_id=&commodity_id=&days=` | future dates only |
-| GET | `/api/v1/forecasts/summary` | |
-| GET | `/api/v1/sale-window/?commodity_id=&market_id=&lang=mr` | `en` \| `mr` \| `hi`. 404 if no recent price |
-| GET | `/api/v1/buyers/` | verified by default |
-| GET | `/api/v1/buyers/{id}/supply` | open lots that fit that buyer |
-| GET | `/api/v1/logistics/?district=Nashik&kind=` | `kind=storage` \| `transport` |
+| POST | `/api/v1/admin/alert-check/run` | Trigger Alert Check |
+| GET | `/api/v1/admin/buyers` | Admin List Buyers |
+| POST | `/api/v1/admin/buyers` | Admin Create Buyer |
+| POST | `/api/v1/admin/buyers/rescore` | Admin Rescore Buyers |
+| PATCH | `/api/v1/admin/buyers/{buyer_id}/verify` | Admin Verify Buyer |
+| GET | `/api/v1/admin/events` | Admin List Events |
+| POST | `/api/v1/admin/events/ingest` | Admin Events Ingest |
+| POST | `/api/v1/admin/forecast/backtest` | Trigger Forecast Backtest |
+| POST | `/api/v1/admin/forecast/run` | Trigger Forecast |
+| GET | `/api/v1/admin/grievances` | Admin List Grievances |
+| PATCH | `/api/v1/admin/grievances/{grievance_id}` | Admin Update Grievance |
+| POST | `/api/v1/admin/offers/expire` | Admin Expire Offers |
+| GET | `/api/v1/alerts/` | List Alerts |
+| POST | `/api/v1/alerts/` | Create Alert |
+| DELETE | `/api/v1/alerts/{alert_id}` | Delete Alert |
+| PATCH | `/api/v1/alerts/{alert_id}` | Update Alert |
+| GET | `/api/v1/buyers/` | List Buyers |
+| POST | `/api/v1/buyers/register` | Register Buyer |
+| GET | `/api/v1/buyers/{buyer_id}/supply` | Buyer Supply |
+| PATCH | `/api/v1/buyers/{buyer_id}/verify` | Verify Buyer |
+| GET | `/api/v1/commodities/` | Get Commodities |
+| GET | `/api/v1/forecasts` | Get Forecasts |
+| GET | `/api/v1/forecasts/summary` | Get Forecasts Summary |
+| GET | `/api/v1/grievances/` | List Grievances |
+| POST | `/api/v1/grievances/` | Create Grievance |
+| GET | `/api/v1/logistics/` | List Logistics |
+| GET | `/api/v1/logistics/bookings` | List Bookings |
+| POST | `/api/v1/logistics/bookings` | Create Booking |
+| PATCH | `/api/v1/logistics/bookings/{booking_id}` | Update Booking |
+| GET | `/api/v1/lots/` | List Lots |
+| POST | `/api/v1/lots/` | Create Lot |
+| POST | `/api/v1/lots/aggregate` | Aggregate Lots |
+| GET | `/api/v1/lots/{lot_id}` | Get Lot |
+| GET | `/api/v1/lots/{lot_id}/advice` | Lot Advice |
+| PATCH | `/api/v1/lots/{lot_id}/grade` | Grade Lot |
+| GET | `/api/v1/lots/{lot_id}/ledger` | Get Lot Ledger |
+| GET | `/api/v1/lots/{lot_id}/matches` | Match Buyers |
+| PATCH | `/api/v1/lots/{lot_id}/withdraw` | Withdraw Lot |
+| GET | `/api/v1/markets/` | Get Markets |
+| GET | `/api/v1/markets/nearby` | Get Nearby Markets |
+| GET | `/api/v1/me/` | Get Me |
+| PATCH | `/api/v1/me/` | Update Me |
+| GET | `/api/v1/offers/` | List Offers |
+| POST | `/api/v1/offers/` | Create Offer |
+| PATCH | `/api/v1/offers/{offer_id}` | Update Offer |
+| GET | `/api/v1/payments/` | List Payments |
+| POST | `/api/v1/payments/` | Create Payment |
+| PATCH | `/api/v1/payments/{payment_id}/disputed` | Mark Disputed |
+| PATCH | `/api/v1/payments/{payment_id}/failed` | Mark Failed |
+| PATCH | `/api/v1/payments/{payment_id}/paid` | Mark Paid |
+| GET | `/api/v1/prices/historical` | Get Historical Prices |
+| GET | `/api/v1/prices/latest` | Get Latest Prices |
+| GET | `/api/v1/sale-window/` | Sale Window |
+| POST | `/api/v1/sms/simulate` | Simulate Inbound |
+| POST | `/api/v1/sms/webhook` | Handle Sms Webhook |
+| GET | `/api/v1/storage/bookings` | List Bookings |
+| POST | `/api/v1/storage/bookings` | Book Storage |
+| PATCH | `/api/v1/storage/bookings/{booking_id}` | Update Booking |
+| GET | `/api/v1/storage/facilities` | List Facilities |
+| GET | `/dashboard` | Get Dashboard |
+| GET | `/dashboard/api/forecast-stats` | Get Forecast Stats |
+| GET | `/dashboard/api/ingestion-logs` | Get Ingestion Logs |
+| DELETE | `/dashboard/session` | Dashboard Logout |
+| POST | `/dashboard/session` | Dashboard Session |
+| GET | `/health` | Health Check |
+| GET | `/metrics` | Metrics |
+| GET | `/readyz` | Readyz |
 
-## Farmer / FPO (Bearer)
-
-| Method | Path |
-|---|---|
-| GET/PATCH | `/api/v1/me/` |
-| POST/GET | `/api/v1/lots/` |
-| GET | `/api/v1/lots/{id}` `/lots/{id}/advice` `/lots/{id}/matches` `/lots/{id}/ledger` |
-| PATCH | `/api/v1/lots/{id}/grade` `/lots/{id}/withdraw` |
-| POST | `/api/v1/lots/aggregate` (role `fpo`) |
-| POST/GET/PATCH | `/api/v1/offers/` |
-| POST/GET | `/api/v1/payments/` |
-| PATCH | `/api/v1/payments/{id}/paid` `/failed` `/disputed` |
-| POST/GET | `/api/v1/grievances/` |
-| POST/GET/PATCH | `/api/v1/logistics/bookings` |
-| CRUD | `/api/v1/alerts/` |
-| POST | `/api/v1/buyers/register` |
-
-### Lot create body
-
-```json
-{
-  "commodity_id": "<uuid>",
-  "market_id": "<uuid>",
-  "quantity_qtl": 20,
-  "grade": "General",
-  "asking_price": 1600
-}
-```
-
-`grade` is `FAQ` | `General` | `Special`.
-
-### Profile patch
-
-```json
-{ "phone": "9876543210", "preferred_language": "mr", "lat": 20.12, "lng": 74.34, "district": "Nashik" }
-```
-
-Phone is normalised to E.164 (`+91…`). Role is not client-writable.
-
-### Sale-window / advice
-
-`action` is `SELL_NOW` | `HOLD` | `WAIT`.  
-`action_label` / `reason` follow `lang`.  
-`best_buyer` on `/lots/{id}/advice` is the local-first match, not a price list.
-
-## Admin (Bearer, DB role `admin`)
-
-`POST /api/v1/admin/forecast/run`  
-`POST /api/v1/admin/alert-check/run`  
-`POST /api/v1/admin/buyers` · `GET /api/v1/admin/buyers?status=pending` · `PATCH /api/v1/admin/buyers/{id}/verify`  
-`GET/PATCH /api/v1/admin/grievances`  
-`POST /api/v1/admin/offers/expire`  
-`POST /api/v1/admin/buyers/rescore`  
-HTML ops shell: `/dashboard` (not the farmer product).
+<!-- END GENERATED -->
 
 ## Errors
 
