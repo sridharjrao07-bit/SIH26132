@@ -10,6 +10,7 @@ previously-untested routes that contained runtime crashes in the evaluation:
   - Auth gates: admin endpoints reject farmer tokens and no-token requests
 """
 from datetime import date, datetime, timezone
+from unittest.mock import patch
 
 from app.main import app
 from fastapi.testclient import TestClient
@@ -335,8 +336,6 @@ def test_admin_forecast_run_accepts_admin_token(override_supabase, fake_supabase
     # 200 = accepted; any non-401/403 status is fine here against the fake DB
     assert resp.status_code not in (401, 403), f"Admin must not be rejected: {resp.status_code}"
 
-from unittest.mock import patch
-
 
 def test_admin_events_ingest_handles_error(override_supabase, fake_supabase):
     """P1 regression: admin_events_ingest must handle unhandled exceptions and return 503"""
@@ -344,3 +343,27 @@ def test_admin_events_ingest_handles_error(override_supabase, fake_supabase):
         resp = client.post("/api/v1/admin/events/ingest", headers=admin_headers())
         assert resp.status_code == 503, f"Expected 503 for run failure, got {resp.status_code}: {resp.text}"
 
+
+# ─── P1-1 regression: _call_rpc must RETURN, not RAISE, json_for_api_error ────
+
+def test_rpc_business_error_returns_mapped_4xx_not_500(override_supabase, fake_supabase):
+    """P1-1 regression: _call_rpc must RETURN json_for_api_error(exc), not RAISE it.
+
+    Raising a JSONResponse throws TypeError('exceptions must derive from
+    BaseException') and the client gets a 500 instead of the mapped 4xx.
+    """
+    fake_supabase.set_rpc_error("payment_mark_paid", "payment already settled")
+    r = client.patch("/api/v1/payments/p1/paid", headers=farmer_headers())
+    assert r.status_code == 409, f"P1-1 regression: got {r.status_code}: {r.text}"
+    assert r.json() == {"detail": "operation not permitted"}
+
+
+def test_rpc_error_survives_response_postprocessing(override_supabase, fake_supabase):
+    """offers.py wraps the result in with_expiry(); a JSONResponse must pass through."""
+    fake_supabase.set_rpc_error("offer_create", "lot already offered")
+    r = client.post(
+        "/api/v1/offers/",
+        headers=farmer_headers(),
+        json={"lot_id": "l1", "buyer_id": "b1", "price_per_qtl": 10, "quantity_qtl": 5},
+    )
+    assert r.status_code == 409, f"expected 409, got {r.status_code}: {r.text}"
