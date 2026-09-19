@@ -64,7 +64,7 @@ class DataGovInAdapter(IngestionSourceAdapter):
     def __init__(self, api_key: str):
         self.api_key = api_key
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=5, min=5, max=45),
+    @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=5, min=5, max=45),
            retry=retry_if_exception(_is_transient), reraise=True,
            before_sleep=before_sleep_log(RETRY_LOGGER, logging.INFO))
     async def _get_json(self, client: httpx.AsyncClient, params: dict):
@@ -93,7 +93,7 @@ class DataGovInAdapter(IngestionSourceAdapter):
         first_data = None
         used_spelling = district
 
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(15.0, connect=5.0)) as client:
             for spelling in spellings:
                 params = {
                     "api-key":            self.api_key,
@@ -104,8 +104,7 @@ class DataGovInAdapter(IngestionSourceAdapter):
                     "limit":              PAGE_SIZE,
                     "offset":             0,
                 }
-                if date is not None:
-                    # e.g., 01/09/2024
+                if date:
                     params["filters[arrival_date]"] = date.strftime("%d/%m/%Y")
                 
                 log.info("fetching_page_1", district_spelling=spelling)
@@ -146,7 +145,7 @@ class DataGovInAdapter(IngestionSourceAdapter):
                     "limit":              PAGE_SIZE,
                     "offset":             offset,
                 }
-                if date is not None:
+                if date:
                     page_params["filters[arrival_date]"] = date.strftime("%d/%m/%Y")
                 
                 try:

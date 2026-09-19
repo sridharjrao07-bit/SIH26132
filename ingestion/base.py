@@ -51,7 +51,7 @@ class IngestionSourceAdapter(ABC):
 
     @abstractmethod
     async def fetch_prices(
-        self, district: str, commodity: str, state: str = "Maharashtra"
+        self, district: str, commodity: str, state: str = "Maharashtra", date: Optional[date] = None
     ) -> List[RawPriceRecord]:
         """
         Fetch prices for a specific district/commodity/state combination.
