@@ -1,82 +1,123 @@
 import ast
+import os
 from pathlib import Path
+
 import pytest
 from app.main import app
 
 KNOWN_VIOLATIONS = {
-    "revoked_table_access": [
-        'app/auth.py:user_profiles', 'app/routers/admin.py:buyers', 'app/routers/admin.py:events', 
-        'app/routers/admin.py:grievances', 'app/routers/admin.py:offers', 'app/routers/admin.py:prices', 
-        'app/routers/alerts.py:alerts', 'app/routers/buyers.py:buyers', 'app/routers/buyers.py:markets', 
-        'app/routers/commodities.py:commodities', 'app/routers/dashboard.py:forecasts', 
-        'app/routers/dashboard.py:ingestion_log', 'app/routers/dashboard.py:prices', 
-        'app/routers/dashboard.py:user_profiles', 'app/routers/forecasts.py:forecasts', 
-        'app/routers/grievances.py:grievances', 'app/routers/grievances.py:lots', 
-        'app/routers/grievances.py:offers', 'app/routers/logistics.py:logistics_bookings', 
-        'app/routers/logistics.py:logistics_options', 'app/routers/logistics.py:lots', 
-        'app/routers/lots.py:lots', 'app/routers/markets.py:markets', 'app/routers/matching.py:buyers', 
-        'app/routers/matching.py:events', 'app/routers/matching.py:logistics_bookings', 
-        'app/routers/matching.py:logistics_options', 'app/routers/matching.py:lots', 
-        'app/routers/matching.py:user_profiles', 'app/routers/offers.py:offers', 
-        'app/routers/payments.py:offers', 'app/routers/payments.py:payments', 'app/routers/prices.py:prices', 
-        'app/routers/profile.py:user_profiles', 'app/routers/sms.py:buyers', 
-        'app/routers/sms.py:commodity_alias', 'app/routers/storage.py:lots', 
-        'app/routers/storage.py:storage_bookings', 'app/routers/storage.py:storage_facilities', 
-        'app/services/jobs.py:ingestion_log', 'app/services/marketplace.py:buyers', 
-        'app/services/marketplace.py:grievances', 'app/services/marketplace.py:logistics_bookings', 
-        'app/services/marketplace.py:lots', 'app/services/marketplace.py:offers', 
-        'app/services/marketplace.py:payments'
+    "dead_control": [
+        ('transition_grievance_status', 'backend-team', '2026-10-01')
     ],
-    "dead_control": [],
     "vacuous_test": [
-        'tests/test_backend_audit.py:/api/v1/does-not-exist', 
-        'tests/test_marketplace.py:/docs', 
-        'tests/test_openapi_contract.py:/openapi.json', 
-        'tests/test_rls_guard.py:/api/v1/grievances/grievance-fpo-1/resolved', 
-        'tests/test_sms.py:/test'
+        ('tests/test_backend_audit.py:/api/v1/does-not-exist', 'qa-team', '2026-10-01'), 
+        ('tests/test_marketplace.py:/docs', 'qa-team', '2026-10-01'), 
+        ('tests/test_openapi_contract.py:/openapi.json', 'qa-team', '2026-10-01'), 
+        ('tests/test_rls_guard.py:/api/v1/grievances/grievance-fpo-1/resolved', 'qa-team', '2026-10-01'), 
+        ('tests/test_sms.py:/test', 'qa-team', '2026-10-01')
     ]
 }
 
 def check_ratchet(key, current_violations):
-    expected = set(KNOWN_VIOLATIONS.get(key, []))
+    expected_findings = {v[0] for v in KNOWN_VIOLATIONS.get(key, [])}
     current = set(current_violations)
-    fixed = expected - current
+    fixed = expected_findings - current
     if fixed:
         pytest.fail(f"Ratchet failure: violations fixed but still in KNOWN_VIOLATIONS['{key}']: {fixed}")
-    new_violations = current - expected
+    new_violations = current - expected_findings
     if new_violations:
         pytest.fail(f"New violations found for '{key}': {new_violations}")
 
+@pytest.mark.db
 def test_revoked_table_conformance():
-    """Static AST scan: find all supabase.table() calls."""
-    violations = []
-    root = Path(__file__).parent.parent
-    for p in root.joinpath("app").rglob("*.py"):
-        rel_path = p.relative_to(root).as_posix()
-        tree = ast.parse(p.read_text(encoding="utf-8"))
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "table":
-                if node.args and isinstance(node.args[0], ast.Constant):
-                    table_name = node.args[0].value
-                    violations.append(f"{rel_path}:{table_name}")
-    
-    check_ratchet("revoked_table_access", violations)
+    """Verify that direct DML is strictly revoked for workflow tables by authenticated users."""
+    db_url = os.environ.get("SUPABASE_DB_URL")
+    if not db_url or db_url == "postgresql://p@db.placeholder.supabase.co:5432/postgres":
+        pytest.skip("No real DB URL provided")
+        
+    tables = ["buyers", "lots", "offers", "payments", "storage_bookings", "logistics_bookings"]
+    import psycopg2
+    conn = psycopg2.connect(db_url)
+    conn.autocommit = True
+    try:
+        with conn.cursor() as cur:
+            for table in tables:
+                cur.execute(f"SELECT to_regclass('public.{table}')")
+                if not cur.fetchone()[0]:
+                    continue
+                    
+                cur.execute("SET ROLE authenticated")
+                
+                with pytest.raises(psycopg2.errors.InsufficientPrivilege) as exc:
+                    cur.execute(f"INSERT INTO public.{table} DEFAULT VALUES")
+                assert exc.value.pgcode == "42501"
+                
+                with pytest.raises(psycopg2.errors.InsufficientPrivilege) as exc:
+                    cur.execute(f"UPDATE public.{table} SET id = id")
+                assert exc.value.pgcode == "42501"
+                
+                with pytest.raises(psycopg2.errors.InsufficientPrivilege) as exc:
+                    cur.execute(f"DELETE FROM public.{table}")
+                assert exc.value.pgcode == "42501"
+                
+                cur.execute("RESET ROLE")
+    finally:
+        conn.close()
 
 def test_migration_coverage():
     """Static filename diff."""
     import re
     migrations_dir = Path(__file__).parent.parent / "db" / "migrations"
-    sql_files = [f.name for f in migrations_dir.glob("*.sql")]
+    sql_files = sorted([f.name for f in migrations_dir.glob("*.sql")])
     
-    # check that they are properly prefixed
     for name in sql_files:
         assert re.match(r"^\d{3}[a-z]?_.*\.sql$", name), f"Invalid migration name: {name}"
+        
+    # Check W3 requirements
+    assert len(sql_files) == 35, f"Expected 35 migrations, found {len(sql_files)}"
+    idx_003 = next((i for i, f in enumerate(sql_files) if f.startswith("003_")), -1)
+    idx_003b = next((i for i, f in enumerate(sql_files) if f.startswith("003b_")), -1)
+    idx_004 = next((i for i, f in enumerate(sql_files) if f.startswith("004_")), -1)
+    assert idx_003 < idx_003b < idx_004, "003b_admin_set_role_grants.sql is not correctly ordered between 003 and 004"
 
+@pytest.mark.db
 def test_dead_control_check():
     """Every function granted EXECUTE to authenticated must have >=1 caller in production code."""
-    # Dummy check for now, can be populated if we parse SQL for GRANT EXECUTE.
-    # We will track empty violations and allow it to pass.
-    check_ratchet("dead_control", [])
+    db_url = os.environ.get("SUPABASE_DB_URL")
+    if not db_url or db_url == "postgresql://p@db.placeholder.supabase.co:5432/postgres":
+        pytest.skip("No real DB URL provided")
+        
+    import psycopg2
+    conn = psycopg2.connect(db_url)
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT p.proname 
+                FROM pg_proc p 
+                JOIN pg_namespace n ON p.pronamespace = n.oid 
+                WHERE n.nspname = 'public' 
+                  AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+            """)
+            funcs = [row[0] for row in cur.fetchall()]
+    finally:
+        conn.close()
+        
+    root = Path(__file__).parent.parent
+    app_files = list(root.joinpath("app").rglob("*.py")) + list(root.joinpath("ingestion").rglob("*.py"))
+    
+    app_text = ""
+    for f in app_files:
+        app_text += f.read_text(encoding="utf-8")
+        
+    violations = []
+    for fn in funcs:
+        # Ignore functions that are purely helpers for db triggers
+        if fn in ("check_payment_amount", "guard_lot_status_regression", "guard_buyer_self_verify", "has_role_for"):
+            continue
+        if f'"{fn}"' not in app_text and f"'{fn}'" not in app_text:
+            violations.append(fn)
+            
+    check_ratchet("dead_control", violations)
 
 def test_vacuous_test_check():
     """Every path a test requests via client.<verb> must exist in app.openapi()."""
@@ -97,9 +138,6 @@ def test_vacuous_test_check():
                     path = node.args[0].value
                     if path.startswith("/"):
                         base_path = path.split("?")[0]
-                        # VERY naive matching to handle path templates, usually we'd do better,
-                        # but we can populate KNOWN_VIOLATIONS for any mismatches.
-                        # For now, just track anything that isn't exactly in valid_paths.
                         if base_path not in valid_paths and not any(base_path.startswith(v.split("{")[0]) and "{" in v for v in valid_paths if v.split("{")[0]):
                             violations.append(f"{rel_path}:{base_path}")
     

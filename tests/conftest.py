@@ -230,20 +230,31 @@ class FakeSupabase:
         """Pre-configure what an rpc() call returns."""
         self._rpc_handlers[fn_name] = result
 
-    def set_rpc_error(self, fn_name: str, error: Exception):
+    def set_rpc_error(self, fn_name: str, message: str = "Mocked RPC error"):
         """Pre-configure what an rpc() call raises."""
-        self._rpc_handlers[fn_name] = error
+        from postgrest.exceptions import APIError
+        self._rpc_handlers[fn_name] = APIError({"message": message, "code": "P0001", "details": "", "hint": ""})
 
     # ── RPC emulators ─────────────────────────────────────────────────────────
 
+    @staticmethod
+    def _haversine_km(lat1, lon1, lat2, lon2):
+        import math
+        R = 6371.0
+        dlat = math.radians(lat2 - lat1)
+        dlon = math.radians(lon2 - lon1)
+        a = (math.sin(dlat / 2) ** 2 +
+             math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2)
+        return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
     def _rpc_nearby_markets(self, params: dict) -> list:
-        from app.services.matching_engine import haversine_km
         lat, lng = params.get("lat"), params.get("lng")
         radius = params.get("radius_km", 50)
         res = []
         for m in self._data.get("markets", []):
-            if not m.get("is_active"): continue
-            dist = haversine_km(lat, lng, m.get("lat"), m.get("lng"))
+            if not m.get("is_active"):
+                continue
+            dist = self._haversine_km(lat, lng, m.get("lat"), m.get("lng"))
             if dist is not None and dist <= radius:
                 m_copy = dict(m)
                 m_copy["distance_km"] = dist
@@ -252,13 +263,13 @@ class FakeSupabase:
         return res[:5]
 
     def _rpc_nearest_market(self, params: dict) -> list:
-        from app.services.matching_engine import haversine_km
         lat, lng = params.get("lat"), params.get("lng")
         best = None
         min_d = 999999
         for m in self._data.get("markets", []):
-            if not m.get("is_active"): continue
-            dist = haversine_km(lat, lng, m.get("lat"), m.get("lng"))
+            if not m.get("is_active"):
+                continue
+            dist = self._haversine_km(lat, lng, m.get("lat"), m.get("lng"))
             if dist is not None and dist < min_d:
                 min_d = dist
                 best = dict(m)
