@@ -11,7 +11,7 @@ install-dev:
 	$(PY) -m pip install -r requirements-dev.txt
 
 lint:
-	ruff check app ingestion forecasting notifications tests demo scripts
+	ruff check .
 
 test:
 	RUN_SCHEDULER=0 RATE_LIMIT_ENABLED=0 pytest

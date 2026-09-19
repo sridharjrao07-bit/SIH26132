@@ -30,7 +30,7 @@ Never commit `.env`.
 ```bat
 set RUN_SCHEDULER=0
 set RATE_LIMIT_ENABLED=0
-ruff check app ingestion forecasting notifications tests demo scripts
+ruff check .
 pytest -q
 ```
 
