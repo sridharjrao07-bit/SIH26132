@@ -1,6 +1,8 @@
 import os
+
 import psycopg2
 import pytest
+
 
 @pytest.mark.db
 def test_fpo_aggregate_lots_cross_tenant_raises_p0001():
@@ -22,6 +24,6 @@ def test_fpo_aggregate_lots_cross_tenant_raises_p0001():
                 cur.execute("SELECT fpo_aggregate_lots(ARRAY['00000000-0000-0000-0000-000000000000']::uuid[], '00000000-0000-0000-0000-000000000000'::uuid, '00000000-0000-0000-0000-000000000000'::uuid, 1000)")
             
             assert exc.value.pgcode == "P0001"
-            assert "fpo role" in str(exc.value) or "fpo_aggregate_lots requires the fpo role" in str(exc.value).lower() or True
+            assert "fpo role" in str(exc.value) or "fpo_aggregate_lots requires the fpo role" in str(exc.value).lower()
     finally:
         conn.close()

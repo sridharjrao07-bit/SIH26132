@@ -334,3 +334,12 @@ def test_admin_forecast_run_accepts_admin_token(override_supabase, fake_supabase
     resp = client.post("/api/v1/admin/forecast/run", headers=admin_headers())
     # 200 = accepted; any non-401/403 status is fine here against the fake DB
     assert resp.status_code not in (401, 403), f"Admin must not be rejected: {resp.status_code}"
+
+from unittest.mock import patch
+
+def test_admin_events_ingest_handles_error(override_supabase, fake_supabase):
+    """P1 regression: admin_events_ingest must handle unhandled exceptions and return 503"""
+    with patch("events.runner.run", side_effect=Exception("Mock error")):
+        resp = client.post("/api/v1/admin/events/ingest", headers=admin_headers())
+        assert resp.status_code == 503, f"Expected 503 for run failure, got {resp.status_code}: {resp.text}"
+

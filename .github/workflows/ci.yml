@@ -3,9 +3,14 @@ name: ci
 on:
   push:
   pull_request:
+    branches: [main]
 
 permissions:
   contents: read
+
+defaults:
+  run:
+    shell: bash
 
 env:
   RUN_SCHEDULER: "0"
@@ -71,9 +76,12 @@ jobs:
       - uses: actions/setup-python@337b0725b8770380d7cde73cfef696f1295727eb
         with: { python-version: "3.12", allow-prereleases: true }
       - run: pip install -r requirements-dev.txt
+      - run: psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f db/ci_bootstrap.sql
       - run: python scripts/apply_migrations.py
-      - run: pytest -m db -q --strict-markers -rs | tee db.log; grep -qE "[1-9][0-9]* skipped" db.log && { echo "::error::db job must not skip"; exit 1; } || true
-      - run: pytest tests/test_privileges.py tests/test_db_rpc.py -q --strict-markers -rs | tee priv.log; grep -qE "[1-9][0-9]* skipped" priv.log && { echo "::error::db job must not skip"; exit 1; } || true
+      - run: pytest -m db -q --strict-markers -rs | tee db.log
+      - run: grep -qE "[1-9][0-9]* skipped" db.log && { echo "::error::db job must not skip"; exit 1; } || true
+      - run: pytest tests/test_privileges.py tests/test_db_rpc.py -q --strict-markers -rs | tee priv.log
+      - run: grep -qE "[1-9][0-9]* skipped" priv.log && { echo "::error::db job must not skip"; exit 1; } || true
 
   lint:
     name: lint
