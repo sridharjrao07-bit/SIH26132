@@ -63,21 +63,30 @@ def test_revoked_table_conformance():
         conn.close()
 
 def test_migration_coverage():
-    """Static filename diff."""
+    """Guard P2-3: the runner must discover every migration, 003b included."""
     import re
+
     from scripts.apply_migrations import get_migration_files
-    migrations_dir = Path(__file__).parent.parent / "db" / "migrations"
+
     sql_files = [Path(f[2]).name for f in get_migration_files()]
-    
+
     for name in sql_files:
         assert re.match(r"^\d{3}[a-z]?_.*\.sql$", name), f"Invalid migration name: {name}"
-        
-    # Check W3 requirements
-    assert len(sql_files) == 35, f"Expected 35 migrations, found {len(sql_files)}"
+
+    # Count ratchet — bump when a migration is intentionally added.
+    EXPECTED_MIGRATIONS = 36
+    assert len(sql_files) == EXPECTED_MIGRATIONS, (
+        f"Expected {EXPECTED_MIGRATIONS} migrations, found {len(sql_files)}"
+    )
+
+    # Explicit -1 check: next(..., -1) lets a MISSING file pass (-1 < 5 < 9 is True).
     idx_003 = next((i for i, f in enumerate(sql_files) if f.startswith("003_")), -1)
     idx_003b = next((i for i, f in enumerate(sql_files) if f.startswith("003b_")), -1)
     idx_004 = next((i for i, f in enumerate(sql_files) if f.startswith("004_")), -1)
-    assert idx_003 < idx_003b < idx_004, "003b_admin_set_role_grants.sql is not correctly ordered between 003 and 004"
+    assert -1 not in (idx_003, idx_003b, idx_004), (
+        f"runner failed to discover 003/003b/004: indices={idx_003, idx_003b, idx_004}"
+    )
+    assert idx_003 < idx_003b < idx_004, "003b must sort between 003 and 004"
 
 @pytest.mark.db
 def test_dead_control_check():
