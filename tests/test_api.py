@@ -337,6 +337,7 @@ def test_admin_forecast_run_accepts_admin_token(override_supabase, fake_supabase
 
 from unittest.mock import patch
 
+
 def test_admin_events_ingest_handles_error(override_supabase, fake_supabase):
     """P1 regression: admin_events_ingest must handle unhandled exceptions and return 503"""
     with patch("events.runner.run", side_effect=Exception("Mock error")):

@@ -5,7 +5,7 @@ import pytest
 
 
 @pytest.mark.db
-def test_fpo_aggregate_lots_cross_tenant_raises_p0001():
+def test_fpo_aggregate_lots_role_gate_raises_p0001():
     db_url = os.environ.get("SUPABASE_DB_URL")
     if not db_url or db_url == "postgresql://p@db.placeholder.supabase.co:5432/postgres":
         pytest.skip("No real DB URL provided")
