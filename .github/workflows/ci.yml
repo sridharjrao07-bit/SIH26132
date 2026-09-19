@@ -95,6 +95,8 @@ jobs:
         run: pip install -r requirements-dev.txt
       - name: Ruff
         run: ruff check .
+      - name: API docs drift
+        run: PYTHONPATH=. python scripts/generate_api_docs.py --check
 
   test:
     name: test (py ${{ matrix.python-version }})

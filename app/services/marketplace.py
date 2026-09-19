@@ -4,6 +4,18 @@ from typing import Optional
 
 OFFER_TTL_HOURS = 48
 
+# PostgREST encodes `in` as a query-string parameter (~38 bytes per UUID), so an
+# unbounded id list builds multi-kilobyte URLs that proxies reject with 414/400
+# long before Postgres sees them — offer expiry and reliability scoring then fail
+# silently for busy buyers.  Cap every in_() call.
+IN_CHUNK = 100
+
+
+def _chunks(seq, size: int = IN_CHUNK):
+    """Yield consecutive slices of `seq`, each no longer than `size`."""
+    for i in range(0, len(seq), size):
+        yield seq[i : i + size]
+
 
 def _parse_dt(value) -> Optional[datetime]:
     if value is None:
@@ -90,7 +102,8 @@ def expire_stale_offers(supabase, ttl_hours: int = OFFER_TTL_HOURS, now: Optiona
                 
     lots_reopened = 0
     if expired_ids:
-        supabase.table("offers").update({"status": "expired"}).in_("id", expired_ids).execute()
+        for chunk in _chunks(expired_ids):
+            supabase.table("offers").update({"status": "expired"}).in_("id", chunk).execute()
         for lot_id in lot_ids_to_check:
             if _reopen_lot_if_idle(supabase, lot_id):
                 lots_reopened += 1
@@ -133,14 +146,16 @@ def recompute_buyer_reliability(supabase, buyer_id: str) -> Optional[str]:
     offer_ids = [o["id"] for o in offers if o.get("id")]
     paid = failed = disputed = grief = 0
     if offer_ids:
-        payments = (
-            supabase.table("payments")
-            .select("status,offer_id")
-            .in_("offer_id", offer_ids)
-            .execute()
-            .data
-            or []
-        )
+        payments = []
+        for chunk in _chunks(offer_ids):
+            payments += (
+                supabase.table("payments")
+                .select("status,offer_id")
+                .in_("offer_id", chunk)
+                .execute()
+                .data
+                or []
+            )
         for p in payments:
             st = p.get("status")
             if st == "paid":
@@ -149,15 +164,17 @@ def recompute_buyer_reliability(supabase, buyer_id: str) -> Optional[str]:
                 failed += 1
             elif st == "disputed":
                 disputed += 1
-        grievances = (
-            supabase.table("grievances")
-            .select("id,status,category,offer_id")
-            .in_("offer_id", offer_ids)
-            .eq("category", "payment")
-            .execute()
-            .data
-            or []
-        )
+        grievances = []
+        for chunk in _chunks(offer_ids):
+            grievances += (
+                supabase.table("grievances")
+                .select("id,status,category,offer_id")
+                .in_("offer_id", chunk)
+                .eq("category", "payment")
+                .execute()
+                .data
+                or []
+            )
         grief = sum(1 for g in grievances if g.get("status") in ("open", "in_progress"))
     grade = score_payment_reliability(paid, failed, disputed, grief)
     if grade is None:
@@ -196,14 +213,15 @@ def lot_ledger(supabase, lot: dict) -> dict:
     offer_ids = [o["id"] for o in offers if o.get("id")]
     payments = []
     if offer_ids:
-        payments = (
-            supabase.table("payments")
-            .select("*")
-            .in_("offer_id", offer_ids)
-            .execute()
-            .data
-            or []
-        )
+        for chunk in _chunks(offer_ids):
+            payments += (
+                supabase.table("payments")
+                .select("*")
+                .in_("offer_id", chunk)
+                .execute()
+                .data
+                or []
+            )
     for p in payments:
         events.append({
             "at": p.get("paid_at") or p.get("created_at") or "",
