@@ -25,10 +25,11 @@ Design rules for this module
    sees them, so ``extra="forbid"`` would raise on every unrelated .env line.
 """
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
-from typing import List, Literal
 from functools import lru_cache
+from typing import List, Literal
+
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):

@@ -12,7 +12,6 @@ from typing import Optional
 from app.services.matching_engine import haversine_km
 from app.utils.tz import get_ist_today
 
-
 NEARBY_STORAGE_KM = 40.0
 HIGH_ARRIVAL_QTL = 1000.0
 HIGH_DISTRICT_ARRIVAL_QTL = 2500.0

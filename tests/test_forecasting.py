@@ -1,14 +1,15 @@
 from datetime import date, timedelta
 
 from forecasting.engine import (
-    MovingAverageModel,
+    ForecastEngine,
     LinearRegressionModel,
+    MovingAverageModel,
     _blend_predictions,
-    build_daily_series,
     _make_forecast_rows,
-    ForecastEngine
+    build_daily_series,
 )
-from tests.conftest import MARKET_ID_LASALGAON, COMMODITY_ID_ONION
+
+from tests.conftest import COMMODITY_ID_ONION, MARKET_ID_LASALGAON
 
 
 def test_ma_model_basic():
@@ -175,8 +176,9 @@ def test_reversed_sanity_band(capsys):
     assert "reversed_sanity_band" in captured.out or "reversed_sanity_band" in captured.err
 
 def test_reversed_sanity_band_invariant():
-    from forecasting.engine import _make_forecast_rows
     from datetime import date
+
+    from forecasting.engine import _make_forecast_rows
     series = [(date(2024, 9, i+1), 2000.0) for i in range(25)]
     # Reversed sanity band
     rows = _make_forecast_rows('m1', 'c1', series, sanity=(5000, 10))

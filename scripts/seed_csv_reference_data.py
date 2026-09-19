@@ -1,9 +1,10 @@
+import asyncio
+import csv
 import os
 import sys
-import csv
-import asyncio
+
 from dotenv import load_dotenv
-from supabase import create_client, Client
+from supabase import Client, create_client
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 load_dotenv()

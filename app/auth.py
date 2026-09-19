@@ -1,10 +1,11 @@
-from typing import Optional
-from datetime import datetime, timedelta, timezone
 import threading
+from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 import jwt
+from fastapi import Depends, Header, HTTPException, Request
 from jwt import InvalidTokenError
-from fastapi import Header, HTTPException, Depends, Request
+
 from .config import get_settings
 from .deps import get_supabase_service_role
 

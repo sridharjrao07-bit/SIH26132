@@ -7,15 +7,16 @@ endpoint creates a buyer with verified=False and calls buyer_register RPC.
 Since migration 031 revoked direct INSERT on buyers from authenticated,
 all writes must go through security-definer RPCs.
 """
-from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
-from supabase import Client
-from app.deps import get_supabase, get_supabase_as_user
+
 from app.auth import get_current_user, require_role
+from app.deps import get_supabase, get_supabase_as_user
 from app.errors import json_for_api_error
-from app.schemas.marketplace import BuyerResponse, BuyerRegisterRequest
+from app.schemas.marketplace import BuyerRegisterRequest, BuyerResponse
 from app.services.matching_engine import rank_lots_for_buyer
+from fastapi import APIRouter, Depends, HTTPException, Query
 from postgrest.exceptions import APIError
+from supabase import Client
 
 router = APIRouter(prefix="/api/v1/buyers", tags=["Buyers"])
 

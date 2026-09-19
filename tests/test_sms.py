@@ -9,12 +9,12 @@ Covers:
   - S3 regression: ephemeral keys are per-instance (two verifiers reject each other)
   - M1 regression: MSG91Gateway sends correct Flow API payload shape
 """
-import time
-import hmac
 import hashlib
+import hmac
+import time
+
 import pytest
 from fastapi.testclient import TestClient
-
 
 # ─── InboundVerifier ────────────────────────────────────────────────────────
 
@@ -30,11 +30,12 @@ def make_signed_request(body: bytes, secret: str = "demo-secret") -> dict:
 async def test_valid_hmac_signature_passes(monkeypatch):
     monkeypatch.setenv("INBOUND_HMAC_SECRET", "test-secret")
     from importlib import reload
+
     import notifications.inbound_verifier as iv_mod
     reload(iv_mod)
 
-    from starlette.testclient import TestClient as STC
     from fastapi import FastAPI, Request
+    from starlette.testclient import TestClient as STC
     app = FastAPI()
     verifier = iv_mod.InboundVerifier()
 
@@ -54,11 +55,12 @@ async def test_valid_hmac_signature_passes(monkeypatch):
 async def test_bad_signature_rejected(monkeypatch):
     monkeypatch.setenv("INBOUND_HMAC_SECRET", "test-secret")
     from importlib import reload
+
     import notifications.inbound_verifier as iv_mod
     reload(iv_mod)
 
-    from starlette.testclient import TestClient as STC
     from fastapi import FastAPI, Request
+    from starlette.testclient import TestClient as STC
     app = FastAPI()
     verifier = iv_mod.InboundVerifier()
 
@@ -79,11 +81,12 @@ async def test_bad_signature_rejected(monkeypatch):
 async def test_expired_timestamp_rejected(monkeypatch):
     monkeypatch.setenv("INBOUND_HMAC_SECRET", "test-secret")
     from importlib import reload
+
     import notifications.inbound_verifier as iv_mod
     reload(iv_mod)
 
-    from starlette.testclient import TestClient as STC
     from fastapi import FastAPI, Request
+    from starlette.testclient import TestClient as STC
     app = FastAPI()
     verifier = iv_mod.InboundVerifier()
 
@@ -106,11 +109,12 @@ async def test_expired_timestamp_rejected(monkeypatch):
 async def test_missing_headers_rejected(monkeypatch):
     monkeypatch.setenv("INBOUND_HMAC_SECRET", "test-secret")
     from importlib import reload
+
     import notifications.inbound_verifier as iv_mod
     reload(iv_mod)
 
-    from starlette.testclient import TestClient as STC
     from fastapi import FastAPI, Request
+    from starlette.testclient import TestClient as STC
     app = FastAPI()
     verifier = iv_mod.InboundVerifier()
 
@@ -130,8 +134,9 @@ async def test_missing_headers_rejected(monkeypatch):
 
 def make_admin_token() -> str:
     """Generate a valid-looking JWT for testing (just tests routing, not real auth)."""
-    import jwt as pyjwt
     import os
+
+    import jwt as pyjwt
     secret = os.environ.get("SUPABASE_JWT_SECRET", "ci-placeholder-jwt-secret-32b-min")
     token = pyjwt.encode(
         {"sub": "admin-user-id", "role": "authenticated", "aud": "authenticated"},
@@ -168,6 +173,7 @@ def test_production_mode_missing_secret_raises_runtime_error(monkeypatch):
     get_settings.cache_clear()
 
     from importlib import reload
+
     import notifications.inbound_verifier as iv_mod
     reload(iv_mod)
 
@@ -185,6 +191,7 @@ def test_production_mode_demo_secret_raises_runtime_error(monkeypatch):
     monkeypatch.setenv("INBOUND_HMAC_SECRET", "demo-secret")
 
     from importlib import reload
+
     import notifications.inbound_verifier as iv_mod
     reload(iv_mod)
 
@@ -211,6 +218,7 @@ async def test_ephemeral_keys_are_per_instance(monkeypatch):
     get_settings.cache_clear()
 
     from importlib import reload
+
     import notifications.inbound_verifier as iv_mod
     reload(iv_mod)
 
@@ -224,8 +232,8 @@ async def test_ephemeral_keys_are_per_instance(monkeypatch):
     payload_to_sign = body + ts.encode("utf-8")
     sig = hmac.new(verifier_a.secret, payload_to_sign, hashlib.sha256).hexdigest()
 
-    from starlette.testclient import TestClient as STC
     from fastapi import FastAPI, Request
+    from starlette.testclient import TestClient as STC
 
     app = FastAPI()
 
@@ -251,8 +259,8 @@ def test_msg91_gateway_sends_correct_flow_api_payload():
     Non-2xx response must return ("failed", False).
     """
     try:
-        import respx
         import httpx
+        import respx
     except ImportError:
         pytest.skip("respx not installed — run: pip install respx")
 

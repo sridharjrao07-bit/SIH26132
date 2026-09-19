@@ -1,10 +1,10 @@
 import json
 import sys
-import structlog
 from typing import Optional
 
-from forecasting.backtest import run_backtest
+import structlog
 from app.deps import get_supabase_service_role
+from forecasting.backtest import run_backtest
 
 # Ensure structlog goes to stderr so stdout is pure JSON
 structlog.configure(

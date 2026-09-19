@@ -1,8 +1,10 @@
+from datetime import date
+
+import httpx
 import pytest
 import respx
-import httpx
-from datetime import date
 from scripts.backfill_weather import fetch_weather_chunk
+
 
 @pytest.mark.asyncio
 async def test_fetch_weather_chunk_missing_days_not_written():

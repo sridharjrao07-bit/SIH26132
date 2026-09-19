@@ -1,8 +1,10 @@
-import pytest
 import sys
-from unittest.mock import patch, MagicMock
-from ingestion.base import SourceFetchError
+from unittest.mock import MagicMock, patch
+
+import pytest
 from ingestion.agmarknet import AgmarknetAdapter
+from ingestion.base import SourceFetchError
+
 
 def test_agmarknet_covers_all_nashik_mandis():
     from ingestion.agmarknet import NASHIK_MARKETS

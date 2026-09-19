@@ -10,8 +10,7 @@ Contract under test:
 """
 import pytest
 
-from tests.conftest import make_record, COMMODITY_ID_ONION
-
+from tests.conftest import COMMODITY_ID_ONION, make_record
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 

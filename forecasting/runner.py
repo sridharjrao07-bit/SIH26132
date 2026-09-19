@@ -7,8 +7,9 @@ without importing the full app stack.
 
 Pattern mirrors ingestion/runner.py.
 """
-import structlog
 import asyncio
+
+import structlog
 from supabase import create_client
 
 from forecasting.engine import ForecastEngine

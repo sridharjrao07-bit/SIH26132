@@ -1,9 +1,10 @@
 import asyncio
-import structlog
 import time
-from typing import List, Optional, Tuple, Dict
-from supabase import Client
 from datetime import datetime, timezone
+from typing import Dict, List, Optional, Tuple
+
+import structlog
+from supabase import Client
 
 from .base import IngestionSourceAdapter, SourceFetchError
 from .validator import PriceValidator

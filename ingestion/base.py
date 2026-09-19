@@ -1,8 +1,9 @@
-import structlog
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel
 from datetime import date
+from typing import Any, Dict, List, Optional
+
+import structlog
+from pydantic import BaseModel
 
 logger = structlog.get_logger()
 

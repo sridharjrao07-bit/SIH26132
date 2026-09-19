@@ -13,9 +13,7 @@ Covers:
 import os
 from datetime import date, datetime, timedelta
 
-from tests.conftest import (
-    MARKET_ID_LASALGAON, COMMODITY_ID_ONION
-)
+from tests.conftest import COMMODITY_ID_ONION, MARKET_ID_LASALGAON
 
 USER_A = "user-a-0000-0000-0000"
 USER_B = "user-b-0000-0000-0000"
@@ -271,6 +269,7 @@ def test_resolve_template_returns_correct_lang(monkeypatch):
     # Settings() ignores field-name kwargs (no populate_by_name) — inject a
     # simple namespace so this test actually covers resolve_template().
     from types import SimpleNamespace
+
     from notifications.sms_gateway import resolve_template
     test_settings = SimpleNamespace(
         msg91_dlt_te_id_mr="tmpl_mr",
@@ -366,8 +365,9 @@ def test_retry_after_failed_send(fake_supabase):
     assert alert["last_notified_at"] is None
     
     # Second run with a working gateway
-    from notifications.sms_gateway import MockSMSGateway
     import os
+
+    from notifications.sms_gateway import MockSMSGateway
     checker.gateway = MockSMSGateway(log_file=os.devnull)
     
     assert checker.run()["fired"] == 1

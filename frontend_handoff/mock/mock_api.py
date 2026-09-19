@@ -52,7 +52,7 @@ import time
 import uuid
 from datetime import date, datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse, parse_qs, quote
+from urllib.parse import parse_qs, quote, urlparse
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Fixture data (stable IDs so you can hardcode them while developing)

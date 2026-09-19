@@ -9,10 +9,11 @@ Gateway return type: Tuple[str, bool] → (status_string, success_bool)
   status_string is written directly to notification_log.status.
   The DB CHECK constraint accepts: 'pending', 'sent', 'failed', 'mock'.
 """
-import structlog
-import httpx
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple
+
+import httpx
+import structlog
 
 logger = structlog.get_logger()
 

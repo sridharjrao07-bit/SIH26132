@@ -1,12 +1,11 @@
 """Crash-proofing: PostgREST errors, bad JSON, IDOR, bounds — never 500."""
 from __future__ import annotations
 
-from postgrest.exceptions import APIError
-
-from fastapi.testclient import TestClient
-
 from app.errors import json_for_api_error
 from app.main import app
+from fastapi.testclient import TestClient
+from postgrest.exceptions import APIError
+
 from tests.conftest import (
     COMMODITY_ID_ONION,
     FARMER_USER_ID,
@@ -58,8 +57,8 @@ def test_postgrest_error_on_markets_is_not_500(override_supabase):
     def boom(*a, **k):
         raise APIError({"code": "22P02", "message": "invalid input syntax for type uuid"})
     
-    from app.main import app
     from app.deps import get_supabase
+    from app.main import app
     
     class BoomSupabase:
         def table(self, *a, **k):
@@ -110,9 +109,10 @@ def test_grievance_for_foreign_lot_is_404(override_supabase, fake_supabase):
 
 
 def test_sms_webhook_bad_json_after_hmac_is_400(override_supabase, fake_supabase, monkeypatch):
-    import hmac
     import hashlib
+    import hmac
     import time
+
     from app.routers import sms as sms_mod
 
     monkeypatch.setenv("INBOUND_HMAC_SECRET", "harden-secret")

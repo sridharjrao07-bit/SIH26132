@@ -21,7 +21,6 @@ from __future__ import annotations
 import pytest
 from postgrest.exceptions import APIError
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
@@ -50,8 +49,8 @@ class TestConfigLiterals:
         assert s.app_env == "development"
 
     def test_invalid_app_env_rejected(self):
-        from pydantic import ValidationError
         from app.config import Settings
+        from pydantic import ValidationError
         with pytest.raises(ValidationError, match="app_env"):
             Settings(
                 app_env="prod",  # typo — should fail
@@ -63,8 +62,8 @@ class TestConfigLiterals:
             )
 
     def test_invalid_auth_db_enforcement_rejected(self):
-        from pydantic import ValidationError
         from app.config import Settings
+        from pydantic import ValidationError
         with pytest.raises(ValidationError, match="auth_db_enforcement"):
             Settings(
                 auth_db_enforcement="rls2",  # typo — should fail
@@ -76,8 +75,8 @@ class TestConfigLiterals:
             )
 
     def test_invalid_forecast_model_rejected(self):
-        from pydantic import ValidationError
         from app.config import Settings
+        from pydantic import ValidationError
         with pytest.raises(ValidationError, match="forecast_model"):
             Settings(
                 forecast_model="xgboost",  # not in Literal
@@ -194,8 +193,8 @@ class TestDoubleAcceptPrevention:
 
 class TestStartupChecks:
     def test_run_startup_checks_passes_in_dev(self):
-        from app.startup_checks import run_startup_checks
         from app.config import Settings
+        from app.startup_checks import run_startup_checks
         s = Settings(
             app_env="development",
             supabase_url="https://x.supabase.co",
@@ -236,6 +235,7 @@ class TestRoleCache:
     def test_role_cache_expired_returns_none(self):
         import time
         from datetime import timedelta
+
         from app import auth as auth_mod
 
         with auth_mod._role_cache_lock:

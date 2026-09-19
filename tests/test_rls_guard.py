@@ -1,6 +1,8 @@
-from fastapi.testclient import TestClient
 from app.main import app
-from tests.conftest import FARMER_USER_ID, ADMIN_USER_ID, FPO_USER_ID, mint_jwt
+from fastapi.testclient import TestClient
+
+from tests.conftest import ADMIN_USER_ID, FARMER_USER_ID, FPO_USER_ID, mint_jwt
+
 
 def test_rls_canary_cross_tenant_isolation(override_supabase, fake_supabase):
     client = TestClient(app)
@@ -48,10 +50,11 @@ def test_rls_canary_cross_tenant_isolation(override_supabase, fake_supabase):
     # The admin uses the service_role client usually, but in our case, ADMIN_USER_ID bypasses RlsFakeSupabase filters
     # Let's just check the response
     assert len([g for g in res_admin.json() if g["id"] == "grievance-cross-tenant-1"]) == 1
-from app.config import Settings
 import pytest
+from app.config import Settings
 from app.deps import get_supabase_as_user
 from fastapi import HTTPException
+
 
 def test_auth_mode_app_startup_rejection_in_prod():
     settings = Settings(app_env="production", auth_db_enforcement="app", kb_allow_app_mode=False, supabase_jwt_issuer="https://test.supabase.co/auth/v1", inbound_hmac_secret="test_secret")

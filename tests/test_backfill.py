@@ -4,12 +4,13 @@ test_backfill.py — Tests for scripts/backfill_history.py adapter-level behavio
 These tests exercise the DataGovInAdapter directly (HTTP level) and verify
 the upsert conflict key / coexistence policy at the ingestion-runner level.
 """
-import pytest
-import respx
-import httpx
 from datetime import date
 
+import httpx
+import pytest
+import respx
 from ingestion.data_gov_in import DataGovInAdapter
+
 
 @pytest.fixture
 def data_gov_adapter():

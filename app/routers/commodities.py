@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends
 from typing import List
-from supabase import Client
+
 from app.deps import get_supabase
 from app.schemas import CommodityResponse
+from fastapi import APIRouter, Depends
+from supabase import Client
 
 router = APIRouter(prefix="/api/v1/commodities", tags=["Commodities"])
 

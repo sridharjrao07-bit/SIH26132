@@ -10,15 +10,13 @@ Covers:
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-
 from forecasting.gates import (
+    DEFAULT_MODEL,
+    MIN_PREDICTIONS,
     GateOutcome,
     evaluate_gates,
     select_model,
-    DEFAULT_MODEL,
-    MIN_PREDICTIONS,
 )
-
 
 # ── Minimal stub types ────────────────────────────────────────────────────────
 

@@ -9,14 +9,15 @@ It prints a clean, judge-friendly terminal card proving the evaluation is honest
 
 import os
 import sys
+
 from dotenv import load_dotenv
 
 # Ensure we can import from the app
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from supabase import create_client
 from app.config import get_settings
 from forecasting.backtest import run_backtest
+from supabase import create_client
 
 # Hardcoded constants for the demo
 MARKET_ID = "61d90610-6cfa-4db7-9a4c-56920f3a61cd"  # Lasalgaon

@@ -1,11 +1,12 @@
-import os
-import hmac
 import hashlib
+import hmac
+import os
 import secrets
-import time
 import threading
-from fastapi import Request, HTTPException
+import time
+
 import structlog
+from fastapi import HTTPException, Request
 
 logger = structlog.get_logger()
 

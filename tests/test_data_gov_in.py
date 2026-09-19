@@ -14,12 +14,12 @@ Contract under test:
   - unexpected response shape (no 'records' key) → raises SourceFetchError
   - source_name returns 'data_gov_in' (no dot)
 """
-import pytest
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from ingestion.data_gov_in import DataGovInAdapter
+import pytest
 from ingestion.base import SourceFetchError
+from ingestion.data_gov_in import DataGovInAdapter
 
 ADAPTER = DataGovInAdapter(api_key="test-key")
 

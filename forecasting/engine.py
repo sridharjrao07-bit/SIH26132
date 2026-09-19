@@ -25,19 +25,19 @@ PostgREST 1,000-row cap avoided by:
   (a) paginated distinct-pairs query (PAGE_SIZE=500),
   (b) per-pair history fetch (bounded by HISTORY_DAYS × ~3 rows ≈ 180 rows).
 """
-import math
-import structlog
-import time
 import collections
+import math
+import time
 from datetime import date, datetime, timedelta, timezone
 from statistics import pstdev
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Any, Dict, List, Optional, Tuple
 
-from supabase import Client
+import structlog
 from app.config import get_settings
-from forecasting.models import FeatureOLSModel, HoltWintersModel
 from app.utils.tz import get_ist_today
+from supabase import Client
 
+from forecasting.models import FeatureOLSModel, HoltWintersModel
 
 logger = structlog.get_logger()
 

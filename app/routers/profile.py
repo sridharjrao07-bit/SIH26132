@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
-from supabase import Client
-from app.deps import get_supabase_as_user
 from app.auth import get_current_user
+from app.deps import get_supabase_as_user
 from app.schemas.marketplace import ProfileUpdate
+from fastapi import APIRouter, Depends, HTTPException
 from notifications.alert_checker import normalize_phone
+from supabase import Client
 
 router = APIRouter(prefix="/api/v1/me", tags=["Profile"])
 

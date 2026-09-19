@@ -1,9 +1,9 @@
+import math
 from datetime import date, timedelta
 from statistics import pstdev
-from typing import List, Tuple, Optional, Any, Dict
-import structlog
-import math
+from typing import Any, Dict, List, Optional, Tuple
 
+import structlog
 
 logger = structlog.get_logger()
 

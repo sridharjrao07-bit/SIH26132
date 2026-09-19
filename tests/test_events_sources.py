@@ -1,6 +1,8 @@
-import pytest
 from datetime import date
-from events.sources import PIBSource, NewsFeedSource, StateBulletinsSource, SourceMode
+
+import pytest
+from events.sources import NewsFeedSource, PIBSource, SourceMode, StateBulletinsSource
+
 
 @pytest.mark.asyncio
 async def test_pib_source_demo():

@@ -1,7 +1,9 @@
 import os
+
 import pytest
 import requests
-from tests.conftest import mint_jwt, FARMER_USER_ID
+
+from tests.conftest import FARMER_USER_ID, mint_jwt
 
 # Run only if the developer explicitly allows live tests
 pytestmark = pytest.mark.skipif(

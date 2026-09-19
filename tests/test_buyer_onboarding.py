@@ -1,6 +1,7 @@
-from fastapi.testclient import TestClient
 from app.main import app
-from tests.conftest import mint_jwt, FARMER_USER_ID, ADMIN_USER_ID
+from fastapi.testclient import TestClient
+
+from tests.conftest import ADMIN_USER_ID, FARMER_USER_ID, mint_jwt
 
 client = TestClient(app)
 

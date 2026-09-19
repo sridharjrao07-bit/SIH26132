@@ -1,9 +1,10 @@
 import uuid
+
+from app.auth import get_current_user
+from app.deps import get_supabase_as_user, get_supabase_service_role
+from app.schemas.marketplace import GrievanceCreate
 from fastapi import APIRouter, Depends, HTTPException
 from supabase import Client
-from app.deps import get_supabase_as_user, get_supabase_service_role
-from app.auth import get_current_user
-from app.schemas.marketplace import GrievanceCreate
 
 router = APIRouter(prefix="/api/v1/grievances", tags=["Grievances"])
 

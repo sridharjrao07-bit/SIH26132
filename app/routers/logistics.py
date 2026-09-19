@@ -1,12 +1,13 @@
 import uuid
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Optional
-from supabase import Client
-from app.deps import get_supabase, get_supabase_as_user
+
 from app.auth import get_current_user
+from app.deps import get_supabase, get_supabase_as_user
 from app.schemas.marketplace import LogisticsBookCreate, LogisticsBookUpdate
-from app.services.marketplace import booked_quantity, ACTIVE_BOOKING_STATUSES
+from app.services.marketplace import ACTIVE_BOOKING_STATUSES, booked_quantity
+from fastapi import APIRouter, Depends, HTTPException, Query
+from supabase import Client
 
 router = APIRouter(prefix="/api/v1/logistics", tags=["Logistics"])
 

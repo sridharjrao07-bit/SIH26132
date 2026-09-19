@@ -1,6 +1,6 @@
-from slowapi import Limiter
-from fastapi import Request
 from app.config import get_settings
+from fastapi import Request
+from slowapi import Limiter
 
 
 def _default_limit() -> str:

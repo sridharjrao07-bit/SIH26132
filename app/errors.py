@@ -21,7 +21,6 @@ from __future__ import annotations
 from fastapi.responses import JSONResponse
 from postgrest.exceptions import APIError
 
-
 # Maps our RPC raise codes (P000x) to HTTP status + human message.
 _RPC_CODE_MAP: dict[str, tuple[int, str]] = {
     "P0001": (409, "operation not permitted"),

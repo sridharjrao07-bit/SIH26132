@@ -8,21 +8,22 @@ Protocol (verbatim, stored in every BacktestReport.protocol):
 """
 from __future__ import annotations
 
+import collections
 import math
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Protocol, Tuple
 
+import structlog
+from app.utils.tz import get_ist_today
+
 from forecasting.evaluation import (
-    mae,
-    mape_winsorized,
     directional_accuracy,
     interval_coverage,
+    mae,
+    mape_winsorized,
 )
 
-import structlog
-import collections
-from app.utils.tz import get_ist_today
 logger = structlog.get_logger()
 
 # Verbatim protocol string — referenced in tests and FORECASTING.md

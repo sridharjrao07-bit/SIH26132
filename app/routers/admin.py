@@ -1,20 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
-from supabase import Client
-import structlog
 import asyncio
 import uuid
 from typing import List, Optional
 
+import structlog
 from app.auth import require_role
 from app.deps import get_supabase_service_role
-from app.schemas.marketplace import BuyerCreate, GrievanceUpdate, BuyerVerificationUpdate
+from app.schemas.marketplace import BuyerCreate, BuyerVerificationUpdate, GrievanceUpdate
 from app.services.marketplace import expire_stale_offers, recompute_buyer_reliability
-
+from app.utils.tz import get_ist_today
+from fastapi import APIRouter, Depends, HTTPException
 from forecasting.engine import ForecastEngine
 from notifications.alert_checker import AlertChecker
-from app.utils.tz import get_ist_today
-
+from pydantic import BaseModel
+from supabase import Client
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -64,7 +62,7 @@ def trigger_forecast_backtest(
       history_days : int   — how far back to pull price history (default 365)
       models       : list  — model names to evaluate; unknown name → 422
     """
-    from forecasting.backtest import run_backtest, MODEL_REGISTRY
+    from forecasting.backtest import MODEL_REGISTRY, run_backtest
 
     model_names = body.models or ["ma", "ols", "naive"]
     unknown = [m for m in model_names if m not in MODEL_REGISTRY]

@@ -9,12 +9,13 @@ Verified contracts:
   5. Canonical hash is stable for identical inputs and distinct for different inputs.
   6. Failed source does not block successful sources.
 """
-import pytest
 from datetime import date
-from events.runner import run, _canonical_event_hash
-from events.base import EventSourceError, RawHeadline, ExtractedEvent
-from tests.conftest import FakeSupabase
 
+import pytest
+from events.base import EventSourceError, ExtractedEvent, RawHeadline
+from events.runner import _canonical_event_hash, run
+
+from tests.conftest import FakeSupabase
 
 # ── Hash canonicality unit tests ──────────────────────────────────────────────
 

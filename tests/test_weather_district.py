@@ -1,5 +1,6 @@
 from forecasting.engine import ForecastEngine
 
+
 class MockBuilder:
     def __init__(self, data):
         self.data = data

@@ -1,11 +1,12 @@
 import os
-import pytest
-import uuid
 import threading
+import uuid
 from datetime import datetime, timezone
 
-from supabase import create_client
+import pytest
 from app.config import get_settings
+from supabase import create_client
+
 
 def is_db_integration_enabled():
     return os.environ.get("ENABLE_DB_INTEGRATION_TESTS", "0") == "1"

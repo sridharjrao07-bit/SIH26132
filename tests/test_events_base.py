@@ -1,7 +1,9 @@
 from datetime import date
-from pydantic import ValidationError
+
 import pytest
-from events.base import EventSourceError, RawHeadline, ExtractedEvent
+from events.base import EventSourceError, ExtractedEvent, RawHeadline
+from pydantic import ValidationError
+
 
 def test_event_source_error_docstring():
     assert EventSourceError.__doc__ == "Raised when an event source fails to fetch or parse headlines."

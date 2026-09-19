@@ -1,14 +1,14 @@
 """Rank verified buyers for a farmer lot (SIH26132 matching)."""
 from typing import Literal, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
-from supabase import Client
-from app.deps import get_supabase, get_supabase_as_user, get_supabase_service_role
-from app.auth import get_current_user
-from app.services.matching_engine import rank_buyers
-from app.services.marketplace import logistics_next_step
-from notifications.sale_window import compute_sale_window, apply_sale_language
-from app.utils.tz import get_ist_today
 
+from app.auth import get_current_user
+from app.deps import get_supabase, get_supabase_as_user, get_supabase_service_role
+from app.services.marketplace import logistics_next_step
+from app.services.matching_engine import rank_buyers
+from app.utils.tz import get_ist_today
+from fastapi import APIRouter, Depends, HTTPException, Query
+from notifications.sale_window import apply_sale_language, compute_sale_window
+from supabase import Client
 
 router = APIRouter(prefix="/api/v1/lots", tags=["Matching"])
 

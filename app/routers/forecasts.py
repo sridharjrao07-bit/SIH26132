@@ -1,12 +1,11 @@
-from fastapi import APIRouter, Depends, Query
+from datetime import datetime, timedelta, timezone
 from typing import List
-from datetime import timedelta, datetime, timezone
-from supabase import Client
 
 from app.deps import get_supabase
 from app.schemas import ForecastResponse
 from app.utils.tz import get_ist_today
-
+from fastapi import APIRouter, Depends, Query
+from supabase import Client
 
 router = APIRouter(prefix="/api/v1/forecasts", tags=["Forecasts"])
 

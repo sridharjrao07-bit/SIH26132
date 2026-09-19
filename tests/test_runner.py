@@ -10,13 +10,16 @@ Contract under test:
   - SourceFetchError from adapter → status='failed' in ingestion_log
 """
 import pytest
-
-from ingestion.runner import IngestionRunner
 from ingestion.base import SourceFetchError
-from tests.conftest import (
-    make_record, StubAdapter, MARKET_ID_LASALGAON, MARKET_ID_PIMPALGAON, COMMODITY_ID_ONION,
-)
+from ingestion.runner import IngestionRunner
 
+from tests.conftest import (
+    COMMODITY_ID_ONION,
+    MARKET_ID_LASALGAON,
+    MARKET_ID_PIMPALGAON,
+    StubAdapter,
+    make_record,
+)
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -124,6 +127,7 @@ async def test_upsert_conflict_columns(fake_supabase):
 @pytest.mark.asyncio
 async def test_no_aliases_source_logs_failed(fake_supabase):
     from ingestion.runner import IngestionRunner
+
     from tests.conftest import StubAdapter
     
     # Adapter has source "unknown_source", which has no aliases

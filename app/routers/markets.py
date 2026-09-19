@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, Query, HTTPException
 from typing import List, Optional
-from supabase import Client
+
+import structlog
 from app.deps import get_supabase
 from app.schemas import MarketResponse
-import structlog
+from fastapi import APIRouter, Depends, HTTPException, Query
+from supabase import Client
 
 logger = structlog.get_logger()
 

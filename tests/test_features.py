@@ -1,6 +1,8 @@
 import math
 from datetime import date
+
 from forecasting.features import _compute_event_pressure
+
 
 # ── Helper: mark an event dict as provenance_mode=live ────────────────────────
 # All existing test events are "live" by intent. New tests explicitly set
@@ -168,6 +170,7 @@ def test_momentum_14d_is_none_when_lag15_missing():
 def test_momentum_14d_is_none_when_denominator_zero():
     """If price[t-15] is zero, momentum_14d must be None (no division by zero)."""
     from datetime import timedelta
+
     from forecasting.features import build_feature_matrix
 
     base = date(2026, 9, 1)
@@ -185,6 +188,7 @@ def test_momentum_14d_is_none_when_denominator_zero():
 def test_district_price_uses_previous_day():
     """district_mean_price must use the previous calendar day to avoid leakage."""
     from datetime import timedelta
+
     from forecasting.features import build_feature_matrix
 
     base = date(2026, 9, 5)
@@ -209,6 +213,7 @@ def test_district_price_uses_previous_day():
 def test_event_pressure_uses_strictly_lagged_events():
     """Events on curr_date must NOT influence that row's event_pressure."""
     from datetime import timedelta
+
     from forecasting.features import build_feature_matrix
 
     base = date(2026, 9, 5)

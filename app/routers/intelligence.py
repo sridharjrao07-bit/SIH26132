@@ -1,9 +1,10 @@
 """Sale-window recommendation — localised hold/sell advice (SIH26132)."""
-from fastapi import APIRouter, Depends, Query, HTTPException
-from typing import Optional, Literal
-from supabase import Client
+from typing import Literal, Optional
+
 from app.deps import get_supabase
-from notifications.sale_window import compute_sale_window, apply_sale_language
+from fastapi import APIRouter, Depends, HTTPException, Query
+from notifications.sale_window import apply_sale_language, compute_sale_window
+from supabase import Client
 
 router = APIRouter(prefix="/api/v1/sale-window", tags=["Intelligence"])
 
