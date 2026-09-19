@@ -1,8 +1,8 @@
 import asyncio
 import os
 import sys
-from datetime import datetime
-from typing import List
+from datetime import date, datetime
+from typing import List, Optional
 
 import structlog
 
@@ -35,7 +35,9 @@ class AgmarknetAdapter(IngestionSourceAdapter):
             return list(NASHIK_MARKETS)
         return [district]
 
-    async def fetch_prices(self, district: str, commodity: str, state: str = "Maharashtra") -> List[RawPriceRecord]:
+    async def fetch_prices(
+        self, district: str, commodity: str, state: str = "Maharashtra", date: Optional[date] = None
+    ) -> List[RawPriceRecord]:
         log = logger.bind(source=self.source_name, district=district, commodity=commodity)
         records: List[RawPriceRecord] = []
 
