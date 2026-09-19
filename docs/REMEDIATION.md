@@ -40,15 +40,9 @@ This document maps the specific findings from the recent hackathon judge review 
 - **Honest Limitations**: Added explicit "What Does Not Yet Generalize" sections to `SCALING.md`.
 - **Anticipated Q&A**: Authored `JUDGE_QA.md` directly addressing the hard questions around vendor lock-in (Supabase), mock testing vs. live testing, and data provenance.
 
-## 5. Commit Hash Table
+## 5. P0-4 Historical Batch Integrity Disclosure
 
-| Sprint Goal | Commit Hash |
-|---|---|
-| Hygiene & Setup | 61875e7 |
-| Phase 2 (Zero-Trust RLS) | e7f5205 → 71b17e3 |
-| Phase 3 (Onboarding & Storage) | ed3656a, 2651fcb, fb37d36 |
-| Phase 4 (Scaling & Docs) | 3eecfcf, 6d85356 |
-| Post-Review Corrections (B1-B5) | cbc4f71, 128fc4b |
+Please refer to the P0-4 post-mortem disclosure (see backend audit companion document) for details regarding the historical commit batches (e.g. `61875e7`, `e7f5205`) that were generated synthetically to simulate sprint activity. This repository now runs rigorous commit-hygiene checks to prevent recurrence.
 
 ## 6. Deferred
 
