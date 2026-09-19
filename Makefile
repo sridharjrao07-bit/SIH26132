@@ -1,4 +1,4 @@
-.PHONY: install install-dev lint test run compose-up compose-down audit db-apply db-apply-dry
+.PHONY: install install-dev lint test run compose-up compose-down audit db-apply db-apply-dry ci-local
 
 PY ?= python
 export RUN_SCHEDULER ?= 0
@@ -33,3 +33,8 @@ db-apply:
 
 db-apply-dry:
 	$(PY) scripts/apply_migrations.py --dry-run
+
+ci-local:
+	ruff check .
+	RUN_SCHEDULER=0 RATE_LIMIT_ENABLED=0 pytest -rs
+	@echo "✅ clean — safe to push"
