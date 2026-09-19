@@ -10,7 +10,7 @@ license = { text = "MIT" }
 # Runtime is Python 3.12 (Dockerfile / CI).
 target-version = "py312"
 line-length = 100
-src = ["app", "ingestion", "forecasting", "notifications", "tests", "demo", "scripts"]
+src = ["app", "events", "ingestion", "forecasting", "notifications", "tests", "demo", "scripts"]
 exclude = [".venv", "venv", "build", "dist", "docs/archive"]
 
 [tool.ruff.lint]
@@ -33,7 +33,8 @@ asyncio_default_fixture_loop_scope = "function"
 pythonpath = ["."]
 testpaths = ["tests"]
 addopts = "-q"
+markers = ["db: requires a real Postgres"]
 
 [tool.coverage.run]
-source = ["app", "ingestion", "forecasting", "notifications"]
+source = ["app", "events", "ingestion", "forecasting", "notifications"]
 omit = ["tests/*", "demo/*", "scripts/*"]
