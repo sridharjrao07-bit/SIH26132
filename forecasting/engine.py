@@ -218,8 +218,9 @@ def apply_postprocessing(
     sanity: Optional[Tuple[float, float]] = None
 ) -> List[Tuple[float, Optional[float], Optional[float]]]:
     """
-    Apply standard interval widening (sqrt(h)), nonnegative bounding, 
-    and commodity sanity clamps. Naive coverage (sigma == 0) returns None for bounds.
+    Apply standard interval widening (sqrt(h)), nonnegative bounding,
+    and commodity sanity clamps. When sigma == 0 (naive coverage) the bounds
+    collapse to a zero-width interval (p, p); they are never None.
     """
     results = []
     for i, p in enumerate(raw_preds, start=1):

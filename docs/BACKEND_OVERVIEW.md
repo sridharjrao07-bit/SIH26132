@@ -20,7 +20,7 @@ The backend operates as a modular monolith. It serves a RESTful JSON API via Fas
 
 The backend utilizes a **"Thick Database, Thin API"** approach to security.
 
-1. **Row-Level Security (RLS)**: Data isolation is not manually handled in FastAPI routers (e.g., there are no manual `.eq("user_id", current_user)` filters). Instead, `app/deps.py` intercepts the incoming JWT and constructs a user-scoped `supabase` client on the fly for every request.
+1. **Row-Level Security (RLS)**: `app/deps.py` intercepts the incoming JWT and constructs a user-scoped `supabase` client for every request, so PostgREST executes as the authenticated role and RLS policies apply server-side. Ownership is additionally asserted in application code: eleven router queries carry explicit `.eq("user_id", …)` filters (`alerts.py`, `grievances.py`, `logistics.py`, `lots.py`, `offers.py`, `payments.py`, `storage.py`) as defence-in-depth, so a policy regression cannot silently expose another user's rows.
 2. **Database Hard Boundary**: When FastAPI makes a query using that scoped client, PostgreSQL's native RLS policies intercept the execution, silently dropping any rows the `authenticated` user does not own.
 3. **Fail-Closed Guard**: `app/startup_checks.py` validates the environment on boot. If the application is set to mock RLS locally (`AUTH_DB_ENFORCEMENT=app`), the server will explicitly refuse to start in a production environment.
 4. **RPC State Machines**: High-risk state transitions (like confirming a payment or advancing a logistics step) are pushed entirely into PostgreSQL as `SECURITY DEFINER` RPCs (e.g., `transition_payment_status`). These functions enforce explicit ownership constraints (`auth.uid() = p_user_id`) natively, guaranteeing that no rogue endpoint logic can bypass the rules.
@@ -34,7 +34,7 @@ The core API is split across several domain-specific routers inside `app/routers
 - **`profile.py` & `buyers.py`**: Handles user identity. Includes a self-service registration flow for institutional buyers that dictates they remain restricted until an Admin explicitly verifies them.
 - **`lots.py` & `offers.py`**: The fundamental marketplace. Farmers list inventory (`lots`), and buyers submit bids (`offers`).
 - **`payments.py` & `grievances.py`**: Workflows tracking the post-matching financial lifecycle and dispute resolution process. 
-- **`logistics.py` & `matching.py`**: Automates supply chain assignments. Features geospatial routing leveraging the PostgreSQL `earthdistance` extension to calculate physical proximity between farms and markets.
+- **`logistics.py` & `matching.py`**: Automates supply chain assignments. Geospatial proximity search (`GET /markets/nearby`) uses the PostgreSQL `earthdistance` extension via RPC; logistics assignment itself is not distance-routed.
 - **`storage.py`**: Manages warehouse and cold-storage bookings as first-class resources, enforcing physical capacity constraints before confirming requests.
 - **`prices.py` & `forecasts.py`**: Exposes real-time ingestion data and AI-driven 7-day predictive pricing.
 
