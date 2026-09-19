@@ -77,6 +77,10 @@ def apply_migrations(db_url: str, dry_run: bool = False, from_version: int = 0) 
             cur.execute(CREATE_LEDGER_SQL)
             cur.execute("SELECT COALESCE(MAX(version), 0) FROM schema_migrations")
             (max_applied,) = cur.fetchone()
+            
+        if dry_run:
+            conn.rollback()
+        else:
             conn.commit()
 
         migrations = get_migration_files()
