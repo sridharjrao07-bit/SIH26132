@@ -51,7 +51,7 @@ def main():
     failed_gates = [g for g in gate_res.gates if g.outcome.name == "FAIL"]
     
     if failed_gates:
-        sys.stderr.write(f"Gates failed: {[g.name for g in failed_gates]}\\n")
+        sys.stderr.write(f"Gates failed: {', '.join(g.name for g in failed_gates)}\n")
         sys.exit(1)
 
 if __name__ == "__main__":

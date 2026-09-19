@@ -11,10 +11,10 @@
 
 ## Checks
 
-- [ ] `pytest -q` passes locally (Python 3.14)
+- [ ] `pytest -q` passes locally (Python 3.12)
 - [ ] No secrets, JWTs, or `.env` values in the diff
 - [ ] No farmer HTML / `ui` router (frontend is a separate repo)
-- [ ] JWT is verified in FastAPI; it is **not** forwarded to PostgREST
+- [ ] JWT is verified in FastAPI; it is forwarded to PostgREST for Row-Level Security (unless running in unverified app mode)
 - [ ] SQL (if any) is a new numbered file under `db/migrations/` and listed in `docs/SQL_APPLY.md`
 - [ ] API contract updates are in `docs/API.md`
 
