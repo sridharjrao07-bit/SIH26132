@@ -43,9 +43,7 @@ def test_revoked_table_conformance():
         with conn.cursor() as cur:
             for table in tables:
                 cur.execute(f"SELECT to_regclass('public.{table}')")
-                if not cur.fetchone()[0]:
-                    continue
-                    
+                assert cur.fetchone()[0] is not None, f"Table {table} does not exist in DB"
                 cur.execute("SET ROLE authenticated")
                 
                 with pytest.raises(psycopg2.errors.InsufficientPrivilege) as exc:
@@ -67,8 +65,9 @@ def test_revoked_table_conformance():
 def test_migration_coverage():
     """Static filename diff."""
     import re
+    from scripts.apply_migrations import get_migration_files
     migrations_dir = Path(__file__).parent.parent / "db" / "migrations"
-    sql_files = sorted([f.name for f in migrations_dir.glob("*.sql")])
+    sql_files = [Path(f[2]).name for f in get_migration_files()]
     
     for name in sql_files:
         assert re.match(r"^\d{3}[a-z]?_.*\.sql$", name), f"Invalid migration name: {name}"
