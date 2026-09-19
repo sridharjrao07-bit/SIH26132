@@ -278,11 +278,19 @@ def run_backtest(
     raw_history = {}
     weather = []
     events = []
+
     try:
         weather = supabase.table("weather_daily").select("*").gte("observation_date", cutoff).execute().data or []
+    except Exception as e:
+        logger.warning("backtest_weather_fetch_failed", error=str(e))
+
+    try:
         from events.loader import load_published_events
         events = load_published_events(supabase, event_date_from=get_ist_today() - timedelta(days=history_days))
-        
+    except Exception as e:
+        logger.warning("backtest_events_fetch_failed", error=str(e))
+
+    try:
         raw_history = collections.defaultdict(list)
         offset = 0
         PAGE_SIZE = 1000
