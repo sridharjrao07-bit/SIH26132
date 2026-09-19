@@ -73,7 +73,7 @@ jobs:
       ENABLE_DB_INTEGRATION_TESTS: "1"
     steps:
       - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
-      - uses: actions/setup-python@337b0725b8770380d7cde73cfef696f1295727eb
+      - uses: actions/setup-python@ad3497abcd142e169a10aac37abd5175c44f33c4
         with: { python-version: "3.12", allow-prereleases: true }
       - run: pip install -r requirements-dev.txt
       - run: psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f db/ci_bootstrap.sql
@@ -88,7 +88,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
-      - uses: actions/setup-python@337b0725b8770380d7cde73cfef696f1295727eb
+      - uses: actions/setup-python@ad3497abcd142e169a10aac37abd5175c44f33c4
         with:
           python-version: "3.12"
           allow-prereleases: true
@@ -106,7 +106,7 @@ jobs:
         python-version: ["3.12"]
     steps:
       - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
-      - uses: actions/setup-python@337b0725b8770380d7cde73cfef696f1295727eb
+      - uses: actions/setup-python@ad3497abcd142e169a10aac37abd5175c44f33c4
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
@@ -124,7 +124,7 @@ jobs:
         python-version: ["3.12"]
     steps:
       - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
-      - uses: actions/setup-python@337b0725b8770380d7cde73cfef696f1295727eb
+      - uses: actions/setup-python@ad3497abcd142e169a10aac37abd5175c44f33c4
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
@@ -142,7 +142,7 @@ jobs:
       - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@337b0725b8770380d7cde73cfef696f1295727eb
+      - uses: actions/setup-python@ad3497abcd142e169a10aac37abd5175c44f33c4
         with:
           python-version: "3.12"
           allow-prereleases: true
