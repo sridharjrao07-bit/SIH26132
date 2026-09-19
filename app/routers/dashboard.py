@@ -13,7 +13,6 @@ from supabase import Client
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 templates = Jinja2Templates(directory=str(PROJECT_ROOT / "templates"))
 
-settings = get_settings()
 router = APIRouter(tags=["dashboard"])
 
 
@@ -33,6 +32,7 @@ def dashboard_session(
     body: DashboardSessionBody,
     response: Response,
     supabase: Client = Depends(get_supabase_service_role),
+    settings = Depends(get_settings),
 ):
     """Exchange a pasted admin JWT for an HttpOnly cookie (not localStorage)."""
     token = (body.token or "").strip()
