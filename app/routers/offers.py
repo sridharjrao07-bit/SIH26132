@@ -21,7 +21,7 @@ def _call_rpc(supabase: Client, fn: str, params: dict):
         res = supabase.rpc(fn, params).execute()
         return res.data
     except APIError as exc:
-        raise json_for_api_error(exc) from exc
+        return json_for_api_error(exc)
 
 
 @router.post("/")
