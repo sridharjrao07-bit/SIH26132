@@ -58,7 +58,7 @@ pip install -r requirements-dev.txt
 cp .env.example .env
 ```
 
-Fill `.env` (never commit it). Apply SQL `001`–`011` once.
+Fill `.env` (never commit it). Run `make db-apply` (or `python scripts/apply_migrations.py`) to safely apply all database migrations.
 
 **Seed the database**:
 ```bat

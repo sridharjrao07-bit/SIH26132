@@ -4,12 +4,24 @@ This document provides exact instructions for applying, verifying, and recoverin
 
 ## Clean Installation
 
-For a fresh environment, apply the migrations sequentially from `db/migrations/`:
+The primary, safe method to apply migrations is using the ledger-driven Python script. It automatically tracks applied migrations in the `_migrations` table and applies only the pending ones.
+
+```sh
+# Using Make (preferred)
+make db-apply
+
+# Or using Python directly
+python scripts/apply_migrations.py
+```
+
+### Manual Fallback
+
+If you cannot run the Python script (e.g. missing dependencies), you can apply the migrations manually in sequential order up to `034` using `psql`.
 
 ```sh
 psql -d $DATABASE_URL -f db/migrations/001_schema.sql
-# ... apply up to 029 sequentially
-psql -d $DATABASE_URL -f db/migrations/029_events_provenance_review_fixes_v2.sql
+# ... apply up to 034 sequentially
+psql -d $DATABASE_URL -f db/migrations/034_add_event_sentiment.sql
 ```
 
 ## Upgrade and Recovery Paths
