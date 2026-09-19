@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 .SHELLFLAGS := -eo pipefail -c
 
-.PHONY: install install-dev lint test run compose-up compose-down audit db-apply db-apply-dry ci-local
+.PHONY: install install-dev lint test run compose-up compose-down audit db-apply db-apply-dry ci-local docs
 
 PY ?= python
 export RUN_SCHEDULER ?= 0
@@ -46,3 +46,6 @@ ci-local:
 	fi
 	@rm -f test.log
 	@echo "✅ clean — safe to push"
+
+docs:
+	PYTHONPATH=. $(PY) scripts/generate_api_docs.py
