@@ -131,7 +131,7 @@ We explicitly document what this prototype does *not* yet do to demonstrate our 
 
 ## Forecasting Engine
 
-The upgraded forecasting engine captures seasonality and market sentiment using an ensemble approach. For baseline stability, it uses a moving average (`ma`), while a feature-rich Ordinary Least Squares (`feature_ols`) model incorporates cumulative weather data and LLM-extracted structured intelligence (`event_pressure`). A gradient boosting model (`gbm`) using LightGBM is also available for complex non-linear relationships. Every model is continuously graded by our walk-forward backtesting harness to provide an honest accuracy card.
+The upgraded forecasting engine captures seasonality and market sentiment using an ensemble approach. For baseline stability, it uses a moving average (`ma`), while a feature-rich Ordinary Least Squares (`feature_ols`) model incorporates cumulative weather data and LLM-extracted structured intelligence (`event_pressure`). A Holt-Winters model (`holt_winters`) is also registered. A LightGBM gradient boosting model (`gbm`) exists but is **delisted from the default registry** until per-fold retraining makes it compatible with walk-forward isolation. Models are graded by the walk-forward backtesting harness; the published [`docs/accuracy_card.md`](docs/accuracy_card.md) is currently **BLOCKED** for insufficient live history, so no certified accuracy figure is claimed and automatic model promotion is disabled.
 
 ## Docker
 

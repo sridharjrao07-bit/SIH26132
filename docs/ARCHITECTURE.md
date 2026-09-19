@@ -8,17 +8,17 @@ HTTP  app/routers/*          FastAPI routes, auth deps, HTTPException
   ├─ schemas  app/schemas/*  request/response models (Pydantic)
   │
   ├─ domain
-  │    app/marketplace.py    lots, offers, payments, ledger, reliability
-  │    app/matching_engine.py  local-first farmer ↔ verified buyer score
-  │    notifications/        sale-window, SMS, alerts
-  │    forecasting/          7-day mandi forecast
-  │    ingestion/            data.gov.in (+ optional Agmarknet)
+  │    app/services/marketplace.py lots, offers, payments, ledger, reliability
+  │    app/matching_engine.py      local-first farmer ↔ verified buyer score
+  │    notifications/              sale-window, SMS, alerts
+  │    forecasting/                7-day mandi forecast
+  │    ingestion/                  data.gov.in (+ optional Agmarknet)
   │
   └─ infra
        app/deps.py           anon + service-role Supabase clients
        app/auth.py           HS256 verify; role from user_profiles
        app/errors.py         PostgREST → boring HTTP
-       app/jobs.py           APScheduler (single worker)
+       app/startup_checks.py APScheduler (single worker)
        db/migrations/        Postgres / RLS (apply in Supabase SQL editor)
 ```
 
