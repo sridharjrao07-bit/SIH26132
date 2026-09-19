@@ -48,6 +48,8 @@ SOURCE_PRECEDENCE: Dict[str, int] = {
     "agmarknet":    2,   # selenium scrape — secondary
     "manual":       3,   # manual entry
     "manual_seed":  4,   # seed data
+    "demo_seed":    5,   # demo history
+    "csv":          6,   # historical csv data
 }
 
 MIN_OBSERVATIONS          = 10   # n <  10 → insufficient_data
