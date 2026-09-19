@@ -46,7 +46,12 @@ def main():
     # Print pure JSON report to stdout
     print(json.dumps(report.to_json(), indent=2, default=str))
     
-    if not report.promotion_eligible:
+    from forecasting.gates import evaluate_gates
+    gate_res = evaluate_gates(report, candidate_name="gbm", incumbent_name="naive")
+    failed_gates = [g for g in gate_res.gates if g.outcome.name == "FAIL"]
+    
+    if failed_gates:
+        sys.stderr.write(f"Gates failed: {[g.name for g in failed_gates]}\\n")
         sys.exit(1)
 
 if __name__ == "__main__":

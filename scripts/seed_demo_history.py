@@ -1,13 +1,12 @@
 import datetime
 import random
 import sys
-import os
 
 from dotenv import load_dotenv
-load_dotenv(r"c:\Users\sridh\OneDrive\Desktop\SIH26132\.env")
+load_dotenv()
 
-from app.deps import get_supabase_service_role
-from app.utils.tz import get_ist_today
+from app.deps import get_supabase_service_role  # noqa: E402
+from app.utils.tz import get_ist_today  # noqa: E402
 
 def main():
     supabase = get_supabase_service_role()
@@ -34,9 +33,13 @@ def main():
     for i in range(150, 0, -1):
         d = today - datetime.timedelta(days=i)
         
-        # Random walk
-        change = random.uniform(-100, 100)
-        current_price = max(500, min(6000, current_price + change))
+        import math
+        day_index = 150 - i
+        trend = day_index * 2.0
+        seasonality = math.sin(day_index * 2 * math.pi / 7) * 200
+        noise = random.uniform(-50, 50)
+        current_price = 2500.0 + trend + seasonality + noise
+        current_price = max(500, min(6000, current_price))
         
         # Missing data gaps? Let's skip ~5% of days
         if random.random() < 0.05:
