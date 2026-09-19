@@ -122,6 +122,19 @@ Bodies are always `{"detail": ...}` — never a stack, SQL, or PostgREST code.
 
 OpenAPI (non-production): `GET /openapi.json` and `/docs`.
 
-## SMS (not the web UI)
+## SMS Webhook & Simulation
 
-Registered farmer texts `PYAJ` / `कांदा` → modal + Sell Now/Hold + best local buyer if they have an open lot. Unsigned webhook is `403`.
+The platform supports an inbound SMS webhook (e.g. MSG91) to provide offline farmers with sale-window advice and buyer matching via text.
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/api/v1/sms/webhook` | Receives inbound SMS. Requires valid HMAC signature (`X-Msg91-Signature` header matching `INBOUND_HMAC_SECRET`). |
+| POST | `/api/v1/sms/simulate` | For judges/testing. Simulates an inbound SMS without HMAC validation. Returns the exact SMS text the farmer would receive. |
+
+**Simulation Body:**
+```json
+{
+  "sender": "919876543210",
+  "text": "PYAJ"
+}
+```

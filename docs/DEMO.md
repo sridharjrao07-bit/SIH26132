@@ -17,6 +17,7 @@ curl -sS http://127.0.0.1:8000/api/v1/buyers/
 curl -sS "http://127.0.0.1:8000/api/v1/logistics/?district=Nashik"
 curl -sS "http://127.0.0.1:8000/api/v1/storage/?district=Nashik"
 curl -sS "http://127.0.0.1:8000/api/v1/sale-window/?commodity_id=<onion-uuid>&market_id=<lasalgaon-uuid>&lang=mr"
+curl -sS -X POST -H "Content-Type: application/json" -d "{\"sender\":\"919876543210\",\"text\":\"PYAJ\"}" http://127.0.0.1:8000/api/v1/sms/simulate
 ```
 
 Sale-window should return `WAIT` / `HOLD` / `SELL_NOW` with a Marathi `action_label` (e.g. थांबा).
