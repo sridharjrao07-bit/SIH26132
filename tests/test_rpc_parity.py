@@ -28,8 +28,8 @@ Adding a field to a request model without forwarding it now fails CI.
 DELIBERATE NON-FORWARDING
 -------------------------
 Some payloads legitimately do not forward every model field (the value is
-derived, computed, or deliberately ignored). Those are declared in
-`INTENTIONALLY_NOT_FORWARDED` with a written reason, so that a *new* omission
+derived, computed, or deliberately ignored). Those are declared via the
+not_forwarded=(...) kwarg on the Target class with a written reason, so that a *new* omission
 fails loudly instead of being silently blessed.
 """
 from __future__ import annotations
@@ -38,14 +38,17 @@ import ast
 from pathlib import Path
 
 import pytest
-
+from app.routers.alerts import AlertCreate
 from app.schemas.marketplace import (
     BuyerRegisterRequest,
+    BuyerVerificationUpdate,
     GrievanceCreate,
     LotAggregate,
     LotCreate,
+    LotGradeUpdate,
     OfferCreate,
     PaymentCreate,
+    StorageBookUpdate,
 )
 
 ROUTERS_DIR = Path(__file__).resolve().parent.parent / "app" / "routers"
@@ -78,17 +81,11 @@ TARGETS = [
     # payload forwards every model field unchanged.
     Target("grievances.create_grievance", "grievances.py", "create_grievance",
            GrievanceCreate),
+    Target("alerts.create_alert", "alerts.py", "create_alert", AlertCreate),
+    Target("lots.grade_lot", "lots.py", "grade_lot", LotGradeUpdate),
+    Target("admin.admin_verify_buyer", "admin.py", "admin_verify_buyer", BuyerVerificationUpdate),
+    Target("storage.update_booking", "storage.py", "update_booking", StorageBookUpdate),
 ]
-
-# Known gap, left explicit rather than silently uncovered:
-# `storage.create_booking` (StorageBookCreate) *does* forward all six model
-# fields, but it does so via conditional subscript assignment, e.g.
-#     if req.notes: payload["notes"] = req.notes
-# rather than as values inside a single dict literal. The extractor below
-# walks dict-literal values, so it cannot see those keys and would report
-# them missing on correct code. Extend the extractor to handle
-# `if <param>.<field>:` + `payload["<field>"] = ...` before adding it here.
-# `storage.update_booking` is out of scope for the same reason.
 
 
 def _function_ast(module_file: str, func_name: str) -> ast.FunctionDef:
@@ -139,22 +136,36 @@ def _payload_attribute_names(func: ast.FunctionDef, param_name: str) -> set[str]
         "p_date":  body.harvest_date.isoformat() if ... else None  -> harvest_date (IfExp)
         "id":      str(uuid.uuid4())                              -> ignored (not the model)
 
-    Restricting to the model-bound name is what excludes unrelated attribute
-    chains such as `uuid.uuid4()` or `datetime.now()`, which would otherwise
-    register as phantom fields and fail the suite on correct code.
+    Also inspects conditionals (e.g. `if param.field: payload["field"] = param.field`)
+    for explicit subscript assignments.
     """
     names: set[str] = set()
     for node in ast.walk(func):
-        if not isinstance(node, ast.Dict):
-            continue
-        for value in node.values:
-            for sub in ast.walk(value):
-                if (
-                    isinstance(sub, ast.Attribute)
-                    and isinstance(sub.value, ast.Name)
-                    and sub.value.id == param_name
-                ):
-                    names.add(sub.attr)
+        if isinstance(node, ast.Dict):
+            for value in node.values:
+                for sub in ast.walk(value):
+                    if (
+                        isinstance(sub, ast.Attribute)
+                        and isinstance(sub.value, ast.Name)
+                        and sub.value.id == param_name
+                    ):
+                        names.add(sub.attr)
+        elif isinstance(node, ast.If):
+            test_node = node.test
+            field_name = None
+            if isinstance(test_node, ast.Attribute) and hasattr(test_node.value, "id") and test_node.value.id == param_name:
+                field_name = test_node.attr
+            elif isinstance(test_node, ast.Compare):
+                left = test_node.left
+                if isinstance(left, ast.Attribute) and hasattr(left.value, "id") and left.value.id == param_name:
+                    field_name = left.attr
+
+            if field_name:
+                for body_node in ast.walk(node):
+                    if isinstance(body_node, ast.Assign):
+                        for target in body_node.targets:
+                            if isinstance(target, ast.Subscript):
+                                names.add(field_name)
     return names
 
 
@@ -172,10 +183,10 @@ def test_every_request_field_is_forwarded(target: Target):
         f"but never forwarded to the database.\n"
         f"  model fields : {sorted(expected)}\n"
         f"  forwarded    : {sorted(forwarded)}\n"
-        f"  allow-listed : {sorted(target.not_forwarded) or 'none'}\n"
+        f"allow-listed : {sorted(target.not_forwarded) or 'none'}\n"
         "This is the bug class that let /buyers/register return 201 while "
         "discarding 7 fields. Forward the field, or add it to "
-        "INTENTIONALLY_NOT_FORWARDED with a reason."
+        "that target's not_forwarded=(...) kwarg with a reason."
     )
 
 
