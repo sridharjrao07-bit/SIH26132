@@ -18,6 +18,9 @@ never executed.
 This module closes that gap: it enumerates the real route table and issues a
 request to each one, asserting the app never returns an unhandled 5xx.
 
+Division of labour: this module catches crash-class bugs (unhandled exceptions). 
+Field-drop-class bugs are caught by test_rpc_parity.py, because no status code can reveal them.
+
 DESIGN NOTES
 ------------
 - `raise_server_exceptions=False` is REQUIRED. Without it TestClient re-raises
@@ -25,7 +28,7 @@ DESIGN NOTES
 - Routes are enumerated from `app.openapi()`, which is a documented public API.
   FastAPI 0.141 wraps `include_router()` results in an internal
   `_IncludedRouter` object that is not an `APIRoute` and does not expose
-  `.routes`, so walking `app.routes` silently yields only 3 of 64 handlers.
+  `.routes`, so walking `app.routes` silently yields only 67 operations across 56 paths.
 - Path parameters are substituted with a fixed UUID. A 404 for a nonexistent
   row is a pass — the point is that routing, dependency injection and the
   handler body did not blow up.
@@ -36,37 +39,57 @@ DESIGN NOTES
 """
 from __future__ import annotations
 
-import hmac
 import hashlib
+import hmac
 import json
 import re
 import time
 
 import pytest
+from app.main import app
 from fastapi.testclient import TestClient
 
-from app.main import app
-from tests.conftest import mint_jwt, ADMIN_USER_ID
+from tests.conftest import ADMIN_USER_ID, mint_jwt
 
 client = TestClient(app, raise_server_exceptions=False)
+
+def _resolve_schema(schema: dict, components: dict) -> dict:
+    if "$ref" in schema:
+        ref_path = schema["$ref"].split("/")[-1]
+        return components.get(ref_path, {})
+    return schema
+
+def _generate_dummy_payload(schema: dict, components: dict) -> dict:
+    schema = _resolve_schema(schema, components)
+    if schema.get("type") == "object":
+        payload = {}
+        for prop, prop_schema in schema.get("properties", {}).items():
+            prop_schema = _resolve_schema(prop_schema, components)
+            if prop_schema.get("type") == "string":
+                payload[prop] = "test-string"
+            elif prop_schema.get("type") == "integer":
+                payload[prop] = 1
+            elif prop_schema.get("type") == "number":
+                payload[prop] = 1.0
+            elif prop_schema.get("type") == "boolean":
+                payload[prop] = True
+            elif prop_schema.get("type") == "array":
+                payload[prop] = []
+            elif prop_schema.get("type") == "object":
+                payload[prop] = _generate_dummy_payload(prop_schema, components)
+            else:
+                payload[prop] = "test"
+        return payload
+    return {}
 
 # A syntactically valid UUID for {path_param} substitution.
 FAKE_UUID = "00000000-0000-4000-8000-000000000000"
 
 HTTP_METHODS = {"get", "post", "put", "patch", "delete"}
 
-# Routes that must NOT be dispatched by the generic walker, with reasons.
 SKIP = {
     # HMAC-gated; covered by test_sms_webhook_signed_request_is_not_5xx below.
     ("post", "/api/v1/sms/webhook"),
-    # Admin job triggers run a full forecast/backtest against the fake DB and
-    # are covered by their own tests; they are slow and not routing-sensitive.
-    ("post", "/api/v1/admin/forecast/run"),
-    ("post", "/api/v1/admin/forecast/backtest"),
-    ("post", "/api/v1/admin/alert-check/run"),
-    ("post", "/api/v1/admin/events/ingest"),
-    ("post", "/api/v1/admin/buyers/rescore"),
-    ("post", "/api/v1/admin/offers/expire"),
 }
 
 
@@ -127,7 +150,24 @@ def test_route_never_returns_unhandled_5xx(method: str, path: str, override_supa
     """
     kwargs: dict = {"headers": _admin_headers()}
     if method in {"POST", "PUT", "PATCH"}:
-        kwargs["json"] = {}
+        openapi_schema = app.openapi()
+        components = openapi_schema.get("components", {}).get("schemas", {})
+        paths = openapi_schema.get("paths", {})
+        op = paths.get(path.replace(FAKE_UUID, "{lot_id}").replace(FAKE_UUID, "{buyer_id}").replace(FAKE_UUID, "{grievance_id}").replace(FAKE_UUID, "{job_key}"), {}).get(method.lower(), {})
+        
+        # A safer way to find the actual operation in OpenAPI schema, avoiding FAKE_UUID string replacements if possible
+        # We can just look up the original raw path. But the test parameter is the concrete path.
+        # Let's iterate paths to find one that matches.
+        req_schema = {}
+        for raw_path, operations in paths.items():
+            concrete = re.sub(r"\{[^}]+\}", FAKE_UUID, raw_path)
+            if concrete == path and method.lower() in operations:
+                content = operations[method.lower()].get("requestBody", {}).get("content", {})
+                json_content = content.get("application/json", {})
+                req_schema = json_content.get("schema", {})
+                break
+
+        kwargs["json"] = _generate_dummy_payload(req_schema, components) if req_schema else {}
 
     resp = client.request(method, path, **kwargs)
 
@@ -243,6 +283,7 @@ def test_sms_webhook_handler_is_a_coroutine():
     be revisited deliberately rather than by accident.
     """
     import inspect
+
     from app.routers import sms as sms_mod
 
     assert inspect.iscoroutinefunction(sms_mod.handle_sms_webhook), (
@@ -260,7 +301,7 @@ def test_asyncio_is_imported_in_the_sms_router():
     import ast
     from pathlib import Path
 
-    source = (Path(__file__).resolve().parent.parent / "app" / "routers" / "sms.py").read_text()
+    source = (Path(__file__).resolve().parent.parent / "app" / "routers" / "sms.py").read_text(encoding="utf-8")
     tree = ast.parse(source)
 
     imported: set[str] = set()
