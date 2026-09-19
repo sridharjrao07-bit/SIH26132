@@ -1,5 +1,5 @@
 # Production dependencies — Krishi Bazaar API
-# Python 3.14 (pre-built wheels; do not pin pydantic 2.7 / FastAPI 0.111)
+# Python 3.12 (pre-built wheels; do not pin pydantic 2.7 / FastAPI 0.111)
 # Install: pip install -r requirements.txt
 # Dev/test extras: pip install -r requirements-dev.txt
 

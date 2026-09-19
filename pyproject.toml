@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 license = { text = "MIT" }
 
 [tool.ruff]
-# Runtime is Python 3.14 (Dockerfile / CI). Ruff's py314 target is still preview.
+# Runtime is Python 3.12 (Dockerfile / CI).
 target-version = "py313"
 line-length = 100
 src = ["app", "ingestion", "forecasting", "notifications", "tests", "demo", "scripts"]
