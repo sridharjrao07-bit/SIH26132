@@ -46,3 +46,33 @@ Krishi Bazaar enforces a strict 4-layer security model to prevent cross-tenant d
 Controlled via `AUTH_DB_ENFORCEMENT`:
 - `rls`: (Production Default) The user JWT is passed to PostgREST. Fails if issuer or secret is mismatched.
 - `app`: (Development Only) Bypasses Postgres RLS entirely by using the `service_role` key, relying solely on Python-layer `.eq()` filters. Blocked from production.
+
+## Role-Cache Propagation Window
+
+`require_role` answers authorization from a **60-second in-process cache**
+(`app/auth.py::_role_cache`) so that authenticated requests do not each pay a
+`user_profiles` round-trip. Entries are `(role, expires_at)` pairs and are
+evicted lazily, on the next read, once past their expiry.
+
+The consequence is deliberate and bounded:
+
+- A **first** request after a role change always sees the new role, because
+  nothing is cached for that principal yet.
+- A **cached** principal keeps their old role for at most `_ROLE_CACHE_TTL`
+  (60 s). An admin demoted via the `admin_set_role` RPC — or by direct SQL —
+  therefore retains admin access for at most one minute.
+- The deployment is single-worker by design (in-process scheduler and rate
+  limiter), so the cache has exactly one copy and there is no cross-replica
+  divergence to reason about. Should that ever change, each worker holds its
+  own cache and the TTL still bounds each of them independently.
+
+There is **no invalidation hook**, and that is a decision rather than an
+omission: role changes happen out-of-band, so a hook would have no caller and
+would rot. If an in-app role-management endpoint is ever introduced, that
+endpoint must call the hook and this section must be updated.
+
+**Risk accepted:** up to 60 s of stale authorization after a demotion. It is
+mitigated by the short TTL, and by the fact that destructive state transitions
+live in `SECURITY DEFINER` RPCs which re-check `auth.uid()` server-side, so a
+stale role grants no write path that bypasses ownership. Per-query ownership
+filters are unaffected by this cache: it stores only the role, never row scope.
