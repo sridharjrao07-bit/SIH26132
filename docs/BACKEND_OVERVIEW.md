@@ -34,8 +34,8 @@ The core API is split across several domain-specific routers inside `app/routers
 - **`profile.py` & `buyers.py`**: Handles user identity. Includes a self-service registration flow for institutional buyers that dictates they remain restricted until an Admin explicitly verifies them.
 - **`lots.py` & `offers.py`**: The fundamental marketplace. Farmers list inventory (`lots`), and buyers submit bids (`offers`).
 - **`payments.py` & `grievances.py`**: Workflows tracking the post-matching financial lifecycle and dispute resolution process. 
-- **`logistics.py` & `matching.py`**: Automates supply chain assignments. Geospatial proximity search (`GET /markets/nearby`) uses the PostgreSQL `earthdistance` extension via RPC; logistics assignment itself is not distance-routed.
-- **`storage.py`**: Manages warehouse and cold-storage bookings as first-class resources, enforcing physical capacity constraints before confirming requests.
+- **`matching.py`**: Geospatial proximity search (`GET /markets/nearby`) uses the PostgreSQL `earthdistance` extension via RPC; logistics assignment itself is not distance-routed.
+- **`storage.py`** / **`logistics.py`**: Manage warehouse and transport bookings as first-class resources. All writes go through the `storage_booking_*` / `logistics_booking_*` SECURITY DEFINER RPCs (migration 036), which enforce ownership, lot state and capacity under row locks — the API layer no longer does check-then-insert.
 - **`prices.py` & `forecasts.py`**: Exposes real-time ingestion data and AI-driven 7-day predictive pricing.
 
 ---

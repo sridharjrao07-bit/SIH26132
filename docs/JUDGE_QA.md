@@ -17,7 +17,7 @@ This document contains candid answers to the hardest questions we anticipate fro
 ### 4. "You added warehousing/logistics, but are you actually verifying physical capacity in real-time?"
 
 
-**Answer**: Our current capacity check is a strong database-enforced invariant: we calculate a godown's remaining capacity by summing all `confirmed` storage bookings and rejecting any new booking that exceeds the total physical capacity. However, this relies entirely on the platform being the single source of truth for the godown's inventory. In a real-world scenario where farmers show up offline or use other booking systems, our digital ledger would drift from physical reality. Future iterations require an API integration with godown management systems or a dedicated partner portal to reconcile physical stock daily.
+**Answer**: Our capacity check is a database-enforced invariant: the `storage_booking_create` / `logistics_booking_create` SECURITY DEFINER RPCs (migration 036) sum all `requested` + `confirmed` bookings under a row lock on the facility/option and atomically reject any booking that would exceed physical capacity — concurrent requests cannot oversubscribe. However, this relies entirely on the platform being the single source of truth for the godown's inventory. In a real-world scenario where farmers show up offline or use other booking systems, our digital ledger would drift from physical reality. Future iterations require an API integration with godown management systems or a dedicated partner portal to reconcile physical stock daily.
 
 ### 5. "What stops a bad actor from scraping the entire farmer database?"
 

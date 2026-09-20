@@ -74,14 +74,26 @@ def apply_migrations(db_url: str, dry_run: bool = False, from_version: int = 0) 
     conn.autocommit = False
 
     try:
-        with conn.cursor() as cur:
-            cur.execute(CREATE_LEDGER_SQL)
-            cur.execute("SELECT filename FROM schema_migrations")
-            applied_files = {row[0] for row in cur.fetchall()}
-            
         if dry_run:
-            conn.rollback()
+            # A dry run must be safe on a READ-ONLY database: it must not
+            # create the ledger either.  (The old path executed CREATE TABLE
+            # before branching on dry_run, so --dry-run against a read-only
+            # standby died with "cannot execute CREATE TABLE in a read-only
+            # transaction".)  Read the ledger if present; a missing ledger
+            # simply means nothing is applied yet.
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT filename FROM schema_migrations")
+                    applied_files = {row[0] for row in cur.fetchall()}
+            except psycopg2.errors.UndefinedTable:
+                applied_files = set()
+            finally:
+                conn.rollback()
         else:
+            with conn.cursor() as cur:
+                cur.execute(CREATE_LEDGER_SQL)
+                cur.execute("SELECT filename FROM schema_migrations")
+                applied_files = {row[0] for row in cur.fetchall()}
             conn.commit()
 
         migrations = get_migration_files()

@@ -197,6 +197,10 @@ async def backfill(days: int, markets_csv: str, commodities_csv: str, sleep_time
     logger.info("backfill_complete", persisted_dates=dates_out,
                 seen=total_seen, written=total_written, rejected=total_rejected, transient_skips=total_transient_skips)
     
+    if hard_failure:
+        logger.error("backfill_incomplete", msg="DB write failed after partial progress; failing loud.")
+        sys.exit(1)
+
     if total_written == 0:
         logger.error("zero_ingestion", msg="No records were written. Failing loud.")
         sys.exit(1)

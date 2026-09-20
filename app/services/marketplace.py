@@ -131,17 +131,35 @@ def score_payment_reliability(paid: int, failed: int, disputed: int, open_paymen
     return "low"
 
 
+def _paged_select(build_query, page_size: int = 1000) -> list:
+    """Page through a PostgREST SELECT, defeating the silent 1,000-row cap.
+
+    PostgREST truncates any single response at its max-rows setting (1,000 by
+    default) WITHOUT an error, so a buyer with more than 1,000 offers
+    silently lost the tail and their payment-reliability score was computed
+    from a partial history.  ``build_query(offset, page_size)`` must return
+    a fresh, unexecuted query ordered by a unique column.
+    """
+    rows: list = []
+    offset = 0
+    while True:
+        page = build_query(offset, page_size).execute().data or []
+        rows.extend(page)
+        if len(page) < page_size:
+            return rows
+        offset += page_size
+
+
 def recompute_buyer_reliability(supabase, buyer_id: str) -> Optional[str]:
     """Recompute and persist buyers.payment_reliability from offers/payments/grievances."""
     if not buyer_id:
         return None
-    offers = (
-        supabase.table("offers")
+    offers = _paged_select(
+        lambda off, size: supabase.table("offers")
         .select("id")
         .eq("buyer_id", buyer_id)
-        .execute()
-        .data
-        or []
+        .order("id")
+        .range(off, off + size - 1)
     )
     offer_ids = [o["id"] for o in offers if o.get("id")]
     paid = failed = disputed = grief = 0

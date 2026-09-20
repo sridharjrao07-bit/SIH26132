@@ -481,9 +481,9 @@ They return **404** for any lot you don't own (or aren't the FPO for). For a buy
 - **Storage booking:** `PATCH` rejects `requested` ("cannot transition back to requested") and rejects any change from `cancelled`/`completed` with **409**.
 - **Logistics booking:** a `completed` booking cannot change status (**409**).
 
-### 9.8 Two different status codes for the same condition
+### 9.8 Capacity errors are 409 everywhere
 
-Exceeding capacity returns **409** on `/logistics/bookings` but **400** on `/storage/bookings`. Handle both for "capacity full" rather than switching on one code.
+Exceeding capacity returns **409** (opaque detail) on both `/storage/bookings` and `/logistics/bookings`. Since migration 036 the check runs inside the `storage_booking_create` / `logistics_booking_create` SECURITY DEFINER RPCs under a facility/option row lock, so concurrent requests can never oversubscribe a godown or truck. (Previously the two routes disagreed: 409 vs 400, with a racy Python-side check.)
 
 ### 9.9 No search, no pagination cursors
 

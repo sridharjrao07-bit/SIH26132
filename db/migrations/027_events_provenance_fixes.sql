@@ -287,6 +287,11 @@ END;
 $$;
 
 -- 7. Views
+-- FIX (2026-09-20): this view previously selected e.review_status and filtered on
+-- it, but that column is only added by migration 028 — two steps AFTER this one —
+-- so a clean install died here with 42703 the moment 026 was repaired.  (Nobody
+-- noticed because 026 failed first.)  028 recreates this view with the full
+-- review_status semantics; this intermediate version must simply be creatable.
 DROP VIEW IF EXISTS public.live_events_published;
 CREATE VIEW public.live_events_published AS
     SELECT 
@@ -304,14 +309,13 @@ CREATE VIEW public.live_events_published AS
         e.reasoning,
         e.raw_text,
         e.reviewed_by,
-        e.review_status,
         sd.provenance_mode,
         sd.extraction_status,
         sd.publication_date
     FROM public.events e
     JOIN public.source_documents sd ON e.source_document_id = sd.id
     WHERE sd.extraction_status = 'complete'
-      AND (e.reviewed_by IS NULL OR e.review_status != 'rejected');
+      AND e.reviewed_by IS NULL;
 
 CREATE OR REPLACE VIEW public.sale_window_headlines AS
     SELECT 

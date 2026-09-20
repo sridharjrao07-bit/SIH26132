@@ -91,18 +91,32 @@ def get_forecasts_summary(
         .execute()
     )
 
-    # PostgREST keeps only the last .order(); sort in Python:
-    # newest generated_at first, then day-1 (earliest forecast_date) within a run.
+    # PostgREST keeps only the last .order(); select explicitly in Python.
+    # Two-phase, revision-aware selection:
+    #   1. per (pair, forecast_date) keep the row from the newest generation
+    #      (max generated_at) — a re-run supersedes the rows it replaces;
+    #   2. per pair report the earliest forecast_date among those winners —
+    #      the day-1 row of the newest run.
+    # The previous two stable sorts let generated_at fully dominate the
+    # ordering, so whenever a run stamped rows with per-row timestamps
+    # (day-7 written last) the summary returned the day-7 row.
     rows = list(res.data or [])
-    rows.sort(key=lambda r: str(r.get("forecast_date") or ""))
-    rows.sort(key=lambda r: str(r.get("generated_at") or ""), reverse=True)
-
-    seen_pairs: set = set()
-    summary = []
+    best_by_date: dict = {}
     for row in rows:
-        pair_key = (row["market_id"], row["commodity_id"])
-        if pair_key not in seen_pairs:
-            seen_pairs.add(pair_key)
-            summary.append(_flatten_forecast(row))
+        key = (
+            (row.get("market_id"), row.get("commodity_id")),
+            str(row.get("forecast_date") or ""),
+        )
+        gen = str(row.get("generated_at") or "")
+        cur = best_by_date.get(key)
+        if cur is None or gen > str(cur.get("generated_at") or ""):
+            best_by_date[key] = row
 
+    best_pair: dict = {}
+    for (pair, fdate), row in best_by_date.items():
+        cur = best_pair.get(pair)
+        if cur is None or fdate < str(cur.get("forecast_date") or ""):
+            best_pair[pair] = row
+
+    summary = [_flatten_forecast(dict(r)) for r in best_pair.values()]
     return summary
