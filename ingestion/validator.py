@@ -2,7 +2,6 @@ import math
 from typing import Dict, Optional, Tuple
 
 import structlog
-from app.config import get_settings
 
 from .base import RawPriceRecord
 
@@ -35,14 +34,19 @@ class PriceValidator:
     """
 
     def __init__(
-        self, commodity_id_map: Dict[str, str], sanity_bands: Dict[str, Tuple[float, float]]
+        self,
+        commodity_id_map: Dict[str, str],
+        sanity_bands: Dict[str, Tuple[float, float]],
+        max_arrival_qty_qtl: Optional[float] = 200000.0,
     ):
         """
         commodity_id_map : "{source}|{norm_source_key}" → commodity_id UUID
         sanity_bands      : commodity_id UUID → (sanity_min, sanity_max) in Rs/quintal
+        max_arrival_qty_qtl: upper bound for arrival_qty
         """
         self.commodity_id_map = commodity_id_map
         self.sanity_bands = sanity_bands
+        self.max_arrival_qty_qtl = max_arrival_qty_qtl
 
     # ── helpers ──────────────────────────────────────────────────────────────
 
@@ -158,9 +162,10 @@ class PriceValidator:
                 log.warning("rejected", reason=reason)
                 return None, reason
 
-            max_qty = get_settings().max_arrival_qty_qtl
-            if arrival_qty > max_qty:
-                reason = f"invalid_quantity:arrival_qty({arrival_qty}) > MAX({max_qty})"
+            if self.max_arrival_qty_qtl is not None and arrival_qty > self.max_arrival_qty_qtl:
+                reason = (
+                    f"invalid_quantity:arrival_qty({arrival_qty}) > MAX({self.max_arrival_qty_qtl})"
+                )
                 # Reject is logged and observable in the ingestion_log table under records_rejected
                 log.warning("rejected", reason=reason)
                 return None, reason
