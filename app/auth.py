@@ -108,13 +108,7 @@ def require_role(*roles: str):
             return
 
         # Slow path: hit the DB and populate the cache.
-        row = (
-            supabase.table("user_profiles")
-            .select("role")
-            .eq("id", user_id)
-            .execute()
-            .data
-        )
+        row = supabase.table("user_profiles").select("role").eq("id", user_id).execute().data
         if not row:
             raise HTTPException(403, f"requires role in {list(allowed)}")
         role = row[0]["role"]
