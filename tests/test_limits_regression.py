@@ -106,36 +106,74 @@ async def test_scheduled_job_wiring():
 
 
 @pytest.mark.asyncio
-async def test_tooling_wiring_backfill():
+async def test_tooling_wiring_backfill(fake_supabase, monkeypatch):
+    from types import SimpleNamespace
     from unittest.mock import AsyncMock
 
-    from scripts.backfill_history import backfill
+    from ingestion.validator import PriceValidator
+    from scripts import backfill_history as bh
 
-    with patch("scripts.backfill_history.get_settings") as mock_settings:
-        mock_settings.return_value.max_arrival_qty_qtl = 456.78
-        mock_settings.return_value.data_gov_in_api_key = "test"
+    from tests.conftest import make_record
 
-        with (
-            patch("scripts.backfill_history.get_supabase_service_role"),
-            patch("scripts.backfill_history.DataGovInAdapter") as MockAdapter,
-            patch("ingestion.validator.PriceValidator") as MockValidator,
-        ):
-            mock_adapter_instance = MagicMock()
-            mock_adapter_instance.fetch_prices = AsyncMock(return_value=[])
-            MockAdapter.return_value = mock_adapter_instance
+    fake_supabase.seed(
+        "commodity_alias",
+        [{"commodity_id": "c1", "source": "data_gov_in", "source_key": "crop1"}],
+    )
+    fake_supabase.seed(
+        "commodities",
+        [{"id": "c1", "name_en": "Crop1", "sanity_min": 10, "sanity_max": 10000}],
+    )
+    fake_supabase.seed(
+        "markets",
+        [
+            {
+                "id": "m1",
+                "name": "market1",
+                "source_code": "market1",
+                "district": "Nashik",
+            }
+        ],
+    )
 
-            try:
-                await backfill(1, "market1", "crop1", 0.0)
-            except SystemExit:
-                pass  # We expect it to exit when stubbing DB calls or if validator doesn't return
+    record = make_record(
+        market_name="market1",
+        commodity_name="crop1",
+        arrival_qty=10,
+    )
+    adapter = SimpleNamespace(
+        source_name="data_gov_in",
+        fetch_prices=AsyncMock(return_value=[record]),
+    )
 
-            if MockValidator.called:
-                _, kwargs = MockValidator.call_args
-                assert kwargs.get("max_arrival_qty_qtl") == 456.78
+    monkeypatch.setattr(
+        bh,
+        "get_settings",
+        lambda: SimpleNamespace(
+            max_arrival_qty_qtl=456.78,
+            data_gov_in_api_key="local-test-only",
+        ),
+    )
+    monkeypatch.setattr(bh, "get_supabase_service_role", lambda: fake_supabase)
+    monkeypatch.setattr(bh, "DataGovInAdapter", lambda **kwargs: adapter)
+
+    # Unexpected SystemExit must fail this happy-path test.
+    with patch(
+        "ingestion.validator.PriceValidator",
+        wraps=PriceValidator,
+    ) as validator_spy:
+        await bh.backfill(0, "market1", "crop1", 0.0)
+        validator_spy.assert_called_once()
+        assert validator_spy.call_args.kwargs["max_arrival_qty_qtl"] == 456.78
+
+    adapter.fetch_prices.assert_awaited_once()
+
+    upserts = [call for call in fake_supabase.upsert_calls() if call["table"] == "prices"]
+    assert len(upserts) == 1
+    assert upserts[0]["payload"][0]["arrival_qty"] == 10
 
 
 def test_validator_default_pins_to_settings():
     from app.config import Settings
     from ingestion.validator import DEFAULT_MAX_ARRIVAL_QTY_QTL
 
-    assert DEFAULT_MAX_ARRIVAL_QTY_QTL == Settings().max_arrival_qty_qtl
+    assert DEFAULT_MAX_ARRIVAL_QTY_QTL == Settings.model_fields["max_arrival_qty_qtl"].default

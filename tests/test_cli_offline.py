@@ -1,49 +1,78 @@
 import csv
 import os
 import subprocess
+import sys
 from pathlib import Path
-from tempfile import NamedTemporaryFile
 
 import pytest
 
 
 @pytest.fixture
-def run_checker():
-    def _run(csv_content, env_updates=None):
-        with NamedTemporaryFile(
-            "w", delete=False, newline="", suffix=".csv", encoding="utf-8"
-        ) as f:
-            f.write(csv_content)
-            temp_path = f.name
+def run_checker(tmp_path):
+    # Parent-process patches do not propagate into a fresh interpreter.
+    # Install the guards inside the child before executing the CLI.
+    wrapper = """
+import runpy
+import socket
+import sys
+from pathlib import Path
+from unittest.mock import patch
 
-        env = os.environ.copy()
-        # Remove any Supabase or runtime settings access
-        for k in ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "DATA_GOV_IN_API_KEY"]:
-            env.pop(k, None)
+script = Path(sys.argv[1]).resolve()
+csv_path = sys.argv[2]
+sys.path.insert(0, str(script.parent.parent))
+sys.argv = [str(script), "--input-csv", csv_path]
+
+def forbidden(*args, **kwargs):
+    raise AssertionError("OFFLINE_FORBIDDEN_DEPENDENCY")
+
+with (
+    patch.object(socket.socket, "connect", forbidden),
+    patch.object(socket.socket, "connect_ex", forbidden),
+    patch.object(socket.socket, "sendto", forbidden),
+    patch.object(socket, "create_connection", forbidden),
+    patch.object(socket, "getaddrinfo", forbidden),
+    patch("app.config.Settings", forbidden),
+    patch("app.config.get_settings", forbidden),
+    patch("supabase.create_client", forbidden),
+    patch("app.deps.get_supabase_service_role", forbidden),
+):
+    runpy.run_path(str(script), run_name="__main__")
+"""
+
+    def _run(csv_content, env_updates=None):
+        csv_path = tmp_path / "input.csv"
+        csv_path.write_bytes(csv_content.encode("utf-8"))
+        original = csv_path.read_bytes()
+
+        # Allowlist instead of inheriting credentials.
+        env = {
+            "PATH": os.environ.get("PATH", ""),
+            "HOME": str(tmp_path),
+            "PYTHONDONTWRITEBYTECODE": "1",
+        }
+        if sys.platform == "win32":
+            for k in ["SystemRoot", "windir", "SystemDrive", "TEMP", "TMP"]:
+                if k in os.environ:
+                    env[k] = os.environ[k]
 
         if env_updates:
             env.update(env_updates)
 
-        script = Path(__file__).parent.parent / "scripts" / "check_historical_data.py"
-        try:
-            res = subprocess.run(
-                [sys.executable, str(script), "--input-csv", temp_path],
-                env=env,
-                capture_output=True,
-                text=True,
-            )
+        script = Path(__file__).resolve().parents[1] / "scripts" / "check_historical_data.py"
 
-            with open(temp_path, "r", encoding="utf-8", newline="") as f:
-                content_after = f.read()
+        result = subprocess.run(
+            [sys.executable, "-c", wrapper, str(script), str(csv_path)],
+            cwd=tmp_path,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
 
-            # File content should remain unchanged
-            assert content_after == csv_content
-
-            return res
-        finally:
-            os.remove(temp_path)
-
-    import sys
+        assert "OFFLINE_FORBIDDEN_DEPENDENCY" not in result.stdout + result.stderr
+        assert csv_path.read_bytes() == original
+        return result
 
     return _run
 
@@ -164,31 +193,103 @@ def test_offline_cli_gapped(run_checker):
     assert "span=50" in res.stdout
 
 
-def test_ingest_csv_tooling_wiring():
-    # test ingest_csv configuration limits behavior (C)
-    import sys
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "raw_limit",
+    ["-10", "abc", "inf", "nan", "0", ""],
+)
+async def test_ingest_csv_rejects_invalid_limit_before_client(
+    raw_limit,
+    monkeypatch,
+):
+    from scripts import ingest_csv as ingest
 
-    script = Path(__file__).parent.parent / "scripts" / "ingest_csv.py"
+    monkeypatch.setenv("MAX_ARRIVAL_QTY_QTL", raw_limit)
 
-    def run_ingest(env_updates=None):
-        env = os.environ.copy()
-        env["SUPABASE_URL"] = "http://localhost:8000"
-        env["SUPABASE_SERVICE_ROLE_KEY"] = "fake-key"
-        if env_updates:
-            env.update(env_updates)
-        return subprocess.run(
-            [sys.executable, str(script)], env=env, capture_output=True, text=True
-        )
+    def unexpected_client(*args, **kwargs):
+        pytest.fail("Invalid configuration must fail before client creation")
 
-    # 1. Invalid configuration
-    res = run_ingest({"MAX_ARRIVAL_QTY_QTL": "-10"})
-    assert res.returncode != 0
-    assert "MAX_ARRIVAL_QTY_QTL must be a positive finite number" in res.stderr
+    monkeypatch.setattr(ingest, "create_client", unexpected_client)
 
-    res = run_ingest({"MAX_ARRIVAL_QTY_QTL": "abc"})
-    assert res.returncode != 0
-    assert "MAX_ARRIVAL_QTY_QTL must be a positive finite number" in res.stderr
+    with pytest.raises(
+        SystemExit,
+        match="MAX_ARRIVAL_QTY_QTL must be a positive finite number",
+    ):
+        await ingest.main()
 
-    res = run_ingest({"MAX_ARRIVAL_QTY_QTL": "inf"})
-    assert res.returncode != 0
-    assert "MAX_ARRIVAL_QTY_QTL must be a positive finite number" in res.stderr
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "raw_limit, expected_limit",
+    [
+        ("123.45", 123.45),
+        (None, 1_000_000.0),
+    ],
+)
+async def test_ingest_csv_passes_configured_limit(
+    raw_limit,
+    expected_limit,
+    fake_supabase,
+    monkeypatch,
+    tmp_path,
+):
+    from unittest.mock import patch
+
+    from ingestion.validator import PriceValidator
+    from scripts import ingest_csv as ingest
+
+    if raw_limit is None:
+        monkeypatch.delenv("MAX_ARRIVAL_QTY_QTL", raising=False)
+    else:
+        monkeypatch.setenv("MAX_ARRIVAL_QTY_QTL", raw_limit)
+
+    monkeypatch.setenv("SUPABASE_URL", "https://test.invalid")
+    monkeypatch.setenv(
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "local-only-fake-client",
+    )
+    monkeypatch.setattr(
+        ingest,
+        "create_client",
+        lambda *args, **kwargs: fake_supabase,
+    )
+    monkeypatch.setattr(
+        ingest,
+        "__file__",
+        str(tmp_path / "scripts" / "ingest_csv.py"),
+    )
+
+    fake_supabase.seed(
+        "commodity_alias",
+        [{"commodity_id": "c1", "source": "csv", "source_key": "Onion"}],
+    )
+    fake_supabase.seed(
+        "commodities",
+        [{"id": "c1", "name_en": "Onion", "sanity_min": 10, "sanity_max": 1000}],
+    )
+    fake_supabase.seed(
+        "markets",
+        [{"id": "m1", "name": "Market1", "source_code": "Market1"}],
+    )
+
+    csv_path = tmp_path / "data" / "gov_prices.csv"
+    csv_path.parent.mkdir()
+    csv_path.write_text(
+        "Market,Commodity,Arrival_Date,"
+        "Min_x0020_Price,Max_x0020_Price,Modal_x0020_Price\n"
+        "Market1,Onion,01/01/2026,100,200,150\n",
+        encoding="utf-8",
+    )
+
+    with patch.object(
+        ingest,
+        "PriceValidator",
+        wraps=PriceValidator,
+    ) as validator_spy:
+        await ingest.main()
+        validator_spy.assert_called_once()
+        assert validator_spy.call_args.kwargs["max_arrival_qty_qtl"] == expected_limit
+
+    upserts = [call for call in fake_supabase.upsert_calls() if call["table"] == "prices"]
+    assert len(upserts) == 1
+    assert upserts[0]["payload"][0]["commodity_id"] == "c1"
