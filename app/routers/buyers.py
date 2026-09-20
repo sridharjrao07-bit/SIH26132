@@ -7,6 +7,7 @@ endpoint creates a buyer with verified=False and calls buyer_register RPC.
 Since migration 031 revoked direct INSERT on buyers from authenticated,
 all writes must go through security-definer RPCs.
 """
+
 from typing import List, Optional
 
 from app.auth import get_current_user, require_role
@@ -96,12 +97,7 @@ def buyer_supply(
 ):
     """Open lots that fit this verified buyer's demand (buyer-side aggregation)."""
     rows = (
-        supabase.table("buyers")
-        .select("*")
-        .eq("id", buyer_id)
-        .eq("verified", True)
-        .execute()
-        .data
+        supabase.table("buyers").select("*").eq("id", buyer_id).eq("verified", True).execute().data
         or []
     )
     if not rows:
