@@ -190,6 +190,18 @@ def test_alert_checker_chunks_district_markets(fake_supabase, in_spy):
         "markets",
         [{"id": f"market-{i}", "district": "Nashik", "is_active": True} for i in range(N_SPLIT)],
     )
+    # Seed a high price in the first chunk's market and a low price in the last chunk's market.
+    # If the chunking loop incorrectly overwrites `history` (keeping only the last chunk),
+    # the average will just be 20.0, failing the >= 100 threshold.
+    fake_supabase.seed(
+        "prices",
+        [
+            {"market_id": "market-0", "commodity_id": "comm-1", "arrival_date": "2026-09-19", "modal_price": 50.0, "source": "test", "variety": "test"},
+            {"market_id": f"market-{N_SPLIT - 1}", "commodity_id": "comm-1", "arrival_date": "2026-09-19", "modal_price": 50.0, "source": "test", "variety": "test"},
+            {"market_id": "market-0", "commodity_id": "comm-1", "arrival_date": "2026-09-20", "modal_price": 200.0, "source": "test", "variety": "test"},
+            {"market_id": f"market-{N_SPLIT - 1}", "commodity_id": "comm-1", "arrival_date": "2026-09-20", "modal_price": 20.0, "source": "test", "variety": "test"},
+        ]
+    )
 
     checker = AlertChecker(fake_supabase)
     checker.run()
@@ -198,3 +210,9 @@ def test_alert_checker_chunks_district_markets(fake_supabase, in_spy):
     assert sizes, "expected chunked in_('market_id', ...) against prices"
     assert max(sizes) <= marketplace.IN_CHUNK
     assert sum(sizes) == N_SPLIT
+
+    # Verify that the prices from all chunks were actually accumulated
+    # If only the last chunk was kept, average would be 20 and no alert would be generated.
+    assert len(fake_supabase.calls) > 0
+    inserts = [c for c in fake_supabase.calls if c["table"] == "notification_log" and c["op"] == "insert"]
+    assert inserts, "expected alert to trigger based on accumulated chunks"

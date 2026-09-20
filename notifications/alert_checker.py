@@ -321,7 +321,7 @@ class AlertChecker:
             for chunk in _chunks(market_ids):
                 chunk_query = (
                     self.supabase.table("prices")
-                    .select("arrival_date, modal_price, source, variety")
+                    .select("market_id, arrival_date, modal_price, source, variety")
                     .eq("commodity_id", commodity_id)
                     .gte("arrival_date", cutoff)
                     .order("arrival_date", desc=False)

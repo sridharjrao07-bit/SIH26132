@@ -93,7 +93,12 @@ def test_auth_mode_app_startup_allows_prod_with_override():
         auth_db_enforcement="app",
         kb_allow_app_mode=True,
         supabase_jwt_issuer="https://test.supabase.co/auth/v1",
-        inbound_hmac_secret="test_secret",
+        inbound_hmac_secret="prod_hmac_secret_key_123",
+        supabase_url="https://prod.supabase.co",
+        supabase_anon_key="prod_anon_key_123",
+        supabase_service_role_key="prod_service_role_key_123",
+        supabase_jwt_secret="prod_jwt_secret_123",
+        data_gov_in_api_key="prod_data_gov_key_123",
     )
     settings.check_runtime()  # Should not raise
 

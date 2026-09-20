@@ -1036,8 +1036,17 @@ class FakeSupabase:
         # SELECT: apply all filter types
         rows = list(self._data.get(table, []))
         rows = self._apply_filters(rows, filters)
+        
+        if select_cols and select_cols not in ("*", "count"):
+            raw_cols = [c.strip() for c in select_cols.split(",")]
+            if "*" not in raw_cols:
+                cols = [c.split("(")[0].strip() for c in raw_cols]
+                filtered = []
+                for r in rows:
+                    filtered.append({k: v for k, v in r.items() if k in cols})
+                rows = filtered
+            
         return _ExecuteResult(data=rows)
-
     @staticmethod
     def _matches_filters(row: dict, filters: dict) -> bool:
         for col, val in (filters or {}).items():
@@ -1327,53 +1336,53 @@ class RlsFakeSupabase(FakeSupabase):
             payload=payload,
             conflict=conflict,
             filters=filters,
-            select_cols=select_cols,
+            select_cols="*" if (op == "select" or op is None) else select_cols,
         )
-        if self._is_service_role:
-            return res
+        if not self._is_service_role:
+            public_tables = {
+                "markets",
+                "commodities",
+                "commodity_alias",
+                "prices",
+                "forecasts",
+                "logistics_options",
+                "storage_facilities",
+            }
+            if (op == "select" or op is None) and table not in public_tables:
+                if not self._uid:
+                    if table == "buyers":
+                        res.data = [r for r in res.data if r.get("verified") is True]
+                    else:
+                        res.data = []
+                else:
+                    def owns(r):
+                        if self._uid == ADMIN_USER_ID:
+                            return True
+                        if table == "user_profiles" and r.get("id") == self._uid:
+                            return True
+                        if table == "buyers":
+                            if r.get("verified") is True:
+                                return True
+                            if r.get("owner_user_id") == self._uid:
+                                return True
+                            return False
+                        if r.get("user_id") == self._uid:
+                            return True
+                        if r.get("buyer_id") == self._uid:
+                            return True
+                        if r.get("fpo_id") == self._uid:
+                            return True
+                        return False
+                    res.data = [r for r in res.data if owns(r)]
 
-        public_tables = {
-            "markets",
-            "commodities",
-            "commodity_alias",
-            "prices",
-            "forecasts",
-            "logistics_options",
-            "storage_facilities",
-        }
-        if (op == "select" or op is None) and table in public_tables:
-            return res
-
-        if not self._uid:
-            if op == "select" or op is None:
-                if table == "buyers":
-                    filtered = [r for r in res.data if r.get("verified") is True]
-                    return _ExecuteResult(data=filtered)
-                return _ExecuteResult(data=[])
-            return _ExecuteResult(data=[])
-
-        def owns(r):
-            if self._uid == ADMIN_USER_ID:
-                return True
-            if table == "user_profiles" and r.get("id") == self._uid:
-                return True
-            if table == "buyers":
-                if r.get("verified") is True:
-                    return True
-                if r.get("owner_user_id") == self._uid:
-                    return True
-                return False
-            if r.get("user_id") == self._uid:
-                return True
-            if r.get("buyer_id") == self._uid:
-                return True
-            if r.get("fpo_id") == self._uid:
-                return True
-            return False
-
-        if op == "select" or op is None:
-            filtered = [r for r in res.data if owns(r)]
-            return _ExecuteResult(data=filtered)
+        if (op == "select" or op is None) and select_cols and select_cols not in ("*", "count"):
+            raw_cols = [c.strip() for c in select_cols.split(",")]
+            if "*" not in raw_cols:
+                cols = [c.split("(")[0].strip() for c in raw_cols]
+                filtered = []
+                for r in res.data:
+                    filtered.append({k: v for k, v in r.items() if k in cols})
+                res.data = filtered
 
         return res
 
