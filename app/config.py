@@ -160,6 +160,17 @@ class Settings(BaseSettings):
                 "to protect the /sms/webhook endpoint from unauthenticated callers."
             )
 
+        if is_prod:
+            dummy_values = {"placeholder", "dummy", "test", "change_me", "changeme"}
+            if self.supabase_anon_key.lower() in dummy_values:
+                raise RuntimeError(
+                    "STARTUP REJECTED: SUPABASE_ANON_KEY cannot be a placeholder in production."
+                )
+            if self.supabase_service_role_key.lower() in dummy_values:
+                raise RuntimeError(
+                    "STARTUP REJECTED: SUPABASE_SERVICE_ROLE_KEY cannot be a placeholder in production."
+                )
+
 
 @lru_cache()
 def get_settings() -> Settings:
