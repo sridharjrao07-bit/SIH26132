@@ -94,7 +94,10 @@ def test_recompute_buyer_reliability_chunks_its_reads(fake_supabase, in_spy):
     fake_supabase.seed(
         "payments",
         [{"id": str(uuid.uuid4()), "offer_id": o["id"], "status": "paid"} for o in offers[:100]]
-        + [{"id": str(uuid.uuid4()), "offer_id": o["id"], "status": "disputed"} for o in offers[100:]],
+        + [
+            {"id": str(uuid.uuid4()), "offer_id": o["id"], "status": "disputed"}
+            for o in offers[100:]
+        ],
     )
     fake_supabase.seed("grievances", [])
     fake_supabase.seed("buyers", [{"id": "buyer-busy", "payment_reliability": "high"}])
@@ -127,3 +130,71 @@ def test_lot_ledger_chunks_payments_and_keeps_them_all(fake_supabase, in_spy):
     assert sizes and max(sizes) <= marketplace.IN_CHUNK
     assert sum(sizes) == N_LARGE
     assert len(ledger["payments"]) == N_LARGE  # accumulated across chunks, none lost
+
+
+def test_alert_checker_chunks_its_reads(fake_supabase, in_spy, monkeypatch):
+    from notifications.alert_checker import AlertChecker
+
+    alerts = [
+        {
+            "id": f"alert-{i}",
+            "user_id": f"user-{i}",
+            "commodity_id": f"comm-{i}",
+            "active": True,
+            "market_id": "market-1",
+            "condition": "gte",
+            "threshold_price": 100,
+        }
+        for i in range(N_SPLIT)
+    ]
+    fake_supabase.seed("alerts", alerts)
+    fake_supabase.seed(
+        "user_profiles", [{"id": f"user-{i}", "phone": f"9876543{i:03d}"} for i in range(N_SPLIT)]
+    )
+    fake_supabase.seed(
+        "commodities", [{"id": f"comm-{i}", "name_en": "Crop"} for i in range(N_SPLIT)]
+    )
+
+    checker = AlertChecker(fake_supabase)
+    checker.run()
+
+    for table, col in [("user_profiles", "id"), ("commodities", "id")]:
+        sizes = [n for (t, c, n) in in_spy if t == table and c == col]
+        assert sizes, f"expected chunked in_('{col}', ...) against {table}"
+        assert max(sizes) <= marketplace.IN_CHUNK
+        assert sum(sizes) == N_SPLIT
+
+
+def test_alert_checker_chunks_district_markets(fake_supabase, in_spy):
+    from notifications.alert_checker import AlertChecker
+
+    fake_supabase.seed(
+        "alerts",
+        [
+            {
+                "id": "alert-1",
+                "user_id": "user-1",
+                "commodity_id": "comm-1",
+                "active": True,
+                "market_id": None,
+                "condition": "gte",
+                "threshold_price": 100,
+            }
+        ],
+    )
+    fake_supabase.seed(
+        "user_profiles", [{"id": "user-1", "phone": "9876543000", "district": "Nashik"}]
+    )
+    fake_supabase.seed("commodities", [{"id": "comm-1", "name_en": "Crop"}])
+    fake_supabase.seed(
+        "markets",
+        [{"id": f"market-{i}", "district": "Nashik", "is_active": True} for i in range(N_SPLIT)],
+    )
+
+    checker = AlertChecker(fake_supabase)
+    checker.run()
+
+    sizes = [n for (t, c, n) in in_spy if t == "prices" and c == "market_id"]
+    assert sizes, "expected chunked in_('market_id', ...) against prices"
+    assert max(sizes) <= marketplace.IN_CHUNK
+    assert sum(sizes) == N_SPLIT

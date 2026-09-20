@@ -1,4 +1,5 @@
 """Shared marketplace helpers: offer TTL and buyer payment-reliability."""
+
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -44,7 +45,9 @@ def offer_expires_at(offer: dict, ttl_hours: int = OFFER_TTL_HOURS) -> Optional[
     return (created + timedelta(hours=ttl_hours)).isoformat()
 
 
-def offer_is_stale(offer: dict, now: Optional[datetime] = None, ttl_hours: int = OFFER_TTL_HOURS) -> bool:
+def offer_is_stale(
+    offer: dict, now: Optional[datetime] = None, ttl_hours: int = OFFER_TTL_HOURS
+) -> bool:
     if offer.get("status") != "pending":
         return False
     created = _parse_dt(offer.get("created_at"))
@@ -79,7 +82,9 @@ def _reopen_lot_if_idle(supabase, lot_id: str) -> bool:
     return True
 
 
-def expire_stale_offers(supabase, ttl_hours: int = OFFER_TTL_HOURS, now: Optional[datetime] = None) -> dict:
+def expire_stale_offers(
+    supabase, ttl_hours: int = OFFER_TTL_HOURS, now: Optional[datetime] = None
+) -> dict:
     """Mark pending offers older than TTL as expired and reopen idle lots."""
     now = now or datetime.now(timezone.utc)
     pending = (
@@ -99,7 +104,7 @@ def expire_stale_offers(supabase, ttl_hours: int = OFFER_TTL_HOURS, now: Optiona
             expired_ids.append(offer["id"])
             if offer.get("lot_id"):
                 lot_ids_to_check.add(offer.get("lot_id"))
-                
+
     lots_reopened = 0
     if expired_ids:
         for chunk in _chunks(expired_ids):
@@ -107,11 +112,13 @@ def expire_stale_offers(supabase, ttl_hours: int = OFFER_TTL_HOURS, now: Optiona
         for lot_id in lot_ids_to_check:
             if _reopen_lot_if_idle(supabase, lot_id):
                 lots_reopened += 1
-                
+
     return {"expired": len(expired_ids), "lots_reopened": lots_reopened, "offer_ids": expired_ids}
 
 
-def score_payment_reliability(paid: int, failed: int, disputed: int, open_payment_grievances: int) -> Optional[str]:
+def score_payment_reliability(
+    paid: int, failed: int, disputed: int, open_payment_grievances: int
+) -> Optional[str]:
     """
     Map observed settlement history to high / medium / low.
 
@@ -206,81 +213,81 @@ def lot_ledger(supabase, lot: dict) -> dict:
     lot_id = lot["id"]
     events = []
     if lot.get("created_at"):
-        events.append({
-            "at": lot["created_at"],
-            "type": "lot_created",
-            "detail": {
-                "status": lot.get("status"),
-                "quantity_qtl": lot.get("quantity_qtl"),
-                "grade": lot.get("grade"),
-                "asking_price": lot.get("asking_price"),
-            },
-        })
+        events.append(
+            {
+                "at": lot["created_at"],
+                "type": "lot_created",
+                "detail": {
+                    "status": lot.get("status"),
+                    "quantity_qtl": lot.get("quantity_qtl"),
+                    "grade": lot.get("grade"),
+                    "asking_price": lot.get("asking_price"),
+                },
+            }
+        )
     offers = supabase.table("offers").select("*").eq("lot_id", lot_id).execute().data or []
     for o in offers:
-        events.append({
-            "at": o.get("updated_at") or o.get("created_at") or "",
-            "type": f"offer_{o.get('status') or 'pending'}",
-            "detail": {
-                "offer_id": o.get("id"),
-                "buyer_id": o.get("buyer_id"),
-                "price_per_qtl": o.get("price_per_qtl"),
-                "quantity_qtl": o.get("quantity_qtl"),
-            },
-        })
+        events.append(
+            {
+                "at": o.get("updated_at") or o.get("created_at") or "",
+                "type": f"offer_{o.get('status') or 'pending'}",
+                "detail": {
+                    "offer_id": o.get("id"),
+                    "buyer_id": o.get("buyer_id"),
+                    "price_per_qtl": o.get("price_per_qtl"),
+                    "quantity_qtl": o.get("quantity_qtl"),
+                },
+            }
+        )
     offer_ids = [o["id"] for o in offers if o.get("id")]
     payments = []
     if offer_ids:
         for chunk in _chunks(offer_ids):
             payments += (
-                supabase.table("payments")
-                .select("*")
-                .in_("offer_id", chunk)
-                .execute()
-                .data
-                or []
+                supabase.table("payments").select("*").in_("offer_id", chunk).execute().data or []
             )
     for p in payments:
-        events.append({
-            "at": p.get("paid_at") or p.get("created_at") or "",
-            "type": f"payment_{p.get('status') or 'pending'}",
-            "detail": {
-                "payment_id": p.get("id"),
-                "offer_id": p.get("offer_id"),
-                "amount": p.get("amount"),
-                "reference": p.get("reference"),
-            },
-        })
+        events.append(
+            {
+                "at": p.get("paid_at") or p.get("created_at") or "",
+                "type": f"payment_{p.get('status') or 'pending'}",
+                "detail": {
+                    "payment_id": p.get("id"),
+                    "offer_id": p.get("offer_id"),
+                    "amount": p.get("amount"),
+                    "reference": p.get("reference"),
+                },
+            }
+        )
     grievances = supabase.table("grievances").select("*").eq("lot_id", lot_id).execute().data or []
     for g in grievances:
-        events.append({
-            "at": g.get("updated_at") or g.get("created_at") or "",
-            "type": f"grievance_{g.get('status') or 'open'}",
-            "detail": {
-                "grievance_id": g.get("id"),
-                "category": g.get("category"),
-                "description": g.get("description"),
-            },
-        })
+        events.append(
+            {
+                "at": g.get("updated_at") or g.get("created_at") or "",
+                "type": f"grievance_{g.get('status') or 'open'}",
+                "detail": {
+                    "grievance_id": g.get("id"),
+                    "category": g.get("category"),
+                    "description": g.get("description"),
+                },
+            }
+        )
     bookings = (
-        supabase.table("logistics_bookings")
-        .select("*")
-        .eq("lot_id", lot_id)
-        .execute()
-        .data
-        or []
+        supabase.table("logistics_bookings").select("*").eq("lot_id", lot_id).execute().data or []
     )
     for b in bookings:
-        events.append({
-            "at": b.get("updated_at") or b.get("created_at") or "",
-            "type": f"booking_{b.get('status') or 'requested'}",
-            "detail": {
-                "booking_id": b.get("id"),
-                "logistics_id": b.get("logistics_id"),
-                "kind": b.get("kind"),
-                "quantity_qtl": b.get("quantity_qtl"),
-            },
-        })
+        events.append(
+            {
+                "at": b.get("updated_at") or b.get("created_at") or "",
+                "type": f"booking_{b.get('status') or 'requested'}",
+                "detail": {
+                    "booking_id": b.get("id"),
+                    "logistics_id": b.get("logistics_id"),
+                    "kind": b.get("kind"),
+                    "quantity_qtl": b.get("quantity_qtl"),
+                },
+            }
+        )
     events.sort(key=lambda e: str(e.get("at") or ""))
     return {
         "lot": lot,
@@ -317,7 +324,9 @@ def booked_quantity(supabase, logistics_id: str, exclude_id: Optional[str] = Non
     return total
 
 
-def logistics_next_step(action: str, window: Optional[dict], bookings: list, transport: list) -> Optional[str]:
+def logistics_next_step(
+    action: str, window: Optional[dict], bookings: list, transport: list
+) -> Optional[str]:
     """Farmer-facing next action: book storage to HOLD, or a truck to SELL NOW."""
     active = [b for b in (bookings or []) if b.get("status") in ACTIVE_BOOKING_STATUSES]
     has_storage = any(b.get("kind") == "storage" for b in active)
