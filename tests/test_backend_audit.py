@@ -8,6 +8,7 @@ These tests exist to:
 
 They do not require a live Supabase instance (FakeSupabase via conftest).
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -48,6 +49,7 @@ def admin_headers():
 
 
 # ── Auth / JWT ────────────────────────────────────────────────────────────────
+
 
 def test_expired_jwt_is_rejected():
     secret = os.environ["SUPABASE_JWT_SECRET"]
@@ -114,6 +116,7 @@ def test_sms_simulate_rejects_farmer():
 
 # ── Public API contracts ──────────────────────────────────────────────────────
 
+
 def test_health_does_not_expose_environment():
     resp = client.get("/health")
     assert resp.status_code == 200
@@ -146,6 +149,38 @@ def test_forecast_days_over_seven_rejected():
 def test_unknown_path_is_404_not_500():
     resp = client.get("/api/v1/does-not-exist")
     assert resp.status_code == 404
+
+
+def test_transport_failures_map_to_503_and_health_remains_200(
+    override_supabase, fake_supabase, monkeypatch
+):
+    import httpx
+
+    def mock_execute(*a, **k):
+        raise httpx.ConnectError("failed")
+
+    from tests.conftest import _FakeQuery
+
+    monkeypatch.setattr(_FakeQuery, "execute", mock_execute)
+
+    # Readiness probe maps to 503
+    resp_ready = client.get("/readyz")
+    assert resp_ready.status_code == 503
+
+    # Public route maps to 503
+    resp_public = client.get("/api/v1/commodities/")
+    assert resp_public.status_code == 503
+
+    # Liveness probe remains 200
+    resp_health = client.get("/health")
+    assert resp_health.status_code == 200
+
+
+def test_readiness_probe_returns_200_when_healthy(override_supabase, fake_supabase):
+    fake_supabase.seed("commodities", [{"id": "c1", "name_en": "Onion"}])
+    resp = client.get("/readyz")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ready"
 
 
 def test_dashboard_html_is_public():
@@ -185,6 +220,7 @@ def test_nearby_zero_radius_rejected():
 
 # ── Alerts CRUD ───────────────────────────────────────────────────────────────
 
+
 def test_create_alert_rejects_negative_threshold():
     resp = client.post(
         "/api/v1/alerts/",
@@ -220,8 +256,16 @@ def test_delete_alert_404_when_missing(override_supabase, fake_supabase):
 def test_delete_alert_ok(override_supabase, fake_supabase):
     fake_supabase.seed(
         "alerts",
-        [{"id": "a-del-1", "user_id": FARMER_USER_ID, "commodity_id": COMMODITY_ID_ONION,
-          "threshold_price": 1500.0, "condition": "lte", "active": True}],
+        [
+            {
+                "id": "a-del-1",
+                "user_id": FARMER_USER_ID,
+                "commodity_id": COMMODITY_ID_ONION,
+                "threshold_price": 1500.0,
+                "condition": "lte",
+                "active": True,
+            }
+        ],
     )
     resp = client.delete("/api/v1/alerts/a-del-1", headers=farmer_headers())
     assert resp.status_code == 200
@@ -238,16 +282,28 @@ def test_list_alerts_hides_other_users_rows(override_supabase, fake_supabase):
     fake_supabase.seed(
         "alerts",
         [
-            {"id": "a-mine", "user_id": FARMER_USER_ID, "commodity_id": COMMODITY_ID_ONION,
-             "threshold_price": 1500.0, "condition": "lte", "active": True,
-             "created_at": datetime.now(timezone.utc).isoformat(),
-             "markets": {"name": "Lasalgaon APCM"},
-             "commodities": {"name_en": "Onion", "name_mr": "कांदा"}},
-            {"id": "a-theirs", "user_id": ADMIN_USER_ID, "commodity_id": COMMODITY_ID_ONION,
-             "threshold_price": 9999.0, "condition": "gte", "active": True,
-             "created_at": datetime.now(timezone.utc).isoformat(),
-             "markets": {"name": "Lasalgaon APCM"},
-             "commodities": {"name_en": "Onion", "name_mr": "कांदा"}},
+            {
+                "id": "a-mine",
+                "user_id": FARMER_USER_ID,
+                "commodity_id": COMMODITY_ID_ONION,
+                "threshold_price": 1500.0,
+                "condition": "lte",
+                "active": True,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "markets": {"name": "Lasalgaon APCM"},
+                "commodities": {"name_en": "Onion", "name_mr": "कांदा"},
+            },
+            {
+                "id": "a-theirs",
+                "user_id": ADMIN_USER_ID,
+                "commodity_id": COMMODITY_ID_ONION,
+                "threshold_price": 9999.0,
+                "condition": "gte",
+                "active": True,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "markets": {"name": "Lasalgaon APCM"},
+                "commodities": {"name_en": "Onion", "name_mr": "कांदा"},
+            },
         ],
     )
     resp = client.get("/api/v1/alerts/", headers=farmer_headers())
@@ -259,11 +315,19 @@ def test_list_alerts_hides_other_users_rows(override_supabase, fake_supabase):
 def test_list_alerts_with_farmer_token(override_supabase, fake_supabase):
     fake_supabase.seed(
         "alerts",
-        [{"id": "a-list-1", "user_id": FARMER_USER_ID, "commodity_id": COMMODITY_ID_ONION,
-          "threshold_price": 1500.0, "condition": "lte", "active": True,
-          "created_at": datetime.now(timezone.utc).isoformat(),
-          "markets": {"name": "Lasalgaon APCM"},
-          "commodities": {"name_en": "Onion", "name_mr": "कांदा"}}],
+        [
+            {
+                "id": "a-list-1",
+                "user_id": FARMER_USER_ID,
+                "commodity_id": COMMODITY_ID_ONION,
+                "threshold_price": 1500.0,
+                "condition": "lte",
+                "active": True,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "markets": {"name": "Lasalgaon APCM"},
+                "commodities": {"name_en": "Onion", "name_mr": "कांदा"},
+            }
+        ],
     )
     resp = client.get("/api/v1/alerts/", headers=farmer_headers())
     assert resp.status_code == 200
@@ -273,8 +337,16 @@ def test_list_alerts_with_farmer_token(override_supabase, fake_supabase):
 def test_patch_alert_happy_path(override_supabase, fake_supabase):
     fake_supabase.seed(
         "alerts",
-        [{"id": "a-patch-1", "user_id": FARMER_USER_ID, "commodity_id": COMMODITY_ID_ONION,
-          "threshold_price": 1500.0, "condition": "lte", "active": True}],
+        [
+            {
+                "id": "a-patch-1",
+                "user_id": FARMER_USER_ID,
+                "commodity_id": COMMODITY_ID_ONION,
+                "threshold_price": 1500.0,
+                "condition": "lte",
+                "active": True,
+            }
+        ],
     )
     resp = client.patch(
         "/api/v1/alerts/a-patch-1",
@@ -288,16 +360,127 @@ def test_patch_alert_happy_path(override_supabase, fake_supabase):
 
 # ── SMS webhook / inbound ─────────────────────────────────────────────────────
 
+
 def test_sms_webhook_unsigned_is_403():
     resp = client.post("/api/v1/sms/webhook", json={"sender": "+919876543210", "message": "ONION"})
     assert resp.status_code == 403
 
 
-def test_sms_simulate_unknown_keyword_sends_help(override_supabase, fake_supabase, tmp_path, monkeypatch):
+def test_sms_webhook_full_handler_success(override_supabase, fake_supabase, tmp_path, monkeypatch):
+    """Test the full webhook handler including signature verification and inbound processing."""
+    monkeypatch.setenv("INBOUND_HMAC_SECRET", "audit-secret")
+    from importlib import reload
+
+    import notifications.inbound_verifier as iv_mod
+
+    reload(iv_mod)
+    import app.routers.sms as sms_mod
+
+    sms_mod.reset_verifier_for_tests()
+
+    monkeypatch.setattr(
+        "app.routers.sms.get_sms_gateway",
+        lambda: MockSMSGateway(log_file=str(tmp_path / "sms.log")),
+    )
+
+    for row in fake_supabase._data["commodity_alias"]:
+        if row.get("source") == "sms":
+            row["commodities"] = {"name_en": "Onion", "name_mr": "कांदा", "name_hi": " प्याज"}
+    today = date.today().isoformat()
+    fake_supabase.seed(
+        "prices",
+        [
+            {
+                "market_id": MARKET_ID_LASALGAON,
+                "commodity_id": COMMODITY_ID_ONION,
+                "arrival_date": today,
+                "modal_price": 2100.0,
+                "source": "data_gov_in",
+                "variety": "General",
+                "markets": {"name": "Lasalgaon APCM"},
+            }
+        ],
+    )
+    fake_supabase.set_rpc(
+        "nearest_market",
+        [{"id": MARKET_ID_LASALGAON, "name": "Lasalgaon APCM", "distance_km": 3.2}],
+    )
+
+    payload_str = '{"sender":"9876543210","message":"PYAJ LASALGAON"}'
+    ts = str(int(time.time()))
+    sig = hmac.new(b"audit-secret", payload_str.encode() + ts.encode(), hashlib.sha256).hexdigest()
+
+    resp = client.post(
+        "/api/v1/sms/webhook",
+        headers={"X-Signature": sig, "X-Timestamp": ts, "Content-Type": "application/json"},
+        content=payload_str,
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "replied"
+
+
+def test_sms_webhook_invalid_json(monkeypatch):
+    monkeypatch.setenv("INBOUND_HMAC_SECRET", "audit-secret")
+    from importlib import reload
+
+    import notifications.inbound_verifier as iv_mod
+
+    reload(iv_mod)
+    import app.routers.sms as sms_mod
+
+    sms_mod.reset_verifier_for_tests()
+
+    payload_str = "{invalid-json"
+    ts = str(int(time.time()))
+    sig = hmac.new(b"audit-secret", payload_str.encode() + ts.encode(), hashlib.sha256).hexdigest()
+
+    resp = client.post(
+        "/api/v1/sms/webhook",
+        headers={"X-Signature": sig, "X-Timestamp": ts, "Content-Type": "application/json"},
+        content=payload_str,
+    )
+
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "invalid json"
+
+
+def test_sms_webhook_non_dict_json(monkeypatch):
+    monkeypatch.setenv("INBOUND_HMAC_SECRET", "audit-secret")
+    from importlib import reload
+
+    import notifications.inbound_verifier as iv_mod
+
+    reload(iv_mod)
+    import app.routers.sms as sms_mod
+
+    sms_mod.reset_verifier_for_tests()
+
+    payload_str = '["not a dict"]'
+    ts = str(int(time.time()))
+    sig = hmac.new(b"audit-secret", payload_str.encode() + ts.encode(), hashlib.sha256).hexdigest()
+
+    resp = client.post(
+        "/api/v1/sms/webhook",
+        headers={"X-Signature": sig, "X-Timestamp": ts, "Content-Type": "application/json"},
+        content=payload_str,
+    )
+
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "invalid json"
+
+
+def test_sms_simulate_unknown_keyword_sends_help(
+    override_supabase, fake_supabase, tmp_path, monkeypatch
+):
     from app.routers import sms as sms_mod
+
     sms_mod.get_sms_gateway = lambda: MockSMSGateway(log_file=str(tmp_path / "sms.log"))
     # Patch the name used inside _process_inbound via module
-    monkeypatch.setattr("app.routers.sms.get_sms_gateway", lambda: MockSMSGateway(log_file=str(tmp_path / "sms.log")))
+    monkeypatch.setattr(
+        "app.routers.sms.get_sms_gateway",
+        lambda: MockSMSGateway(log_file=str(tmp_path / "sms.log")),
+    )
     resp = client.post(
         "/api/v1/sms/simulate",
         json={"sender": "9876543210", "message": "POTATO"},
@@ -307,7 +490,9 @@ def test_sms_simulate_unknown_keyword_sends_help(override_supabase, fake_supabas
     assert resp.json()["status"] == "help_sent"
 
 
-def test_sms_simulate_known_keyword_replies(override_supabase, fake_supabase, tmp_path, monkeypatch):
+def test_sms_simulate_known_keyword_replies(
+    override_supabase, fake_supabase, tmp_path, monkeypatch
+):
     monkeypatch.setattr(
         "app.routers.sms.get_sms_gateway",
         lambda: MockSMSGateway(log_file=str(tmp_path / "sms.log")),
@@ -318,11 +503,22 @@ def test_sms_simulate_known_keyword_replies(override_supabase, fake_supabase, tm
     today = date.today().isoformat()
     fake_supabase.seed(
         "prices",
-        [{"market_id": MARKET_ID_LASALGAON, "commodity_id": COMMODITY_ID_ONION,
-          "arrival_date": today, "modal_price": 2100.0, "source": "data_gov_in",
-          "variety": "General", "markets": {"name": "Lasalgaon APCM"}}],
+        [
+            {
+                "market_id": MARKET_ID_LASALGAON,
+                "commodity_id": COMMODITY_ID_ONION,
+                "arrival_date": today,
+                "modal_price": 2100.0,
+                "source": "data_gov_in",
+                "variety": "General",
+                "markets": {"name": "Lasalgaon APCM"},
+            }
+        ],
     )
-    fake_supabase.set_rpc("nearest_market", [{"id": MARKET_ID_LASALGAON, "name": "Lasalgaon APCM", "distance_km": 3.2}])
+    fake_supabase.set_rpc(
+        "nearest_market",
+        [{"id": MARKET_ID_LASALGAON, "name": "Lasalgaon APCM", "distance_km": 3.2}],
+    )
     resp = client.post(
         "/api/v1/sms/simulate",
         json={"sender": "9876543210", "message": "PYAJ"},
@@ -334,7 +530,9 @@ def test_sms_simulate_known_keyword_replies(override_supabase, fake_supabase, tm
         assert "recommendation" in resp.json()
 
 
-def test_sms_simulate_first_token_keyword_replies(override_supabase, fake_supabase, tmp_path, monkeypatch):
+def test_sms_simulate_first_token_keyword_replies(
+    override_supabase, fake_supabase, tmp_path, monkeypatch
+):
     monkeypatch.setattr(
         "app.routers.sms.get_sms_gateway",
         lambda: MockSMSGateway(log_file=str(tmp_path / "sms.log")),
@@ -345,11 +543,22 @@ def test_sms_simulate_first_token_keyword_replies(override_supabase, fake_supaba
     today = date.today().isoformat()
     fake_supabase.seed(
         "prices",
-        [{"market_id": MARKET_ID_LASALGAON, "commodity_id": COMMODITY_ID_ONION,
-          "arrival_date": today, "modal_price": 2100.0, "source": "data_gov_in",
-          "variety": "General", "markets": {"name": "Lasalgaon APCM"}}],
+        [
+            {
+                "market_id": MARKET_ID_LASALGAON,
+                "commodity_id": COMMODITY_ID_ONION,
+                "arrival_date": today,
+                "modal_price": 2100.0,
+                "source": "data_gov_in",
+                "variety": "General",
+                "markets": {"name": "Lasalgaon APCM"},
+            }
+        ],
     )
-    fake_supabase.set_rpc("nearest_market", [{"id": MARKET_ID_LASALGAON, "name": "Lasalgaon APCM", "distance_km": 3.2}])
+    fake_supabase.set_rpc(
+        "nearest_market",
+        [{"id": MARKET_ID_LASALGAON, "name": "Lasalgaon APCM", "distance_km": 3.2}],
+    )
     resp = client.post(
         "/api/v1/sms/simulate",
         json={"sender": "9876543210", "message": "PYAJ LASALGAON"},
@@ -386,6 +595,7 @@ async def test_webhook_replay_within_window_is_rejected(monkeypatch):
 
     import notifications.inbound_verifier as iv_mod
     from fastapi import HTTPException
+
     reload(iv_mod)
 
     verifier = iv_mod.InboundVerifier()
@@ -408,6 +618,7 @@ async def test_webhook_replay_within_window_is_rejected(monkeypatch):
 
 # ── Phone normalization ───────────────────────────────────────────────────────
 
+
 @pytest.mark.parametrize(
     "raw,expected",
     [
@@ -428,6 +639,7 @@ def test_normalize_phone(raw, expected):
 
 # ── Forecasting correctness ───────────────────────────────────────────────────
 
+
 def test_forecast_horizon_is_anchored_to_today():
     last = date.today() - timedelta(days=20)
     series = [(last - timedelta(days=24 - i), 1800.0 + i) for i in range(25)]
@@ -441,19 +653,24 @@ def test_forecast_public_api_hides_past_dated_rows(override_supabase, fake_supab
     past = (date.today() - timedelta(days=3)).isoformat()
     fake_supabase.seed(
         "forecasts",
-        [{
-            "id": "f-past",
-            "market_id": MARKET_ID_LASALGAON,
-            "commodity_id": COMMODITY_ID_ONION,
-            "forecast_date": past,
-            "predicted_price": 1800.0,
-            "lower_bound": 1600.0, "upper_bound": 2000.0,
-            "confidence": "high", "method": "blend",
-            "observations": 25, "status": "ok",
-            "generated_at": datetime.now(timezone.utc).isoformat(),
-            "markets": {"name": "Lasalgaon APCM", "district": "Nashik"},
-            "commodities": {"name_en": "Onion", "name_mr": "कांदा", "name_hi": "प्याज"},
-        }],
+        [
+            {
+                "id": "f-past",
+                "market_id": MARKET_ID_LASALGAON,
+                "commodity_id": COMMODITY_ID_ONION,
+                "forecast_date": past,
+                "predicted_price": 1800.0,
+                "lower_bound": 1600.0,
+                "upper_bound": 2000.0,
+                "confidence": "high",
+                "method": "blend",
+                "observations": 25,
+                "status": "ok",
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "markets": {"name": "Lasalgaon APCM", "district": "Nashik"},
+                "commodities": {"name_en": "Onion", "name_mr": "कांदा", "name_hi": "प्याज"},
+            }
+        ],
     )
     resp = client.get(
         f"/api/v1/forecasts?market_id={MARKET_ID_LASALGAON}&commodity_id={COMMODITY_ID_ONION}"
@@ -464,11 +681,22 @@ def test_forecast_public_api_hides_past_dated_rows(override_supabase, fake_supab
 
 def test_district_fallback_averages_across_markets():
     from forecasting.engine import build_district_daily_series
+
     rows = [
-        {"arrival_date": "2026-08-01", "modal_price": 1000, "source": "data_gov_in",
-         "variety": "General", "market_id": "m1"},
-        {"arrival_date": "2026-08-01", "modal_price": 5000, "source": "data_gov_in",
-         "variety": "General", "market_id": "m2"},
+        {
+            "arrival_date": "2026-08-01",
+            "modal_price": 1000,
+            "source": "data_gov_in",
+            "variety": "General",
+            "market_id": "m1",
+        },
+        {
+            "arrival_date": "2026-08-01",
+            "modal_price": 5000,
+            "source": "data_gov_in",
+            "variety": "General",
+            "market_id": "m2",
+        },
     ]
     series = build_district_daily_series(rows)
     assert len(series) == 1
@@ -484,6 +712,7 @@ def test_blend_tier_medium_for_15_to_19_obs():
 
 # ── Ingestion / adapter ───────────────────────────────────────────────────────
 
+
 def test_data_gov_in_adapter_parses_arrival_qty():
     src = inspect.getsource(DataGovInAdapter.fetch_prices)
     assert "arrival_qty" in src
@@ -492,6 +721,7 @@ def test_data_gov_in_adapter_parses_arrival_qty():
 
 def test_ingestion_job_takes_distributed_lock():
     from app.services.jobs import _claim, run_alert_job, run_ingestion_job
+
     assert "_claim" in inspect.getsource(run_ingestion_job)
     assert "_claim" in inspect.getsource(run_alert_job)
     assert "claim_job_lock" in inspect.getsource(_claim)
@@ -510,6 +740,7 @@ def test_slowapi_is_wired_into_the_app():
 
 def test_settings_constructor_accepts_field_names():
     from app.config import Settings
+
     s = Settings(msg91_dlt_te_id_mr="tmpl_mr")
     assert s.msg91_dlt_te_id_mr == "tmpl_mr"
 
@@ -521,6 +752,7 @@ def test_inbound_verifier_uses_settings_when_env_empty(monkeypatch):
     from types import SimpleNamespace
 
     import notifications.inbound_verifier as iv_mod
+
     monkeypatch.setattr(
         "app.config.get_settings",
         lambda: SimpleNamespace(
@@ -537,10 +769,14 @@ def test_inbound_verifier_uses_settings_when_env_empty(monkeypatch):
 
 # ── Alert checker behaviour ───────────────────────────────────────────────────
 
+
 def test_sustained_gte_breach_does_not_fire_without_fresh_cross(fake_supabase, tmp_path):
     from tests.test_alerts import make_alert, make_checker, make_prices, make_profile
+
     fake_supabase.seed("user_profiles", [make_profile()])
-    fake_supabase.seed("alerts", [make_alert(threshold=2200.0, condition="gte", last_notified_at=None)])
+    fake_supabase.seed(
+        "alerts", [make_alert(threshold=2200.0, condition="gte", last_notified_at=None)]
+    )
     fake_supabase.seed(
         "prices",
         make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2300, 1: 2400}),
@@ -552,6 +788,7 @@ def test_sustained_gte_breach_does_not_fire_without_fresh_cross(fake_supabase, t
 
 def test_invalid_phone_skips_sms(fake_supabase):
     from tests.test_alerts import make_alert, make_checker, make_prices, make_profile
+
     fake_supabase.seed("user_profiles", [make_profile(phone="123")])
     fake_supabase.seed("alerts", [make_alert()])
     fake_supabase.seed(
@@ -567,9 +804,16 @@ def test_latest_price_for_user_district_fallback(fake_supabase):
     today = date.today().isoformat()
     fake_supabase.seed(
         "prices",
-        [{"market_id": MARKET_ID_LASALGAON, "commodity_id": COMMODITY_ID_ONION,
-          "arrival_date": today, "modal_price": 1750.0, "source": "data_gov_in",
-          "markets": {"name": "Lasalgaon APCM"}}],
+        [
+            {
+                "market_id": MARKET_ID_LASALGAON,
+                "commodity_id": COMMODITY_ID_ONION,
+                "arrival_date": today,
+                "modal_price": 1750.0,
+                "source": "data_gov_in",
+                "markets": {"name": "Lasalgaon APCM"},
+            }
+        ],
     )
     price, market = latest_price_for_user(
         fake_supabase, COMMODITY_ID_ONION, {"lat": None, "lng": None, "district": "Nashik"}
@@ -598,6 +842,7 @@ def test_admin_forecast_locked_returns_locked(override_supabase, fake_supabase):
 
 def test_exception_handler_does_not_leak_internal_message(override_supabase, fake_supabase):
     """Nearby already maps RPC errors to generic 503; confirm no traceback in body."""
+
     def boom(fn_name, params=None):
         raise RuntimeError("password=supersecret schema cache")
 
@@ -657,6 +902,7 @@ def test_sms_outbound_cap(override_supabase, fake_supabase, tmp_path, monkeypatc
         lambda: MockSMSGateway(log_file=str(tmp_path / "sms.log")),
     )
     from app.routers import sms as sms_mod
+
     sms_mod.reset_outbound_cap()
     sms_mod._OUTBOUND_MAX = 2
     for row in fake_supabase._data["commodity_alias"]:
@@ -665,9 +911,17 @@ def test_sms_outbound_cap(override_supabase, fake_supabase, tmp_path, monkeypatc
     today = date.today().isoformat()
     fake_supabase.seed(
         "prices",
-        [{"market_id": MARKET_ID_LASALGAON, "commodity_id": COMMODITY_ID_ONION,
-          "arrival_date": today, "modal_price": 2100.0, "source": "data_gov_in",
-          "variety": "General", "markets": {"name": "Lasalgaon APCM"}}],
+        [
+            {
+                "market_id": MARKET_ID_LASALGAON,
+                "commodity_id": COMMODITY_ID_ONION,
+                "arrival_date": today,
+                "modal_price": 2100.0,
+                "source": "data_gov_in",
+                "variety": "General",
+                "markets": {"name": "Lasalgaon APCM"},
+            }
+        ],
     )
     statuses = []
     for _ in range(3):
