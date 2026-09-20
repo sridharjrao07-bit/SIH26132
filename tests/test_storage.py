@@ -80,8 +80,11 @@ def test_book_storage_capacity_exceeded(override_supabase, fake_supabase):
         "quantity_qtl": 50
     }, headers={"Authorization": f"Bearer {token}"})
     
-    assert resp.status_code == 400
-    assert "capacity exceeded" in resp.json()["detail"]
+    # Migration 036 contract: capacity is enforced inside storage_booking_create
+    # under a facility row lock. The RPC raises P0001, which json_for_api_error
+    # maps to 409 with an opaque detail by design (the old app-side check was
+    # a racy 400 that could not stop concurrent oversubscription).
+    assert resp.status_code == 409
 
 
 def test_update_storage_booking_state_machine(override_supabase, fake_supabase):

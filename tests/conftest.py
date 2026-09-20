@@ -176,6 +176,14 @@ class FakeSupabase:
                     return _ExecuteResult(data=store._rpc_offer_decide(params))
                 if fn_name == "payment_create":
                     return _ExecuteResult(data=store._rpc_payment_create(params))
+                if fn_name == "storage_booking_create":
+                    return _ExecuteResult(data=store._rpc_storage_booking_create(params))
+                if fn_name == "storage_booking_update":
+                    return _ExecuteResult(data=store._rpc_storage_booking_update(params))
+                if fn_name == "logistics_booking_create":
+                    return _ExecuteResult(data=store._rpc_logistics_booking_create(params))
+                if fn_name == "logistics_booking_update":
+                    return _ExecuteResult(data=store._rpc_logistics_booking_update(params))
                 if fn_name == "payment_mark_paid":
                     return _ExecuteResult(data=store._rpc_payment_mark_paid(params))
                 if fn_name == "buyer_register":
@@ -401,7 +409,7 @@ class FakeSupabase:
         lot_id = params.get("p_lot_id")
         for lot in self._data.get("lots", []):
             if lot.get("id") == lot_id:
-                if lot.get("status") in ("sold", "withdrawn"):
+                if lot.get("status") in ("sold", "withdrawn", "matched"):
                     raise HTTPException(409, f"cannot withdraw a {lot['status']} lot")
                 lot["status"] = "withdrawn"
                 return dict(lot)
@@ -430,7 +438,9 @@ class FakeSupabase:
         profile = next((p for p in profiles if p.get("id") == caller_uid), None)
         if not profile or profile.get("role") != "fpo":
             raise HTTPException(403, "fpo_aggregate_lots requires the fpo role")
-        lot_ids = params.get("p_lot_ids", [])
+        caller = params.get("_test_user_id", "test-user")
+        # 036 D: de-duplicate ids — a repeated id used to pool the lot twice.
+        lot_ids = list(dict.fromkeys(params.get("p_lot_ids", [])))
         commodity = None
         total = 0.0
         price_sum = 0.0
@@ -439,6 +449,8 @@ class FakeSupabase:
         for lid in lot_ids:
             for lot in self._data.get("lots", []):
                 if lot.get("id") == lid:
+                    if lot.get("user_id") != caller and lot.get("fpo_id") != caller:
+                        raise HTTPException(409, f"lot {lid} does not belong to your FPO")
                     if lot.get("status") != "open":
                         raise HTTPException(409, f"lot {lid} is not open")
                     if commodity is None:
@@ -478,6 +490,15 @@ class FakeSupabase:
             raise HTTPException(404, "lot not found or not owned by caller")
         if lot.get("status") not in ("open", "offered"):
             raise HTTPException(409, f"lot is not open for offers (status: {lot.get('status')})")
+        # 036 B1: only verified buyers may receive offers
+        buyer = next(
+            (b for b in self._data.get("buyers", []) if b.get("id") == params.get("p_buyer_id")),
+            None,
+        )
+        if not buyer:
+            raise HTTPException(404, "buyer not found")
+        if not buyer.get("verified"):
+            raise HTTPException(409, "buyer is not verified")
         qty = float(params.get("p_quantity_qtl", 0))
         if qty > float(lot.get("quantity_qtl") or 0):
             raise HTTPException(400, "offer quantity exceeds lot quantity")
@@ -498,6 +519,8 @@ class FakeSupabase:
         return dict(row)
 
     def _rpc_offer_decide(self, params: dict) -> dict:
+        from datetime import datetime, timezone
+
         from fastapi import HTTPException
         offer_id = params.get("p_offer_id")
         decision = params.get("p_decision")
@@ -506,6 +529,17 @@ class FakeSupabase:
             raise HTTPException(404, "offer not found")
         if offer.get("status") != "pending":
             raise HTTPException(409, f"cannot decide on a {offer.get('status')} offer")
+        # 036 B2: pending offers expire after OFFER_TTL_HOURS (48h)
+        created = offer.get("created_at")
+        if created:
+            try:
+                cdt = datetime.fromisoformat(str(created).replace("Z", "+00:00"))
+                if cdt.tzinfo is None:
+                    cdt = cdt.replace(tzinfo=timezone.utc)
+                if (datetime.now(timezone.utc) - cdt).total_seconds() > 48 * 3600:
+                    raise HTTPException(409, "offer expired (older than 48 hours)")
+            except ValueError:
+                pass
         lot = next((l for l in self._data.get("lots", []) if l.get("id") == offer.get("lot_id")), None)
         if decision == "accepted":
             offer["status"] = "accepted"
@@ -531,7 +565,9 @@ class FakeSupabase:
             raise HTTPException(404, "offer not found")
         if offer.get("status") != "accepted":
             raise HTTPException(409, f"payments require an accepted offer, current status: {offer.get('status')}")
-        existing = next((p for p in self._data.get("payments", []) if p.get("offer_id") == offer_id and p.get("status") in ("pending", "paid")), None)
+        # 036 C2: one payment row per offer (uq_payments_one_per_offer);
+        # re-calling payment_create for any existing status returns the row.
+        existing = next((p for p in self._data.get("payments", []) if p.get("offer_id") == offer_id), None)
         if existing:
             return dict(existing)
         row = {
@@ -568,6 +604,11 @@ class FakeSupabase:
             raise HTTPException(409, f"cannot mark a {payment['status']} payment as paid")
         if payment.get("status") == "paid":
             return dict(payment)
+        # 036 C3: a lot withdrawn after matching can no longer be sold
+        offer0 = next((o for o in self._data.get("offers", []) if o.get("id") == payment.get("offer_id")), None)
+        lot0 = next((l for l in self._data.get("lots", []) if l.get("id") == (offer0 or {}).get("lot_id")), None)
+        if lot0 and lot0.get("status") == "withdrawn":
+            raise HTTPException(409, "cannot mark paid: lot was withdrawn")
         payment["status"] = "paid"
         payment["paid_at"] = datetime.now(timezone.utc).isoformat()
         offer = next((o for o in self._data.get("offers", []) if o.get("id") == payment.get("offer_id")), None)
@@ -576,6 +617,196 @@ class FakeSupabase:
             if lot:
                 lot["status"] = "sold"
         return dict(payment)
+
+    # ── booking RPCs (migration 036 F) ──────────────────────────────────────
+    # Mirror the P-code → HTTP mapping used by app.errors.json_for_api_error:
+    #   P0001 → 409 (capacity), P0002 → 404 (not found / cross-tenant),
+    #   P0003 → 409 (invalid state), P0004 → 422 (invalid argument)
+
+    def _booking_lot(self, uid, lot_id):
+        from fastapi import HTTPException
+        lot = next((l for l in self._data.get("lots", []) if l.get("id") == lot_id), None)
+        if not lot or (lot.get("user_id") != uid and lot.get("fpo_id") != uid):
+            raise HTTPException(404, "lot not found or access denied")
+        if lot.get("status") in ("sold", "withdrawn"):
+            raise HTTPException(409, f"cannot book a {lot.get('status')} lot")
+        return lot
+
+    @staticmethod
+    def _booking_status_machine(current, target):
+        from fastapi import HTTPException
+        if current == "requested":
+            if target not in ("confirmed", "cancelled"):
+                raise HTTPException(409, f"invalid transition requested -> {target}")
+        elif current == "confirmed":
+            if target not in ("completed", "cancelled"):
+                raise HTTPException(409, f"invalid transition confirmed -> {target}")
+        else:
+            raise HTTPException(409, f"booking is already {current}")
+
+    def _rpc_storage_booking_create(self, params: dict) -> dict:
+        import uuid as _uuid
+        from datetime import datetime, timezone
+
+        from fastapi import HTTPException
+        uid = params.get("_test_user_id", "test-user")
+        lot = self._booking_lot(uid, params.get("p_lot_id"))
+        qty = params.get("p_quantity_qtl", lot.get("quantity_qtl"))
+        lot_qty = float(lot.get("quantity_qtl") or 0)
+        if qty is None or float(qty) <= 0 or float(qty) > lot_qty:
+            raise HTTPException(422, "quantity must be positive and not exceed the lot quantity")
+        fac = next(
+            (f for f in self._data.get("storage_facilities", [])
+             if f.get("id") == params.get("p_facility_id") and f.get("is_active")),
+            None,
+        )
+        if not fac:
+            raise HTTPException(404, "storage facility not found or inactive")
+        cap = fac.get("capacity_qtl")
+        if cap is not None:
+            used = sum(
+                float(b.get("quantity_qtl") or 0)
+                for b in self._data.get("storage_bookings", [])
+                if b.get("facility_id") == fac["id"] and b.get("status") in ("requested", "confirmed")
+            )
+            if used + float(qty) > float(cap):
+                raise HTTPException(409, f"facility capacity exceeded: {used} of {float(cap)} qtl already booked")
+        now = datetime.now(timezone.utc).isoformat()
+        row = {
+            "id": str(_uuid.uuid4()),
+            "user_id": uid,
+            "lot_id": params.get("p_lot_id"),
+            "facility_id": params.get("p_facility_id"),
+            "quantity_qtl": qty,
+            "status": "requested",
+            "storage_start_date": params.get("p_storage_start_date"),
+            "storage_end_date": params.get("p_storage_end_date"),
+            "notes": params.get("p_notes"),
+            "created_at": now,
+            "updated_at": now,
+        }
+        self._data.setdefault("storage_bookings", []).append(row)
+        return dict(row)
+
+    def _rpc_storage_booking_update(self, params: dict) -> dict:
+        from datetime import datetime, timezone
+
+        from fastapi import HTTPException
+        uid = params.get("_test_user_id", "test-user")
+        target = params.get("p_new_status")
+        if target not in ("confirmed", "cancelled", "completed"):
+            raise HTTPException(422, f"invalid booking status: {target}")
+        booking = next(
+            (b for b in self._data.get("storage_bookings", [])
+             if b.get("id") == params.get("p_booking_id")),
+            None,
+        )
+        if not booking or booking.get("user_id") != uid:
+            raise HTTPException(404, "booking not found")
+        self._booking_status_machine(booking.get("status"), target)
+        if target == "confirmed":
+            fac = next(
+                (f for f in self._data.get("storage_facilities", [])
+                 if f.get("id") == booking.get("facility_id")), None,
+            )
+            cap = (fac or {}).get("capacity_qtl")
+            if cap is not None:
+                used = sum(
+                    float(b.get("quantity_qtl") or 0)
+                    for b in self._data.get("storage_bookings", [])
+                    if b.get("facility_id") == booking.get("facility_id")
+                    and b.get("status") in ("requested", "confirmed")
+                    and b.get("id") != booking["id"]
+                )
+                if used + float(booking.get("quantity_qtl") or 0) > float(cap):
+                    raise HTTPException(409, "facility capacity exceeded")
+        booking["status"] = target
+        if params.get("p_notes") is not None:
+            booking["notes"] = params.get("p_notes")
+        booking["updated_at"] = datetime.now(timezone.utc).isoformat()
+        return dict(booking)
+
+    def _rpc_logistics_booking_create(self, params: dict) -> dict:
+        import uuid as _uuid
+        from datetime import datetime, timezone
+
+        from fastapi import HTTPException
+        uid = params.get("_test_user_id", "test-user")
+        lot = self._booking_lot(uid, params.get("p_lot_id"))
+        qty = params.get("p_quantity_qtl", lot.get("quantity_qtl"))
+        lot_qty = float(lot.get("quantity_qtl") or 0)
+        if qty is None or float(qty) <= 0 or float(qty) > lot_qty:
+            raise HTTPException(422, "quantity must be positive and not exceed the lot quantity")
+        opt = next(
+            (o for o in self._data.get("logistics_options", [])
+             if o.get("id") == params.get("p_logistics_id") and o.get("is_active")),
+            None,
+        )
+        if not opt:
+            raise HTTPException(404, "logistics option not found or inactive")
+        cap = opt.get("capacity_qtl")
+        if cap is not None:
+            used = sum(
+                float(b.get("quantity_qtl") or 0)
+                for b in self._data.get("logistics_bookings", [])
+                if b.get("logistics_id") == opt["id"] and b.get("status") in ("requested", "confirmed")
+            )
+            if used + float(qty) > float(cap):
+                raise HTTPException(409, f"transport capacity exceeded: {used} of {float(cap)} qtl already booked")
+        now = datetime.now(timezone.utc).isoformat()
+        row = {
+            "id": str(_uuid.uuid4()),
+            "user_id": uid,
+            "lot_id": params.get("p_lot_id"),
+            "logistics_id": params.get("p_logistics_id"),
+            "kind": opt.get("kind", "transport"),
+            "quantity_qtl": qty,
+            "scheduled_date": params.get("p_scheduled_date"),
+            "status": "requested",
+            "notes": params.get("p_notes"),
+            "created_at": now,
+            "updated_at": now,
+        }
+        self._data.setdefault("logistics_bookings", []).append(row)
+        return dict(row)
+
+    def _rpc_logistics_booking_update(self, params: dict) -> dict:
+        from datetime import datetime, timezone
+
+        from fastapi import HTTPException
+        uid = params.get("_test_user_id", "test-user")
+        target = params.get("p_new_status")
+        if target not in ("confirmed", "cancelled", "completed"):
+            raise HTTPException(422, f"invalid booking status: {target}")
+        booking = next(
+            (b for b in self._data.get("logistics_bookings", [])
+             if b.get("id") == params.get("p_booking_id")),
+            None,
+        )
+        if not booking or booking.get("user_id") != uid:
+            raise HTTPException(404, "booking not found")
+        self._booking_status_machine(booking.get("status"), target)
+        if target == "confirmed":
+            opt = next(
+                (o for o in self._data.get("logistics_options", [])
+                 if o.get("id") == booking.get("logistics_id")), None,
+            )
+            cap = (opt or {}).get("capacity_qtl")
+            if cap is not None:
+                used = sum(
+                    float(b.get("quantity_qtl") or 0)
+                    for b in self._data.get("logistics_bookings", [])
+                    if b.get("logistics_id") == booking.get("logistics_id")
+                    and b.get("status") in ("requested", "confirmed")
+                    and b.get("id") != booking["id"]
+                )
+                if used + float(booking.get("quantity_qtl") or 0) > float(cap):
+                    raise HTTPException(409, "transport capacity exceeded")
+        booking["status"] = target
+        if params.get("p_notes") is not None:
+            booking["notes"] = params.get("p_notes")
+        booking["updated_at"] = datetime.now(timezone.utc).isoformat()
+        return dict(booking)
 
     def _rpc_buyer_register(self, params: dict) -> dict:
         import uuid as _uuid

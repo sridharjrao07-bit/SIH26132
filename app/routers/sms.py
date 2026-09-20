@@ -1,7 +1,7 @@
 import asyncio
 import threading
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 import structlog
 from app.auth import require_role
@@ -14,6 +14,7 @@ from notifications.inbound_verifier import InboundVerifier
 from notifications.prices import latest_price_for_user
 from notifications.sale_window import compute_sale_window, format_sale_sms
 from notifications.sms_gateway import get_sms_gateway, resolve_template
+from pydantic import BaseModel, ValidationError, field_validator
 from supabase import Client
 
 logger = structlog.get_logger()
@@ -97,13 +98,49 @@ async def handle_sms_webhook(request: Request, supabase: Client = Depends(get_su
         raise HTTPException(400, "invalid json")
     if not isinstance(payload, dict):
         raise HTTPException(400, "invalid json")
-    return await asyncio.to_thread(_process_inbound, payload, supabase)
+    body = _parse_inbound_payload(payload)
+    return await asyncio.to_thread(_process_inbound, body, supabase)
 
 
 @router.post("/simulate", dependencies=[Depends(require_role("admin"))])
 def simulate_inbound(payload: Dict[str, Any], supabase: Client = Depends(get_supabase_service_role)):
     """Admin-only endpoint to demonstrate the two-way webhook without real SMS provider"""
-    return _process_inbound(payload, supabase)
+    body = _parse_inbound_payload(payload)
+    return _process_inbound(body, supabase)
+
+
+class InboundSmsPayload(BaseModel):
+    """Typed inbound SMS body (audit fix C12).
+
+    Providers deliver numeric sender/message fields as JSON numbers. The old
+    untyped ``payload.get("message") or ""`` passed them straight into
+    ``.strip()`` and turned a VALIDLY SIGNED request into a 500
+    (AttributeError). Scalars are coerced to text; structured values
+    (lists/objects) are rejected with 400.
+    """
+
+    model_config = {"extra": "allow"}  # providers attach tracking fields
+
+    sender: Union[str, int, float, None] = None
+    message: Union[str, int, float, None] = None
+
+    @field_validator("sender", "message", mode="before")
+    @classmethod
+    def _scalar_only(cls, v):
+        if v is None or isinstance(v, (str, int, float)):
+            return v
+        raise ValueError("must be a scalar value")
+
+
+def _parse_inbound_payload(payload: dict) -> InboundSmsPayload:
+    try:
+        return InboundSmsPayload.model_validate(payload)
+    except ValidationError:
+        raise HTTPException(400, "invalid json")
+
+
+def _as_text(value: Union[str, int, float, None]) -> str:
+    return "" if value is None else str(value)
 
 
 def _alias_keys(message: str):
@@ -122,9 +159,9 @@ def _lookup_profile(supabase: Client, sender: str) -> dict:
     return rows[0] if rows else {}
 
 
-def _process_inbound(payload: dict, supabase: Client):
-    sender = normalize_phone(payload.get("sender"))
-    raw_msg = (payload.get("message") or "").strip()
+def _process_inbound(body: InboundSmsPayload, supabase: Client):
+    sender = normalize_phone(_as_text(body.sender))
+    raw_msg = _as_text(body.message).strip()
 
     if not sender or not raw_msg:
         return {"status": "ignored"}

@@ -19,14 +19,14 @@ async def main():
     supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
     if not supabase_url or not supabase_key:
         print("Missing Supabase credentials in .env")
-        return
+        sys.exit(1)
 
     supabase: Client = create_client(supabase_url, supabase_key)
     csv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "gov_prices.csv")
     
     if not os.path.exists(csv_path):
         print(f"CSV not found at {csv_path}")
-        return
+        sys.exit(1)
 
     print("Fetching metadata...")
     resp = supabase.table("commodity_alias").select("commodity_id, source, source_key").execute()
@@ -56,6 +56,7 @@ async def main():
     print("Parsing CSV...")
     valid_records = []
     rejected_count = 0
+    parse_errors: list[str] = []
     with open(csv_path, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
@@ -96,10 +97,14 @@ async def main():
                     
                 valid_dict["market_id"] = market_id
                 valid_records.append(valid_dict)
-            except Exception:
+            except Exception as e:
                 rejected_count += 1
+                if len(parse_errors) < 5:
+                    parse_errors.append(f"{type(e).__name__}: {e}")
 
     print(f"Parsed {len(valid_records)} valid records. Rejected {rejected_count} records.")
+    for err in parse_errors:
+        print(f"  malformed row example: {err}")
     
     if valid_records:
         print("Upserting to DB...")
