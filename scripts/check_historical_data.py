@@ -1,6 +1,11 @@
 import argparse
 import csv
 import sys
+from pathlib import Path
+
+# Allow execution from the repository root
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from collections import defaultdict
 from datetime import date
 from typing import Dict, List, Set, Tuple
