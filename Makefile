@@ -14,7 +14,7 @@ install-dev:
 	$(PY) -m pip install -r requirements-dev.txt
 
 lint:
-	ruff check .
+	$(PY) -m ruff check .
 
 test:
 	RUN_SCHEDULER=0 RATE_LIMIT_ENABLED=0 pytest
@@ -38,7 +38,9 @@ db-apply-dry:
 	$(PY) scripts/apply_migrations.py --dry-run
 
 ci-local:
-	ruff check .
+	$(PY) -m ruff check .
+	$(PY) -m ruff format --check .
+	PYTHONPATH=. $(PY) scripts/generate_api_docs.py --check
 	RUN_SCHEDULER=0 RATE_LIMIT_ENABLED=0 pytest -rs | tee test.log
 	@unexpected="$$(grep -E '^SKIPPED' test.log | sed 's/.*py:[0-9]*: //' | sort -u | grep -vFf ci/allowed-skips.txt || true)"; \
 	if [ -n "$$unexpected" ]; then \

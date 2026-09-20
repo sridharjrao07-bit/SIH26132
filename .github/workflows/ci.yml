@@ -94,7 +94,9 @@ jobs:
       - name: Install dev deps
         run: pip install -r requirements-dev.txt
       - name: Ruff
-        run: ruff check .
+        run: |
+          ruff check .
+          ruff format --check .
       - name: API docs drift
         run: PYTHONPATH=. python scripts/generate_api_docs.py --check
 
