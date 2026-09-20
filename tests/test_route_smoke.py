@@ -236,8 +236,11 @@ def test_sms_webhook_signed_request_reaches_the_thread_offload(monkeypatch, over
 
     captured: dict = {}
 
-    def spy(payload, supabase):
-        captured["payload"] = payload
+    def spy(body, supabase):
+        # C12: the handler now parses the signed body into InboundSmsPayload
+        # before the thread offload, so numeric JSON fields can no longer
+        # reach .strip() and 500.
+        captured["payload"] = body
         captured["called"] = True
         return {"status": "replied", "stub": True}
 
@@ -276,8 +279,8 @@ def test_sms_webhook_signed_request_reaches_the_thread_offload(monkeypatch, over
         "never invoked _process_inbound. The webhook is not actually processing."
     )
     # The signed body must arrive intact, unmodified by the signature step.
-    assert captured["payload"]["message"] == "PYAJ"
-    assert captured["payload"]["sender"] == "+919812345678"
+    assert captured["payload"].message == "PYAJ"
+    assert captured["payload"].sender == "+919812345678"
 
 
 def test_sms_webhook_rejects_unsigned_request(override_supabase):

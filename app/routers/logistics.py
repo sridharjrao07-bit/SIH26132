@@ -1,15 +1,33 @@
-import uuid
-from datetime import datetime, timezone
+"""Logistics router — bookings via the ACID RPCs (migration 036).
+
+Migration 031 revoked direct INSERT/UPDATE on logistics_bookings from API
+roles; until 036 no RPC existed, so every booking write failed with 42501,
+and the old insert referenced option_name / rate_per_qtl — columns that do
+not exist on logistics_bookings (42703) — making POST /bookings doubly dead.
+
+CREATE  → logistics_booking_create  (ownership + lot state + capacity under lock)
+UPDATE  → logistics_booking_update  (owner-only state machine, notes persisted)
+LIST    → direct SELECT (no write; RLS enforces visibility)
+"""
 from typing import Optional
 
 from app.auth import get_current_user
 from app.deps import get_supabase, get_supabase_as_user
+from app.errors import json_for_api_error
 from app.schemas.marketplace import LogisticsBookCreate, LogisticsBookUpdate
-from app.services.marketplace import ACTIVE_BOOKING_STATUSES, booked_quantity
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
+from postgrest.exceptions import APIError
 from supabase import Client
 
 router = APIRouter(prefix="/api/v1/logistics", tags=["Logistics"])
+
+
+def _call_rpc(supabase: Client, fn: str, params: dict):
+    try:
+        res = supabase.rpc(fn, params).execute()
+        return res.data
+    except APIError as exc:
+        return json_for_api_error(exc)
 
 
 @router.get("/")
@@ -27,79 +45,26 @@ def list_logistics(
     return res.data or []
 
 
-def _own_lot(supabase, lot_id: str, user_id: str) -> dict:
-    rows = supabase.table("lots").select("*").eq("id", lot_id).execute().data or []
-    if not rows:
-        raise HTTPException(404, "lot not found")
-    lot = rows[0]
-    if lot.get("user_id") != user_id and lot.get("fpo_id") != user_id:
-        raise HTTPException(404, "lot not found")
-    if lot.get("status") in ("withdrawn", "sold"):
-        raise HTTPException(409, "cannot book logistics for a sold or withdrawn lot")
-    return lot
-
-
-def _active_option(supabase, logistics_id: str) -> dict:
-    rows = (
-        supabase.table("logistics_options")
-        .select("*")
-        .eq("id", logistics_id)
-        .eq("is_active", True)
-        .execute()
-        .data
-        or []
-    )
-    if not rows:
-        raise HTTPException(404, "logistics option not found")
-    return rows[0]
-
-
-def _assert_capacity(supabase, option: dict, extra_qty: float, exclude_id: Optional[str] = None):
-    cap = option.get("capacity_qtl")
-    if cap is None:
-        return
-    used = booked_quantity(supabase, option["id"], exclude_id=exclude_id)
-    if used + extra_qty > float(cap) + 1e-9:
-        raise HTTPException(
-            409,
-            f"not enough capacity at {option.get('name')}: "
-            f"{used:.0f}/{float(cap):.0f} qtl already booked",
-        )
-
-
 @router.post("/bookings")
 def create_booking(
     body: LogisticsBookCreate,
     user_id: str = Depends(get_current_user),
     supabase: Client = Depends(get_supabase_as_user),
-    public: Client = Depends(get_supabase),
 ):
-    lot = _own_lot(supabase, body.lot_id, user_id)
-    option = _active_option(public, body.logistics_id)
-    qty = float(body.quantity_qtl) if body.quantity_qtl is not None else float(lot["quantity_qtl"])
-    if qty > float(lot["quantity_qtl"]) + 1e-9:
-        raise HTTPException(400, "booking quantity exceeds lot quantity")
-    _assert_capacity(supabase, option, qty)
-    now = datetime.now(timezone.utc).isoformat()
-    row = {
-        "id": str(uuid.uuid4()),
-        "user_id": user_id,
-        "lot_id": body.lot_id,
-        "logistics_id": body.logistics_id,
-        "kind": option.get("kind"),
-        "quantity_qtl": qty,
-        "status": "requested",
-        "scheduled_date": body.scheduled_date.isoformat() if body.scheduled_date else None,
-        "notes": body.notes,
-        "created_at": now,
-        "updated_at": now,
-        "option_name": option.get("name"),
-        "rate_per_qtl": option.get("rate_per_qtl"),
+    """Create a logistics booking via the logistics_booking_create RPC.
+
+    The RPC (migration 036) validates lot ownership and state, that the
+    option is active, and enforces capacity_qtl under an option row lock —
+    the Python check-then-insert this replaces was racy (TOCTOU).
+    """
+    params = {
+        "p_lot_id": body.lot_id,
+        "p_logistics_id": body.logistics_id,
+        "p_quantity_qtl": body.quantity_qtl,
+        "p_scheduled_date": body.scheduled_date.isoformat() if body.scheduled_date else None,
+        "p_notes": body.notes,
     }
-    res = supabase.table("logistics_bookings").insert(row).execute()
-    if not res.data:
-        raise HTTPException(400, "could not create booking")
-    return res.data[0]
+    return _call_rpc(supabase, "logistics_booking_create", params)
 
 
 @router.get("/bookings")
@@ -121,32 +86,15 @@ def update_booking(
     body: LogisticsBookUpdate,
     user_id: str = Depends(get_current_user),
     supabase: Client = Depends(get_supabase_as_user),
-    public: Client = Depends(get_supabase),
 ):
-    rows = (
-        supabase.table("logistics_bookings")
-        .select("*")
-        .eq("id", booking_id)
-        .eq("user_id", user_id)
-        .execute()
-        .data
-        or []
-    )
-    if not rows:
-        raise HTTPException(404, "booking not found")
-    current = rows[0]
-    if current.get("status") == "completed" and body.status != "completed":
-        raise HTTPException(409, "completed booking cannot change status")
-    if body.status in ACTIVE_BOOKING_STATUSES:
-        option = _active_option(public, current["logistics_id"])
-        _assert_capacity(supabase, option, float(current["quantity_qtl"]), exclude_id=booking_id)
-    res = (
-        supabase.table("logistics_bookings")
-        .update({"status": body.status})
-        .eq("id", booking_id)
-        .eq("user_id", user_id)
-        .execute()
-    )
-    if not res.data:
-        raise HTTPException(404, "booking not found")
-    return res.data[0]
+    """Update a logistics booking via the logistics_booking_update RPC.
+
+    Owner-only state machine: requested→confirmed→completed, cancel from
+    requested/confirmed.  Notes are persisted (previously discarded).
+    """
+    params = {
+        "p_booking_id": booking_id,
+        "p_new_status": body.status,
+        "p_notes": body.notes,
+    }
+    return _call_rpc(supabase, "logistics_booking_update", params)

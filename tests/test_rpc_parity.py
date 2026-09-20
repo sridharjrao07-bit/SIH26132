@@ -43,11 +43,14 @@ from app.schemas.marketplace import (
     BuyerRegisterRequest,
     BuyerVerificationUpdate,
     GrievanceCreate,
+    LogisticsBookCreate,
+    LogisticsBookUpdate,
     LotAggregate,
     LotCreate,
     LotGradeUpdate,
     OfferCreate,
     PaymentCreate,
+    StorageBookCreate,
     StorageBookUpdate,
 )
 
@@ -84,7 +87,12 @@ TARGETS = [
     Target("alerts.create_alert", "alerts.py", "create_alert", AlertCreate),
     Target("lots.grade_lot", "lots.py", "grade_lot", LotGradeUpdate),
     Target("admin.admin_verify_buyer", "admin.py", "admin_verify_buyer", BuyerVerificationUpdate),
+    Target("storage.book_storage", "storage.py", "book_storage", StorageBookCreate),
     Target("storage.update_booking", "storage.py", "update_booking", StorageBookUpdate),
+    # Migration 036 moved booking writes into RPCs; `notes` used to be
+    # accepted by the model and silently discarded by the update routes.
+    Target("logistics.create_booking", "logistics.py", "create_booking", LogisticsBookCreate),
+    Target("logistics.update_booking", "logistics.py", "update_booking", LogisticsBookUpdate),
 ]
 
 

@@ -370,6 +370,11 @@ def _make_forecast_rows(
             method     = "moving_avg"
             confidence = "medium"
 
+    # One timestamp for the whole row set: "generated_at" identifies the
+    # generation RUN.  Per-row timestamps made the newest-written row (day-7)
+    # look like the newest run, which broke latest-run selection downstream
+    # (/forecasts/summary returned day-7 instead of day-1).
+    v_generated_at = datetime.now(timezone.utc).isoformat()
     rows = []
     for i, (predicted, lower, upper) in enumerate(preds):
         fdate = (horizon_start + timedelta(days=i + 1)).isoformat()
@@ -384,15 +389,16 @@ def _make_forecast_rows(
                 features_used = ["market_id", "commodity_id", "dow", "lag_1", "lag_7", "lag_14", "arrivals_7d_avg", "momentum_14d", "rain_7d_cum_mm", "district_mean_price", "event_pressure"]
             
         
-        # Maps methods to the model registry key
-        mapped_model = requested_model
-        if mapped_model == "auto":
-            mapped_model = method
-            if mapped_model == "moving_avg":
-                mapped_model = "auto"
-            elif mapped_model == "blend":
-                mapped_model = "auto"
-                
+        # The registry key must describe the model that ACTUALLY produced the
+        # row.  A requested model that fell back to the blend/MA tier must not
+        # be stamped with the requested model's id (FORECAST_MODEL=gbm with
+        # lightgbm unavailable previously wrote model_id=<GBM id> over
+        # method=blend rows — the accuracy card then over-claimed).
+        if method == requested_model:
+            mapped_model = requested_model          # honoured as requested
+        else:
+            mapped_model = "auto"                   # fallback tier (blend / moving_avg)
+
         rows.append({
             "market_id":       market_id,
             "commodity_id":    commodity_id,
@@ -407,7 +413,7 @@ def _make_forecast_rows(
             "status":          "ok",
             "model_version":   "1.0",
             "features_used":   features_used,
-            "generated_at":    datetime.now(timezone.utc).isoformat(),
+            "generated_at":    v_generated_at,
         })
     return rows
 

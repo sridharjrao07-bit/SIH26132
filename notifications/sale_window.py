@@ -143,16 +143,31 @@ def compute_sale_window(
 
     fc_q = (
         supabase.table("forecasts")
-        .select("predicted_price, forecast_date, status")
+        .select("predicted_price, forecast_date, generated_at, status")
         .eq("commodity_id", commodity_id)
         .eq("status", "ok")
         .gte("forecast_date", today.isoformat())
         .order("forecast_date")
-        .limit(7)
+        .limit(30)
     )
     if market_id:
         fc_q = fc_q.eq("market_id", market_id)
     forecasts = fc_q.execute().data or []
+    # Revision-aware selection (audit fix C13): a re-run that revises prices
+    # used to be mixed with the rows it superseded — whichever copy the
+    # unordered query returned first decided the advice, so a revision could
+    # silently flip SELL_NOW to WAIT.  Keep only the newest generation
+    # (max generated_at) per forecast_date, then take the 7-day horizon.
+    latest_by_date: dict = {}
+    for row in forecasts:
+        fdate = str(row.get("forecast_date") or "")
+        gen = str(row.get("generated_at") or "")
+        cur = latest_by_date.get(fdate)
+        if cur is None or gen > str(cur.get("generated_at") or ""):
+            latest_by_date[fdate] = row
+    forecasts = sorted(
+        latest_by_date.values(), key=lambda r: str(r.get("forecast_date") or "")
+    )[:7]
     day1 = (
         float(forecasts[0]["predicted_price"])
         if forecasts and forecasts[0].get("predicted_price") is not None

@@ -7,7 +7,11 @@ from app.main import app
 
 KNOWN_VIOLATIONS = {
     "dead_control": [
-        ('transition_grievance_status', 'backend-team', '2026-10-01')
+        # admin-only RPC (gated on has_role(admin) internally) with no app
+        # caller yet — ratcheted until the events-review UI lands. 036 revoked
+        # the other dead grants (nearest_market, set_event_publication_date).
+        ('transition_grievance_status', 'backend-team', '2026-10-01'),
+        ('review_event', 'backend-team', '2026-10-01'),
     ],
     "vacuous_test": [
         ('tests/test_backend_audit.py:/api/v1/does-not-exist', 'qa-team', '2026-10-01'), 
@@ -74,7 +78,7 @@ def test_migration_coverage():
         assert re.match(r"^\d{3}[a-z]?_.*\.sql$", name), f"Invalid migration name: {name}"
 
     # Count ratchet — bump when a migration is intentionally added.
-    EXPECTED_MIGRATIONS = 36
+    EXPECTED_MIGRATIONS = 37
     assert len(sql_files) == EXPECTED_MIGRATIONS, (
         f"Expected {EXPECTED_MIGRATIONS} migrations, found {len(sql_files)}"
     )
@@ -111,7 +115,16 @@ def test_dead_control_check():
         conn.close()
         
     root = Path(__file__).parent.parent
-    app_files = list(root.joinpath("app").rglob("*.py")) + list(root.joinpath("ingestion").rglob("*.py"))
+    # Production code is more than app/ + ingestion/: notifications/,
+    # forecasting/ and events/ also issue Supabase RPCs (e.g. the alerts job
+    # tier calls nearest_market via the service client).
+    app_files = (
+        list(root.joinpath("app").rglob("*.py"))
+        + list(root.joinpath("ingestion").rglob("*.py"))
+        + list(root.joinpath("notifications").rglob("*.py"))
+        + list(root.joinpath("forecasting").rglob("*.py"))
+        + list(root.joinpath("events").rglob("*.py"))
+    )
     
     app_text = ""
     for f in app_files:
@@ -120,7 +133,10 @@ def test_dead_control_check():
     violations = []
     for fn in funcs:
         # Ignore functions that are purely helpers for db triggers
-        if fn in ("check_payment_amount", "guard_lot_status_regression", "guard_buyer_self_verify", "has_role_for"):
+        # check_payment_amount / guard_* are trigger helpers; has_role_for is
+        # the internal helper RPCs call; has_role is used by RLS policies,
+        # which evaluate as the querying (authenticated) role.
+        if fn in ("check_payment_amount", "guard_lot_status_regression", "guard_buyer_self_verify", "has_role_for", "has_role"):
             continue
         if f'"{fn}"' not in app_text and f"'{fn}'" not in app_text:
             violations.append(fn)

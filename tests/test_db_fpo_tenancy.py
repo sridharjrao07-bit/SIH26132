@@ -23,20 +23,30 @@ COMMODITY = "cccccccc-0000-0000-0000-0000000000c1"
 SEED = f"""
 insert into auth.users (id) values ('{FPO_A}'), ('{FPO_B}'), ('{FARMER}')
     on conflict (id) do nothing;
+-- NOTE: trg_on_auth_user_created auto-creates a 'farmer' profile for every
+-- auth.users row, so a plain "ON CONFLICT DO NOTHING" insert of 'fpo'
+-- profiles is silently ignored (this fixture bug was surfaced by migration
+-- 036's has_role_for gate). Promote via admin_set_role — the postgres
+-- bootstrap path that bypasses guard_profile_role correctly.
 insert into public.user_profiles (id, role, name) values
-    ('{FPO_A}',  'fpo',    'FPO A'),
-    ('{FPO_B}',  'fpo',    'FPO B'),
+    ('{FPO_A}',  'farmer', 'FPO A'),
+    ('{FPO_B}',  'farmer', 'FPO B'),
     ('{FARMER}', 'farmer', 'Farmer C')
     on conflict (id) do nothing;
+select public.admin_set_role('{FPO_A}', 'fpo');
+select public.admin_set_role('{FPO_B}', 'fpo');
 insert into public.commodities
     (id, name_en, name_mr, name_hi, category, sanity_min, sanity_max)
 values ('{COMMODITY}', 'Tenancy Test Onion', 'कांदा', 'प्याज', 'vegetable', 100, 5000)
     on conflict do nothing;
+-- Delete-then-insert (not on conflict do nothing): a previous run leaves
+-- LOT_A 'matched' (correctly — it was pooled), and both the status guard and
+-- the RPC refuse to re-open a matched lot. The fixture must reset cleanly.
+delete from public.lots where id in ('{LOT_A}', '{LOT_B}', '{LOT_FARMER}');
 insert into public.lots (id, user_id, fpo_id, commodity_id, quantity_qtl, status) values
     ('{LOT_A}',      '{FPO_A}',  '{FPO_A}',  '{COMMODITY}', 100, 'open'),
     ('{LOT_B}',      '{FPO_B}',  '{FPO_B}',  '{COMMODITY}', 100, 'open'),
-    ('{LOT_FARMER}', '{FARMER}', null,       '{COMMODITY}', 100, 'open')
-    on conflict (id) do nothing;
+    ('{LOT_FARMER}', '{FARMER}', null,       '{COMMODITY}', 100, 'open');
 """
 
 

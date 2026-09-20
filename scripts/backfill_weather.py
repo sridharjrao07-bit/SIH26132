@@ -1,7 +1,6 @@
 import argparse
 import asyncio
 import sys
-import time
 from datetime import date, timedelta
 
 import httpx
@@ -100,7 +99,7 @@ async def backfill(days: int, markets_csv: str, sleep_time: float):
                     logger.warning("api_fetch_failed_transient", market=market["name"], start=current_start.isoformat(), end=current_end.isoformat(), error=type(e).__name__)
                     total_transient_skips += 1
                     current_start = current_end + timedelta(days=1)
-                    time.sleep(sleep_time)
+                    await asyncio.sleep(sleep_time)
                     continue
                     
                 daily = data.get("daily", {})
@@ -152,7 +151,7 @@ async def backfill(days: int, markets_csv: str, sleep_time: float):
                         pass
                         
                 current_start = current_end + timedelta(days=1)
-                time.sleep(sleep_time)
+                await asyncio.sleep(sleep_time)
             
             if hard_failure:
                 break
