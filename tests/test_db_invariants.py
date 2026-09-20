@@ -16,6 +16,7 @@ companion DB-integration job (CI postgres:16 container) applies the migration
 SQL and runs the same scenarios against a real database.  Both layers must
 pass before a PR is merged.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -24,6 +25,7 @@ from postgrest.exceptions import APIError
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _make_api_error(code: str, message: str) -> APIError:
     """Construct a minimal APIError that matches PostgREST error shape."""
@@ -35,9 +37,11 @@ def _make_api_error(code: str, message: str) -> APIError:
 # 1. Config — Literal enforcement (config.py PR-1 regression guard)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestConfigLiterals:
     def test_valid_app_env(self):
         from app.config import Settings
+
         s = Settings(
             app_env="development",
             supabase_url="https://x.supabase.co",
@@ -51,6 +55,7 @@ class TestConfigLiterals:
     def test_invalid_app_env_rejected(self):
         from app.config import Settings
         from pydantic import ValidationError
+
         with pytest.raises(ValidationError, match="app_env"):
             Settings(
                 app_env="prod",  # typo — should fail
@@ -64,6 +69,7 @@ class TestConfigLiterals:
     def test_invalid_auth_db_enforcement_rejected(self):
         from app.config import Settings
         from pydantic import ValidationError
+
         with pytest.raises(ValidationError, match="auth_db_enforcement"):
             Settings(
                 auth_db_enforcement="rls2",  # typo — should fail
@@ -77,6 +83,7 @@ class TestConfigLiterals:
     def test_invalid_forecast_model_rejected(self):
         from app.config import Settings
         from pydantic import ValidationError
+
         with pytest.raises(ValidationError, match="forecast_model"):
             Settings(
                 forecast_model="xgboost",  # not in Literal
@@ -89,6 +96,7 @@ class TestConfigLiterals:
 
     def test_check_runtime_blocks_production_app_mode(self):
         from app.config import Settings
+
         s = Settings(
             app_env="production",
             auth_db_enforcement="app",
@@ -105,6 +113,7 @@ class TestConfigLiterals:
 
     def test_check_runtime_allows_production_rls_mode(self):
         from app.config import Settings
+
         s = Settings(
             app_env="production",
             auth_db_enforcement="rls",
@@ -121,10 +130,11 @@ class TestConfigLiterals:
 
     def test_check_runtime_blocks_missing_jwt_issuer_in_prod(self):
         from app.config import Settings
+
         s = Settings(
             app_env="production",
             auth_db_enforcement="rls",
-            supabase_jwt_issuer="",   # missing
+            supabase_jwt_issuer="",  # missing
             supabase_url="https://x.supabase.co",
             supabase_anon_key="k",
             supabase_service_role_key="k",
@@ -136,6 +146,7 @@ class TestConfigLiterals:
 
     def test_check_runtime_blocks_missing_hmac_secret_in_prod(self):
         from app.config import Settings
+
         s = Settings(
             app_env="production",
             auth_db_enforcement="rls",
@@ -155,22 +166,28 @@ class TestConfigLiterals:
 # 2. API-layer invariant: double-accept must return 409
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestDoubleAcceptPrevention:
     """Verifies that the 409 conflict from the unique partial index is mapped
     correctly by the PostgREST error handler in app/errors.py."""
 
     def test_errors_maps_23505_to_409(self):
         from app.errors import json_for_api_error
-        exc = _make_api_error("23505", "duplicate key value violates unique constraint idx_one_accepted_offer_per_lot")
+
+        exc = _make_api_error(
+            "23505", "duplicate key value violates unique constraint idx_one_accepted_offer_per_lot"
+        )
         resp = json_for_api_error(exc)
         assert resp.status_code == 409
         import json
+
         body = json.loads(resp.body)
         assert body["detail"] == "already exists"
 
     def test_errors_maps_payment_amount_mismatch(self):
         """PAYMENT_AMOUNT_MISMATCH from the trigger must map to 422."""
         from app.errors import json_for_api_error
+
         exc = _make_api_error("P0001", "PAYMENT_AMOUNT_MISMATCH")
         # P0001 is the generic raise_exception code; currently falls through to 503.
         # This test documents the current behaviour and the PR-3 RPC migration
@@ -182,6 +199,7 @@ class TestDoubleAcceptPrevention:
 
     def test_errors_maps_check_violation_23514_to_422(self):
         from app.errors import json_for_api_error
+
         exc = _make_api_error("23514", "new row violates check constraint")
         resp = json_for_api_error(exc)
         assert resp.status_code == 422
@@ -191,10 +209,12 @@ class TestDoubleAcceptPrevention:
 # 3. Startup checks — module importability
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestStartupChecks:
     def test_run_startup_checks_passes_in_dev(self):
         from app.config import Settings
         from app.startup_checks import run_startup_checks
+
         s = Settings(
             app_env="development",
             supabase_url="https://x.supabase.co",
@@ -208,6 +228,7 @@ class TestStartupChecks:
 
     def test_check_imports_raises_on_bad_module(self):
         from app import startup_checks
+
         original = startup_checks._REQUIRED_MODULES
         try:
             startup_checks._REQUIRED_MODULES = ["this_module_does_not_exist_xyz"]
@@ -221,9 +242,11 @@ class TestStartupChecks:
 # 4. Role cache — require_role() uses TTL cache
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestRoleCache:
     def test_role_cache_set_and_get(self):
         from app import auth as auth_mod
+
         # Purge stale cache entries
         with auth_mod._role_cache_lock:
             auth_mod._role_cache.clear()

@@ -7,13 +7,16 @@ from pydantic import BaseModel, Field
 
 class EventSourceError(Exception):
     """Raised when an event source fails to fetch or parse headlines."""
+
     pass
+
 
 class RawHeadline(BaseModel):
     source_url: str
     headline: str
     published_date: date
     raw_text: str
+
 
 class ExtractedEvent(BaseModel):
     commodity_name: Optional[str] = None
@@ -27,6 +30,7 @@ class ExtractedEvent(BaseModel):
     # If absent, runner falls back to headline.published_date and logs a warning.
     # Confidence/direction/magnitude changes do not affect event identity.
     event_date: Optional[date] = None
+
 
 class EventExtractor(ABC):
     @abstractmethod

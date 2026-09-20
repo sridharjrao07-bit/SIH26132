@@ -13,6 +13,7 @@ Client tiers
 IMPORTANT: ``get_supabase_as_user`` is **never** @lru_cached — caching a
 user-scoped client is a cross-user data-leak vector.
 """
+
 from functools import lru_cache
 
 import structlog
@@ -22,6 +23,7 @@ from supabase import Client, ClientOptions, create_client
 from .config import get_settings
 
 _log = structlog.get_logger()
+
 
 def get_supabase_as_user(authorization: str = Header(None)) -> Client:
     """Return a Supabase client scoped to the authenticated caller.
@@ -39,6 +41,7 @@ def get_supabase_as_user(authorization: str = Header(None)) -> Client:
 
     # Validate JWT regardless of mode — lazy import avoids circular dep.
     from app.auth import decode_access_token
+
     decode_access_token(authorization[7:])
 
     settings = get_settings()
@@ -46,7 +49,11 @@ def get_supabase_as_user(authorization: str = Header(None)) -> Client:
         # Per-request user-scoped client: PostgREST runs as `authenticated`
         # role and RLS policies enforce at the DB boundary.
         # Requires SUPABASE_JWT_ISSUER + JWT secret aligned with project.
-        options = ClientOptions(headers={"Authorization": authorization})
+        options = ClientOptions(
+            headers={"Authorization": authorization},
+            postgrest_client_timeout=5,
+            storage_client_timeout=5,
+        )
         return create_client(settings.supabase_url, settings.supabase_anon_key, options=options)
 
     # "app" mode — service-role client; app-level filters are the sole guard.
@@ -65,11 +72,13 @@ def get_supabase_as_user(authorization: str = Header(None)) -> Client:
 def get_supabase() -> Client:
     """Anon Supabase client — respects RLS; use for public reads."""
     settings = get_settings()
-    return create_client(settings.supabase_url, settings.supabase_anon_key)
+    options = ClientOptions(postgrest_client_timeout=5, storage_client_timeout=5)
+    return create_client(settings.supabase_url, settings.supabase_anon_key, options=options)
 
 
 @lru_cache()
 def get_supabase_service_role() -> Client:
     """Service-role Supabase client — bypasses RLS.  Use ONLY for jobs / admin."""
     settings = get_settings()
-    return create_client(settings.supabase_url, settings.supabase_service_role_key)
+    options = ClientOptions(postgrest_client_timeout=15, storage_client_timeout=15)
+    return create_client(settings.supabase_url, settings.supabase_service_role_key, options=options)

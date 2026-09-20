@@ -4,6 +4,7 @@ CREATE  → offer_create  (locks lot, validates qty, marks lot='offered')
 DECIDE  → offer_decide  (accept/reject atomically, handles sibling offers + lot status)
 LIST    → direct SELECT (no write; RLS enforces visibility)
 """
+
 from app.auth import get_current_user
 from app.deps import get_supabase_as_user
 from app.errors import json_for_api_error
@@ -36,10 +37,10 @@ def create_offer(
     and atomically marks the lot as 'offered' if it was still 'open'.
     """
     params = {
-        "p_lot_id":        body.lot_id,
-        "p_buyer_id":      body.buyer_id,
+        "p_lot_id": body.lot_id,
+        "p_buyer_id": body.buyer_id,
         "p_price_per_qtl": body.price_per_qtl,
-        "p_quantity_qtl":  body.quantity_qtl,
+        "p_quantity_qtl": body.quantity_qtl,
     }
     data = _call_rpc(supabase, "offer_create", params)
     return with_expiry(data) if isinstance(data, dict) else data
@@ -80,8 +81,12 @@ def update_offer(
     if body.status not in ("accepted", "rejected"):
         raise HTTPException(422, f"status must be accepted or rejected, got {body.status!r}")
 
-    data = _call_rpc(supabase, "offer_decide", {
-        "p_offer_id": offer_id,
-        "p_decision": body.status,
-    })
+    data = _call_rpc(
+        supabase,
+        "offer_decide",
+        {
+            "p_offer_id": offer_id,
+            "p_decision": body.status,
+        },
+    )
     return with_expiry(data) if isinstance(data, dict) else data

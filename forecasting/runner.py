@@ -7,6 +7,7 @@ without importing the full app stack.
 
 Pattern mirrors ingestion/runner.py.
 """
+
 import asyncio
 
 import structlog
@@ -24,6 +25,7 @@ def _get_supabase_client():
     is used from outside the FastAPI app context.
     """
     from app.config import get_settings
+
     settings = get_settings()
     return create_client(settings.supabase_url, settings.supabase_service_role_key)
 
@@ -38,16 +40,20 @@ async def run_forecast_job() -> dict:
     """
     logger.info("scheduler_trigger_forecast")
     supabase = _get_supabase_client()
-    
-    lock_res = supabase.rpc("claim_job_lock", {"p_job_key": "forecast", "p_holder": "scheduler"}).execute()
+
+    lock_res = supabase.rpc(
+        "claim_job_lock", {"p_job_key": "forecast", "p_holder": "scheduler"}
+    ).execute()
     if not lock_res.data:
         logger.info("forecast_job_locked")
         return {"status": "locked"}
-        
+
     try:
-        engine   = ForecastEngine(supabase=supabase)
-        summary  = await asyncio.to_thread(engine.run)
+        engine = ForecastEngine(supabase=supabase)
+        summary = await asyncio.to_thread(engine.run)
         logger.info("forecast_job_done", **summary)
         return summary
     finally:
-        supabase.rpc("release_job_lock", {"p_job_key": "forecast", "p_holder": "scheduler"}).execute()
+        supabase.rpc(
+            "release_job_lock", {"p_job_key": "forecast", "p_holder": "scheduler"}
+        ).execute()

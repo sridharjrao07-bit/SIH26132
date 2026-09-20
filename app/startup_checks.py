@@ -12,6 +12,7 @@ Design
 - Concurrency detection is a warning, not a hard fail — some operators
   intentionally run multiple uvicorn workers behind an external lock store.
 """
+
 import structlog
 from app.config import Settings
 

@@ -1,4 +1,5 @@
 """Crash-proofing: PostgREST errors, bad JSON, IDOR, bounds — never 500."""
+
 from __future__ import annotations
 
 from app.errors import json_for_api_error
@@ -22,7 +23,13 @@ def farmer_headers():
 
 def test_api_error_invalid_uuid_is_422_not_500():
     resp = json_for_api_error(
-        APIError({"code": "22P02", "message": "invalid input syntax for type uuid", "hint": "schema cache"})
+        APIError(
+            {
+                "code": "22P02",
+                "message": "invalid input syntax for type uuid",
+                "hint": "schema cache",
+            }
+        )
     )
     assert resp.status_code == 422
     body = resp.body.decode()
@@ -41,7 +48,9 @@ def test_api_error_unique_is_409():
 
 
 def test_api_error_jwt_is_401():
-    resp = json_for_api_error(APIError({"code": "PGRST301", "message": "No suitable key or wrong key type"}))
+    resp = json_for_api_error(
+        APIError({"code": "PGRST301", "message": "No suitable key or wrong key type"})
+    )
     assert resp.status_code == 401
     assert "PGRST" not in resp.body.decode()
 
@@ -56,16 +65,16 @@ def test_api_error_unknown_is_503():
 def test_postgrest_error_on_markets_is_not_500(override_supabase):
     def boom(*a, **k):
         raise APIError({"code": "22P02", "message": "invalid input syntax for type uuid"})
-    
+
     from app.deps import get_supabase
     from app.main import app
-    
+
     class BoomSupabase:
         def table(self, *a, **k):
             return boom()
-            
+
     app.dependency_overrides[get_supabase] = lambda: BoomSupabase()
-    
+
     try:
         resp = client.get("/api/v1/markets/")
         assert resp.status_code == 422

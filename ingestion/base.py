@@ -18,6 +18,7 @@ class SourceFetchError(Exception):
     the others.  Critically, this means ingestion_log will show 'failed' (not
     'success' with 0 records), which is what the source-health dashboard needs.
     """
+
     pass
 
 
@@ -26,19 +27,20 @@ class RawPriceRecord(BaseModel):
     Unified representation of a raw price record before validation/normalization.
     All adapters return lists of these; the validator converts them to DB dicts.
     """
-    market_name:   str
+
+    market_name: str
     commodity_name: str
-    arrival_date:  date
-    min_price:     Optional[float] = None
-    max_price:     Optional[float] = None
-    modal_price:   float
-    unit:          str
-    arrival_qty:   Optional[float] = None
-    variety:       str = "General"
-    grade:         str = "General"
-    source:        str              # must match commodity_alias.source column
-    source_ref:    Optional[str] = None
-    raw_payload:   Dict[str, Any]   # verbatim source record for audit
+    arrival_date: date
+    min_price: Optional[float] = None
+    max_price: Optional[float] = None
+    modal_price: float
+    unit: str
+    arrival_qty: Optional[float] = None
+    variety: str = "General"
+    grade: str = "General"
+    source: str  # must match commodity_alias.source column
+    source_ref: Optional[str] = None
+    raw_payload: Dict[str, Any]  # verbatim source record for audit
 
 
 class IngestionSourceAdapter(ABC):

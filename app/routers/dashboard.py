@@ -32,17 +32,14 @@ def dashboard_session(
     body: DashboardSessionBody,
     response: Response,
     supabase: Client = Depends(get_supabase_service_role),
-    settings = Depends(get_settings),
+    settings=Depends(get_settings),
 ):
     """Exchange a pasted admin JWT for an HttpOnly cookie (not localStorage)."""
     token = (body.token or "").strip()
     if not token:
         raise HTTPException(400, "token required")
     user_id = decode_access_token(token)
-    row = (
-        supabase.table("user_profiles").select("role").eq("id", user_id).execute().data
-        or []
-    )
+    row = supabase.table("user_profiles").select("role").eq("id", user_id).execute().data or []
     if not row or row[0].get("role") != "admin":
         raise HTTPException(403, "requires role in ['admin']")
     response.set_cookie(
@@ -103,26 +100,33 @@ def get_forecast_stats(supabase: Client = Depends(get_supabase_service_role)):
         target_date = f["forecast_date"]
 
         candidates = [
-            p for p in by_pair.get((market_id, commodity_id), [])
+            p
+            for p in by_pair.get((market_id, commodity_id), [])
             if str(p.get("arrival_date") or "") >= str(target_date)
         ]
         actual_price = candidates[0]["modal_price"] if candidates else None
 
         within_bounds = None
-        if actual_price is not None and f["lower_bound"] is not None and f["upper_bound"] is not None:
-            within_bounds = (f["lower_bound"] <= actual_price <= f["upper_bound"])
+        if (
+            actual_price is not None
+            and f["lower_bound"] is not None
+            and f["upper_bound"] is not None
+        ):
+            within_bounds = f["lower_bound"] <= actual_price <= f["upper_bound"]
 
-        stats.append({
-            "id": f.get("id"),
-            "date": target_date,
-            "market": (f.get("markets") or {}).get("name"),
-            "commodity": (f.get("commodities") or {}).get("name_en"),
-            "predicted": f["predicted_price"],
-            "lower": f["lower_bound"],
-            "upper": f["upper_bound"],
-            "confidence": f.get("confidence"),
-            "actual": actual_price,
-            "hit": within_bounds,
-        })
+        stats.append(
+            {
+                "id": f.get("id"),
+                "date": target_date,
+                "market": (f.get("markets") or {}).get("name"),
+                "commodity": (f.get("commodities") or {}).get("name_en"),
+                "predicted": f["predicted_price"],
+                "lower": f["lower_bound"],
+                "upper": f["upper_bound"],
+                "confidence": f.get("confidence"),
+                "actual": actual_price,
+                "hit": within_bounds,
+            }
+        )
 
     return stats

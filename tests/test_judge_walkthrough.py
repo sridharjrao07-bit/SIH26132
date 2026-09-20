@@ -1,4 +1,5 @@
 """Judge-facing walkthrough tests — appended by audit HIGH patch."""
+
 from app.main import app
 from fastapi.testclient import TestClient
 
@@ -18,14 +19,16 @@ def test_judge_payment_create_is_idempotent(override_supabase, fake_supabase):
     )
     fake_supabase.seed(
         "offers",
-        [{
-            "id": "off-idemp",
-            "lot_id": "lot-idemp",
-            "buyer_id": "b1",
-            "user_id": FARMER_USER_ID,
-            "status": "accepted",
-            "quantity_qtl": 10,
-        }],
+        [
+            {
+                "id": "off-idemp",
+                "lot_id": "lot-idemp",
+                "buyer_id": "b1",
+                "user_id": FARMER_USER_ID,
+                "status": "accepted",
+                "quantity_qtl": 10,
+            }
+        ],
     )
     fake_supabase.seed("payments", [])
     body = {"offer_id": "off-idemp", "amount": 20000, "reference": "UPI-1"}

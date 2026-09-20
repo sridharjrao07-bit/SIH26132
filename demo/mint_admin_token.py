@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 def mint_admin_token(hours: int = 24, sub: str = "admin-demo-user") -> str:
     """Mint an HS256 JWT that FastAPI and PostgREST will both accept.
 
@@ -25,6 +26,7 @@ def mint_admin_token(hours: int = 24, sub: str = "admin-demo-user") -> str:
     issuer = os.getenv("SUPABASE_JWT_ISSUER", "")
     if not issuer:
         import warnings
+
         warnings.warn(
             "SUPABASE_JWT_ISSUER is not set. "
             "Minted token omits 'iss' and will be rejected by PostgREST on hosted Supabase "
@@ -45,6 +47,7 @@ def mint_admin_token(hours: int = 24, sub: str = "admin-demo-user") -> str:
         payload["iss"] = issuer
 
     return jwt.encode(payload, secret, algorithm="HS256")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

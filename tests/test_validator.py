@@ -8,11 +8,13 @@ Contract under test:
   - unknown unit → reject (not guess×1)
   - sanity band violation → reject
 """
+
 import pytest
 
 from tests.conftest import COMMODITY_ID_ONION, make_record
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def ok(result):
     d, reason = result
@@ -29,6 +31,7 @@ def rejected(result):
 
 
 # ── Success path ──────────────────────────────────────────────────────────────
+
 
 def test_valid_record_returns_dict(validator):
     rec = make_record()
@@ -82,12 +85,13 @@ def test_variety_defaults_to_general(validator):
 
 # ── Rejection reasons ─────────────────────────────────────────────────────────
 
+
 def test_rejection_reasons_are_strings(validator):
     """All rejections must return a non-empty reason string (not None or '')."""
     cases = [
         make_record(commodity_name="UnknownCrop"),
         make_record(unit="furlongs"),
-        make_record(modal_price=50.0),   # below sanity_min=100
+        make_record(modal_price=50.0),  # below sanity_min=100
         make_record(modal_price=99999.0),  # above sanity_max=8000
     ]
     for rec in cases:

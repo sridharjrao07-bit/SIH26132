@@ -9,6 +9,7 @@ from supabase import Client
 
 router = APIRouter(prefix="/api/v1/prices", tags=["Prices"])
 
+
 def _flatten(row: dict) -> dict:
     row = dict(row or {})
     market_data = row.pop("markets", {}) or {}
@@ -23,12 +24,13 @@ def _flatten(row: dict) -> dict:
     row.setdefault("grade", "General")
     return row
 
+
 @router.get("/latest", response_model=List[PriceResponse])
 def get_latest_prices(
     market_id: Optional[str] = Query(None, description="Filter by market ID"),
     commodity_id: Optional[str] = Query(None, description="Filter by commodity ID"),
     limit: int = Query(50, ge=1, le=500, description="Max records to return"),
-    supabase: Client = Depends(get_supabase)
+    supabase: Client = Depends(get_supabase),
 ):
     """
     Get the latest price records.
@@ -36,9 +38,11 @@ def get_latest_prices(
     """
     seven_days_ago = (get_ist_today() - timedelta(days=7)).isoformat()
 
-    query = supabase.table("prices").select(
-        "*, markets(name, district), commodities(name_en, name_mr, name_hi)"
-    ).gte("arrival_date", seven_days_ago)
+    query = (
+        supabase.table("prices")
+        .select("*, markets(name, district), commodities(name_en, name_mr, name_hi)")
+        .gte("arrival_date", seven_days_ago)
+    )
 
     if market_id:
         query = query.eq("market_id", market_id)
@@ -55,21 +59,22 @@ def get_historical_prices(
     commodity_id: str = Query(..., description="Commodity ID"),
     days: int = Query(30, ge=1, le=365, description="Number of days of history (1–365)"),
     limit: int = Query(1000, ge=1, le=1000, description="Max records to return"),
-    supabase: Client = Depends(get_supabase)
+    supabase: Client = Depends(get_supabase),
 ):
     """
     Get historical prices for a specific market and commodity over a period of time.
     """
     start_date = (get_ist_today() - timedelta(days=days)).isoformat()
 
-    res = (supabase.table("prices").select(
-        "*, markets(name, district), commodities(name_en, name_mr, name_hi)"
+    res = (
+        supabase.table("prices")
+        .select("*, markets(name, district), commodities(name_en, name_mr, name_hi)")
+        .eq("market_id", market_id)
+        .eq("commodity_id", commodity_id)
+        .gte("arrival_date", start_date)
+        .order("arrival_date", desc=True)
+        .limit(limit)
+        .execute()
     )
-    .eq("market_id", market_id)
-    .eq("commodity_id", commodity_id)
-    .gte("arrival_date", start_date)
-    .order("arrival_date", desc=True)
-    .limit(limit)
-    .execute())
 
     return [_flatten(row) for row in (res.data or [])]
