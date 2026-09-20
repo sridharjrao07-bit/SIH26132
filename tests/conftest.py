@@ -1036,7 +1036,7 @@ class FakeSupabase:
         # SELECT: apply all filter types
         rows = list(self._data.get(table, []))
         rows = self._apply_filters(rows, filters)
-        
+
         if select_cols and select_cols not in ("*", "count"):
             raw_cols = [c.strip() for c in select_cols.split(",")]
             if "*" not in raw_cols:
@@ -1045,8 +1045,9 @@ class FakeSupabase:
                 for r in rows:
                     filtered.append({k: v for k, v in r.items() if k in cols})
                 rows = filtered
-            
+
         return _ExecuteResult(data=rows)
+
     @staticmethod
     def _matches_filters(row: dict, filters: dict) -> bool:
         for col, val in (filters or {}).items():
@@ -1355,6 +1356,7 @@ class RlsFakeSupabase(FakeSupabase):
                     else:
                         res.data = []
                 else:
+
                     def owns(r):
                         if self._uid == ADMIN_USER_ID:
                             return True
@@ -1373,6 +1375,7 @@ class RlsFakeSupabase(FakeSupabase):
                         if r.get("fpo_id") == self._uid:
                             return True
                         return False
+
                     res.data = [r for r in res.data if owns(r)]
 
         if (op == "select" or op is None) and select_cols and select_cols not in ("*", "count"):

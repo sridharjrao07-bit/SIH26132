@@ -40,7 +40,11 @@ async def backfill(days: int, markets_csv: str, commodities_csv: str, sleep_time
 
     from ingestion.validator import PriceValidator
 
-    validator = PriceValidator(commodity_id_map=commodity_id_map, sanity_bands=sanity_bands)
+    validator = PriceValidator(
+        commodity_id_map=commodity_id_map,
+        sanity_bands=sanity_bands,
+        max_arrival_qty_qtl=settings.max_arrival_qty_qtl,
+    )
 
     market_names = [m.strip() for m in markets_csv.split(",") if m.strip()]
     commodities = [c.strip() for c in commodities_csv.split(",") if c.strip()]

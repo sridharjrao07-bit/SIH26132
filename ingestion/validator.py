@@ -25,6 +25,9 @@ UNIT_CONVERSIONS: Dict[str, float] = {
 # Max quantity is now loaded dynamically from config to handle mixed-unit sources.
 
 
+DEFAULT_MAX_ARRIVAL_QTY_QTL = 1_000_000.0
+
+
 class PriceValidator:
     """
     Validates and normalizes RawPriceRecords before insertion.
@@ -37,7 +40,7 @@ class PriceValidator:
         self,
         commodity_id_map: Dict[str, str],
         sanity_bands: Dict[str, Tuple[float, float]],
-        max_arrival_qty_qtl: Optional[float] = 200000.0,
+        max_arrival_qty_qtl: Optional[float] = DEFAULT_MAX_ARRIVAL_QTY_QTL,
     ):
         """
         commodity_id_map : "{source}|{norm_source_key}" → commodity_id UUID

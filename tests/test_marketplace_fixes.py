@@ -305,6 +305,8 @@ def test_engine_fallback_does_not_stamp_requested_model_id(monkeypatch):
 
     class _Settings:
         forecast_model = "gbm"
+        target_state = "Maharashtra"
+        max_arrival_qty_qtl = 200000.0
 
     # force a gbm request with no pretrained model → fallback tier
     monkeypatch.setattr(eng, "get_settings", lambda: _Settings())
@@ -702,6 +704,7 @@ def test_backfill_history_hard_db_failure_exits_nonzero(
 
     class _Settings:
         data_gov_in_api_key = "test-key"
+        max_arrival_qty_qtl = 200000.0
 
     monkeypatch.setattr(bh, "get_settings", lambda: _Settings())
     monkeypatch.setattr(bh, "get_supabase_service_role", lambda: fake)

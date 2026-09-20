@@ -7,7 +7,7 @@ import structlog
 from supabase import Client
 
 from .base import IngestionSourceAdapter, SourceFetchError
-from .validator import PriceValidator
+from .validator import DEFAULT_MAX_ARRIVAL_QTY_QTL, PriceValidator
 
 logger = structlog.get_logger()
 
@@ -18,9 +18,16 @@ def _norm_key(s: str) -> str:
 
 
 class IngestionRunner:
-    def __init__(self, supabase: Client, adapters: List[IngestionSourceAdapter]):
+    def __init__(
+        self,
+        supabase: Client,
+        adapters: List[IngestionSourceAdapter],
+        *,
+        max_arrival_qty_qtl: Optional[float] = DEFAULT_MAX_ARRIVAL_QTY_QTL,
+    ):
         self.supabase = supabase
         self.adapters = adapters
+        self.max_arrival_qty_qtl = max_arrival_qty_qtl
 
     async def _db(self, fn):
         """Run a blocking PostgREST call off the event loop."""
@@ -109,7 +116,11 @@ class IngestionRunner:
             )
             return
 
-        validator = PriceValidator(commodity_id_map=commodity_id_map, sanity_bands=sanity_bands)
+        validator = PriceValidator(
+            commodity_id_map=commodity_id_map,
+            sanity_bands=sanity_bands,
+            max_arrival_qty_qtl=self.max_arrival_qty_qtl,
+        )
 
         # ── 2. Run each adapter independently ────────────────────────────────
         for adapter in self.adapters:

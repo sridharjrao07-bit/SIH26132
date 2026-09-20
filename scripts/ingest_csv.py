@@ -16,6 +16,19 @@ load_dotenv()
 
 
 async def main():
+    import math
+
+    from ingestion.validator import DEFAULT_MAX_ARRIVAL_QTY_QTL
+
+    raw_limit = os.environ.get("MAX_ARRIVAL_QTY_QTL", str(DEFAULT_MAX_ARRIVAL_QTY_QTL))
+    try:
+        configured_limit = float(raw_limit)
+    except ValueError:
+        raise SystemExit("MAX_ARRIVAL_QTY_QTL must be a positive finite number")
+
+    if not math.isfinite(configured_limit) or configured_limit <= 0:
+        raise SystemExit("MAX_ARRIVAL_QTY_QTL must be a positive finite number")
+
     supabase_url = os.environ.get("SUPABASE_URL")
     supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
     if not supabase_url or not supabase_key:
@@ -52,7 +65,9 @@ async def main():
                 norm_k = " ".join(k.strip().lower().split())
                 market_map[norm_k] = row["id"]
 
-    validator = PriceValidator(commodity_id_map, sanity_bands)
+    import math
+
+    validator = PriceValidator(commodity_id_map, sanity_bands, max_arrival_qty_qtl=configured_limit)
 
     print("Parsing CSV...")
     valid_records = []

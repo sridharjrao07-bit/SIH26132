@@ -48,8 +48,12 @@ def check_csv_data(csv_path: str):
         commodity_id_map[c_key] = _norm_key(c_name)
         market_map[_norm_key(m_name)] = _norm_key(m_name)
 
+    from ingestion.validator import DEFAULT_MAX_ARRIVAL_QTY_QTL
+
     validator = PriceValidator(
-        commodity_id_map=commodity_id_map, sanity_bands={}, max_arrival_qty_qtl=200000.0
+        commodity_id_map=commodity_id_map,
+        sanity_bands={},
+        max_arrival_qty_qtl=DEFAULT_MAX_ARRIVAL_QTY_QTL,
     )
 
     # Group valid records by (market_id, commodity_id) -> set of dates

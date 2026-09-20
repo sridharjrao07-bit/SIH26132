@@ -146,7 +146,11 @@ async def run_ingestion_job():
             logger.error("no_ingestion_adapters_configured")
             return
 
-        runner = IngestionRunner(supabase=supabase, adapters=adapters)
+        runner = IngestionRunner(
+            supabase=supabase,
+            adapters=adapters,
+            max_arrival_qty_qtl=settings.max_arrival_qty_qtl,
+        )
         await runner.run(district=settings.target_district, state=settings.target_state)
     finally:
         _release(supabase, "ingestion")
