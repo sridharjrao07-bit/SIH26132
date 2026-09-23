@@ -169,6 +169,42 @@ def test_signal_set_performance(mock_supabase):
     assert gbm_mae < ols_mae, f"GBM MAE {gbm_mae} failed to beat OLS MAE {ols_mae} on signal set"
     
 @pytest.mark.skipif(not HAS_LIGHTGBM, reason="lightgbm not installed")
+def test_feature_importances_nonempty_on_success(mock_supabase):
+    """
+    Regression guard for Bug 1: when GBM trains successfully, the report MUST
+    carry non-empty feature_importances with positive total gain.
+
+    The original bug called `model.feature_importance()` on the sklearn wrapper
+    (which only exists on the Booster), raising AttributeError that a bare
+    `except` swallowed — so importances were silently [] forever. This test
+    fails if that regresses.
+    """
+    rows, _, builder = _generate_synthetic_data(seed=42, n_days=200, is_noise=False)
+    supabase = mock_supabase(builder, rows)
+
+    report = run_backtest(supabase, pairs=[("M1", "C1")], history_days=150, model_names=["gbm"])
+
+    gbm_agg = report.aggregate["gbm"]
+    assert gbm_agg["status"] == "ok", f"precondition: GBM should train ok, got {gbm_agg['status']}"
+
+    importances = gbm_agg.get("feature_importances")
+    assert importances, "feature_importances must be non-empty when GBM trains successfully"
+
+    # Structural contract: list of {feature: str, gain: float}
+    for item in importances:
+        assert isinstance(item["feature"], str)
+        assert isinstance(item["gain"], float)
+
+    # A trained model must attribute positive gain somewhere.
+    total_gain = sum(item["gain"] for item in importances)
+    assert total_gain > 0, "total gain must be positive for a fitted model"
+
+    # Signal set is driven by dow + lag_1; lag_1 should carry real gain.
+    by_name = {item["feature"]: item["gain"] for item in importances}
+    assert by_name.get("lag_1", 0) > 0, "lag_1 must have positive gain on the autoregressive signal set"
+
+
+@pytest.mark.skipif(not HAS_LIGHTGBM, reason="lightgbm not installed")
 def test_backtest_report_format(mock_supabase):
     """Backtest report format: `gbm` exists, lists `feature_importances`, correctly formats nulls."""
     rows, _, builder = _generate_synthetic_data(seed=42, n_days=30, is_noise=True)
