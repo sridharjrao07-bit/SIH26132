@@ -9,7 +9,7 @@ previously-untested routes that contained runtime crashes in the evaluation:
   - Forecasts: get_forecasts, get_forecasts_summary (M7)
   - Auth gates: admin endpoints reject farmer tokens and no-token requests
 """
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from unittest.mock import patch
 
 from app.main import app
@@ -160,8 +160,10 @@ def test_ingestion_logs_farmer_gets_403(override_supabase, fake_supabase):
 # ─── Forecasts ───────────────────────────────────────────────────────────────
 
 def test_get_forecasts_returns_ok_rows_only(override_supabase, fake_supabase):
-    """M7: status=ok filter — stale rows must not appear"""
-    today = get_ist_today().isoformat()
+    """M7: status=ok filter — stale rows must not appear.
+    Rows are dated tomorrow: the engine writes tomorrow…today+7, and the S1 fix
+    excludes today-dated rows (they can only come from a superseded run)."""
+    today = (get_ist_today() + timedelta(days=1)).isoformat()
     fake_supabase._data["forecasts"] = [
         {
             "id": "f-ok",
@@ -200,8 +202,9 @@ def test_get_forecasts_returns_ok_rows_only(override_supabase, fake_supabase):
     assert "ok" in statuses
 
 def test_get_forecasts_summary_includes_insufficient_data(override_supabase, fake_supabase):
-    """M7+B2: summary should include insufficient_data but not stale"""
-    today = date.today().isoformat()
+    """M7+B2: summary should include insufficient_data but not stale.
+    Rows dated tomorrow per the S1 contract (today rows = superseded run)."""
+    today = (date.today() + timedelta(days=1)).isoformat()
     now_iso = datetime.now(timezone.utc).isoformat()
     fake_supabase._data["forecasts"] = [
         {
