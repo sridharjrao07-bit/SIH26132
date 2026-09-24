@@ -322,7 +322,7 @@ The full set of typed interfaces is in `types/api-types.ts`. The non-obvious one
 
 **`Forecast`** — render the confidence band (`lower_bound`–`upper_bound`), not a bare line. `GET /forecasts` returns only `status: "ok"`; `GET /forecasts/summary` also returns `insufficient_data` so you can show *"not enough data yet"* instead of an empty screen.
 
-**`SaleWindow`** — 404 when there's no recent price for the commodity. Design a real empty state. `better_market` is non-null when a neighbouring mandi pays meaningfully more.
+**`SaleWindow`** — 404 when there's no recent price for the commodity. Design a real empty state. `better_market` is non-null only when a nearby mandi's modal price is **≥ 5% above** the local price; its shape is `{market, modal_price, premium_rs, arrival_qty}` (no `market_id` — see `notifications/sale_window.py`).
 
 **`LotAdvice`** — **`next_step` may be null**, **`best_buyer` may be null**, **`sale_window` may be null**. Handle all three. `matches` is capped at 5 here, 10 on `/matches`.
 

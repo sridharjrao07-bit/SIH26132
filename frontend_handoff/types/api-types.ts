@@ -205,10 +205,10 @@ export interface SaleWindow {
 }
 
 export interface BetterMarket {
-  market_id: string;
   market: string | null;
-  price: number;
-  delta: number;
+  modal_price: number;
+  premium_rs: number;
+  arrival_qty: number | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

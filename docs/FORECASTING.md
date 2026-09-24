@@ -25,7 +25,7 @@ Because agricultural data can be sparse or noisy, the engine implements a strict
 
 To protect users from spurious predictions driven by insufficient data, the engine enforces progressive "Kill-Gates":
 
-- **G1 (Rule-Based Minimums)**: If a market has fewer than 14 historical data points, forecasting is disabled completely for that commodity.
+- **G1 (Rule-Based Minimums)**: If a market has fewer than **10** distinct observation days (`MIN_OBSERVATIONS` in `forecasting/engine.py`), no prediction is produced (`status='insufficient_data'`). Between 10–14 observations only the moving-average tier runs (`method='moving_avg'`, `confidence='medium'`); the blend tier requires 15+, and `confidence='high'` requires 20+. Any UI or API surface quoting these thresholds must read them from the forecasting code constants, not hardcode them.
 - **G2 (Honest Backtest Existence)**: An honest backtest requires a minimum data length to simulate folds. The threshold is defined as `TOTAL_TEST_DAYS + 1` (currently 57 days). If a market has fewer than 57 days of distinct historical arrival dates, no honest backtest can be constructed. In this scenario, we ship the model but label the accuracy card as **"Backfill pending"**.
 - **G3 (Model Performance Guarantee)**: A complex model (like GBM) must demonstrably beat a simpler baseline (like Naive Last-Week-Same-Day) on the backtest harness to be selected for production. If it fails, the system falls back to the simpler model.
 
