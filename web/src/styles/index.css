@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+/* Fonts: self-hosted by Vite from @fontsource (no Google Fonts request). */
+@import "@fontsource/ibm-plex-sans/latin-400.css";
+@import "@fontsource/ibm-plex-sans/latin-600.css";
+@import "@fontsource/ibm-plex-sans-devanagari/devanagari-400.css";
+@import "@fontsource/ibm-plex-sans-devanagari/devanagari-600.css";
+
+/*
+ * Design tokens (docs/frontend/04-design.md). The default Tailwind palette is switched off:
+ * only these colours exist, so nobody can reach for blue-500 or a gradient.
+ * Contrast on paper: ink 16.0, ink-2 6.98, sell 7.30, hold 7.24, wait 7.47.
+ */
+@theme {
+  --color-*: initial;
+  --color-paper: #F7F4EE;
+  --color-paper-2: #EFEAE0;
+  --color-ink: #1A1916;
+  --color-ink-2: #57534A;
+  --color-rule: #DDD6C8;
+  --color-sell: #1A5C32;
+  --color-hold: #6E4A03;
+  --color-wait: #475059;
+  --color-forecast: #2D5B88;   /* chart only, never text */
+  --color-arrivals: #CBBFA9;   /* chart only */
+  --color-white: #FFFFFF;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  --font-sans: "IBM Plex Sans", "IBM Plex Sans Devanagari", system-ui, sans-serif;
+
+  --radius-*: initial;
+  --radius-sm: 2px;
+  --radius: 4px;
+
+  --shadow-*: initial;
+
+  --text-xs: 0.875rem;   /* 14px floor: nothing smaller */
+  --text-xs--line-height: 1.45;
+  --text-sm: 0.9375rem;  /* 15 */
+  --text-sm--line-height: 1.5;
+  --text-base: 1.0625rem;/* 17: Devanagari needs the extra size */
+  --text-base--line-height: 1.55;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.4;
+  --text-xl: 1.75rem;    /* verdict */
+  --text-xl--line-height: 1.25;
+  --text-price: 2.5rem;  /* 40px headline price */
+  --text-price--line-height: 1.1;
+}
+
+@layer base {
+  html { background: var(--color-paper); color: var(--color-ink); -webkit-text-size-adjust: 100%; }
+  body { font-family: var(--font-sans); font-size: var(--text-base); line-height: 1.55; margin: 0; }
+  :lang(en) body, :lang(en) { line-height: 1.45; }
+  :focus-visible { outline: 3px solid var(--color-ink); outline-offset: 2px; }
+  button, select, input { font: inherit; color: inherit; }
+  ::selection { background: var(--color-paper-2); }
+}
+
+@utility tabular { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+@utility rule-b { border-bottom: 1px solid var(--color-rule); }
+@utility rule-t { border-top: 1px solid var(--color-rule); }
+@utility tap { min-height: 48px; }
