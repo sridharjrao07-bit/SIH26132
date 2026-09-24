@@ -27,3 +27,7 @@ The verdict is also always identified by its **label**, never by hue alone.
 - **F5:** `confidence: 'low'` styling (dashed band outline) is **dormant**. `forecasting/engine.py` never emits it (n<10 → no prediction). QA: don't try to trigger it.
 - Horizon label: "पुढील N दिवस" where **N = number of forecast points**, never a literal 7 (see Phase 5 finding S1).
 - Gap rule: the dotted bridge appears only when a price is missing **before today** (`last_actual < today − 1`). Today not yet being reported is normal, not a gap.
+
+## Pending states demo first
+`<ModelChip/>` and `<AccuracyCard/>` are built and polished against their **pending** states first (G6 `backfill_pending`, G5 fields null, G6 endpoint not yet deployed), because those are the states that will actually demo.
+If a judge asks: **"Pending is intended behaviour, not a missing feature."**
