@@ -1,16 +1,11 @@
 @import "tailwindcss";
 
-/* Fonts: self-hosted by Vite from @fontsource (no Google Fonts request). */
+/* Fonts */
 @import "@fontsource/ibm-plex-sans/latin-400.css";
 @import "@fontsource/ibm-plex-sans/latin-600.css";
 @import "@fontsource/ibm-plex-sans-devanagari/devanagari-400.css";
 @import "@fontsource/ibm-plex-sans-devanagari/devanagari-600.css";
 
-/*
- * Design tokens (docs/frontend/04-design.md). The default Tailwind palette is switched off:
- * only these colours exist, so nobody can reach for blue-500 or a gradient.
- * Contrast on paper: ink 16.0, ink-2 6.98, sell 7.30, hold 7.24, wait 7.47.
- */
 @theme {
   --color-*: initial;
   --color-paper: #F7F4EE;
@@ -21,8 +16,8 @@
   --color-sell: #1A5C32;
   --color-hold: #6E4A03;
   --color-wait: #475059;
-  --color-forecast: #2D5B88;   /* chart only, never text */
-  --color-arrivals: #CBBFA9;   /* chart only */
+  --color-forecast: #2D5B88;
+  --color-arrivals: #CBBFA9;
   --color-white: #FFFFFF;
   --color-transparent: transparent;
   --color-current: currentColor;
@@ -32,28 +27,58 @@
   --radius-*: initial;
   --radius-sm: 2px;
   --radius: 4px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 4px;
+  --radius-2xl: 4px;
+  --radius-full: 9999px; /* keep full for circles like dots, but card radii shouldn't use it */
 
   --shadow-*: initial;
 
-  --text-xs: 0.875rem;   /* 14px floor: nothing smaller */
-  --text-xs--line-height: 1.45;
-  --text-sm: 0.9375rem;  /* 15 */
-  --text-sm--line-height: 1.5;
-  --text-base: 1.0625rem;/* 17: Devanagari needs the extra size */
-  --text-base--line-height: 1.55;
-  --text-lg: 1.25rem;
-  --text-lg--line-height: 1.4;
-  --text-xl: 1.75rem;    /* verdict */
-  --text-xl--line-height: 1.25;
-  --text-price: 2.5rem;  /* 40px headline price */
-  --text-price--line-height: 1.1;
+  --spacing-*: initial;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+
+  --text-*: initial;
+  --text-xs: 14px;
+  --text-sm: 15px;
+  --text-base: 17px;
+  --text-lg: 20px;
+  --text-xl: 28px;
+  --text-price: 40px;
+
+  --animate-rise: rise 220ms cubic-bezier(0.16,1,0.3,1) both;
+  --animate-fade: fade 220ms cubic-bezier(0.16,1,0.3,1) both;
+  --animate-band: band 260ms cubic-bezier(0.16,1,0.3,1) both;
+  --animate-slide-down: slide-down 240ms cubic-bezier(0.4,0,0.2,1) both;
+  --animate-pulse-soft: pulse-soft 1.4s ease-in-out infinite;
+
+  @keyframes rise { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+  @keyframes fade { from { opacity: 0 } to { opacity: 1 } }
+  @keyframes band { from { transform: scaleX(0); opacity: .6 } to { transform: scaleX(1); opacity: 1 } }
+  @keyframes slide-down { from { opacity: 0; transform: translateY(-8px) } to { opacity: 1; transform: none } }
+  @keyframes pulse-soft { 0%,100% { opacity: 1 } 50% { opacity: .55 } }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
 
 @layer base {
   html { background: var(--color-paper); color: var(--color-ink); -webkit-text-size-adjust: 100%; }
   body { font-family: var(--font-sans); font-size: var(--text-base); line-height: 1.55; margin: 0; }
   :lang(en) body, :lang(en) { line-height: 1.45; }
-  :focus-visible { outline: 3px solid var(--color-ink); outline-offset: 2px; }
+  :focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
   button, select, input { font: inherit; color: inherit; }
   ::selection { background: var(--color-paper-2); }
 }
