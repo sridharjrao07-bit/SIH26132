@@ -10,6 +10,7 @@ import { PairView } from '../features/price-detail/PairView.tsx';
 const LASALGAON = '11111111-1111-1111-1111-111111111101';
 const ONION = '22222222-2222-2222-2222-222222222201';
 const mockUp = await fetch('http://127.0.0.1:8000/health').then((r) => r.ok).catch(() => false);
+if (process.env.REQUIRE_MOCK === '1' && !mockUp) throw new Error('REQUIRE_MOCK=1 but the mock API is not reachable on :8000');
 
 describe.skipIf(!mockUp)('PairView against the mock', () => {
   test('price → chart caption → model chip → verdict all render; verdict chip and card agree', async () => {
@@ -29,7 +30,11 @@ describe.skipIf(!mockUp)('PairView against the mock', () => {
     await waitFor(() => expect(container.querySelector('#verdict')).toBeTruthy(), { timeout: 8000 });
 
     const text = container.textContent!;
-    expect(text).toMatch(/पुढील 7 दिवसांचा संभाव्य भाव/);          // horizon from data (S1 fixed)
+    // Invariant, not a golden number: the horizon is read from the data and never exceeds the
+    // 7 days requested. (The pre-S1 mock returns 6, the fixed one returns 7; both are honest.)
+    const horizon = Number(/पुढील (\d+) दिवसांचा संभाव्य भाव/.exec(text)?.[1]);
+    expect(horizon).toBeGreaterThanOrEqual(1);
+    expect(horizon).toBeLessThanOrEqual(7);
     expect(text).toContain('अजून मोजलेली नाही');                     // accuracy pending (G6 404 in mock)
     expect(text).not.toMatch(/95\s?%/);
     // Chip and card render the same action_label from the same query

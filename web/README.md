@@ -19,15 +19,16 @@ supply, FPO pooling). Mobile-first at 360px, Marathi by default, built for weak 
 | `/buy` | Buyer registration, "waiting for verification", supply + make offer | yes |
 | `/account` | Profile (name, phone, district, SMS language), sign out | yes |
 
-The design record lives in the backend repo under `docs/frontend/01…05` (branch `arena/01a0d307-sih26132`).
-Backend gaps are tracked there as G5–G7. Frontend tickets are G1, G2, G3, G8, G9 and G11.
+The design record lives in [`../docs/frontend/`](../docs/frontend/) (`01…05`); backend gap tickets in [`../docs/tickets/`](../docs/tickets/).
+The API contract is [`../frontend_handoff/API_CONTRACT.md`](../frontend_handoff/API_CONTRACT.md).
+Backend gaps are G5–G7 (plus G12 below). Frontend tickets are G1, G2, G3, G8, G9 and G11.
 
 ## Run
 
 ```bash
+cd web
 npm ci
-cp /path/to/SIH26132/frontend_handoff/mock/mock_api.py .mock/   # or set MOCK_API=/path/to/mock_api.py
-npm run mock          # FastAPI-shaped mock on :8000
+npm run mock          # ../frontend_handoff/mock/mock_api.py on :8000 (override with MOCK_API=...)
 npm run dev           # http://localhost:5173, with /api proxied to API_TARGET (default :8000)
 ```
 
@@ -44,7 +45,7 @@ The browser only calls `/api/...` on its own origin. Point `API_TARGET` at the r
 
 | script | what it does |
 | --- | --- |
-| `npm test` | vitest: domain rules, trust states, chart ticks/tooltip, the full farmer journey (list → offer → accept → pay → sold → ledger), alerts, and a render of every signed-in screen against the mock (integration tests are skipped if the mock is down) |
+| `npm test` | vitest: domain rules, trust states, chart ticks/tooltip, the full farmer journey (list → offer → accept → pay → sold → ledger), alerts, and a render of every signed-in screen against the mock (integration tests skip if the mock is down locally; CI sets `REQUIRE_MOCK=1` so they fail instead) |
 | `npm run build` | typecheck and production build (the Lingui vite plugin compiles `.po` on import) |
 | `npm run i18n:extract` | refresh the catalogs after changing copy |
 | `npm run i18n:check` | fails if any mr/hi string is missing |

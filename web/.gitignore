@@ -7,5 +7,4 @@ dev-dist
 !.env.example
 coverage
 src/i18n/locales/*/messages.ts
-.mock
 *.tsbuildinfo

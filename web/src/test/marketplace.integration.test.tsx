@@ -20,6 +20,7 @@ const BASE = 'http://127.0.0.1:8000';
 const ONION = '22222222-2222-2222-2222-222222222201';
 const LASALGAON = '11111111-1111-1111-1111-111111111101';
 const mockUp = await fetch(`${BASE}/health`).then((r) => r.ok).catch(() => false);
+if (process.env.REQUIRE_MOCK === '1' && !mockUp) throw new Error('REQUIRE_MOCK=1 but the mock API is not reachable on :8000');
 
 function renderAt(path: string, routes: Record<string, ComponentType>) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });

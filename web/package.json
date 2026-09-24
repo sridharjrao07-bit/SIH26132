@@ -10,7 +10,7 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "i18n:extract": "lingui extract",
-    "mock": "python3 ${MOCK_API:-.mock/mock_api.py}",
+    "mock": "python3 ${MOCK_API:-../frontend_handoff/mock/mock_api.py}",
     "i18n:check": "lingui extract --clean && lingui compile --strict"
   },
   "dependencies": {

@@ -4,7 +4,7 @@
 
 Market linkage and price discovery API for farmers (Government of Maharashtra / MSInS).
 
-This repository is the **FastAPI + Supabase backend**. Farmer/buyer UI lives in a **separate frontend repo**. HTTP contract: [`docs/API.md`](docs/API.md). Layout: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). How to contribute: [`CONTRIBUTING.md`](CONTRIBUTING.md).
+This repository holds the **FastAPI + Supabase backend**. The farmer/buyer PWA lives in [`web/`](web/) (Vite + React; see [`web/README.md`](web/README.md)), with its design record in [`docs/frontend/`](docs/frontend/). HTTP contract: [`docs/API.md`](docs/API.md). Layout: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). How to contribute: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Problem → API
 

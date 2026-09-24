@@ -23,3 +23,4 @@ SECURITY.md
 Makefile
 .pre-commit-config.yaml
 .python-version
+web
