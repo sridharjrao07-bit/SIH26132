@@ -45,9 +45,26 @@ export type Language = "en" | "mr" | "hi";
 export type SupplyPressure = "high" | "normal" | "low";
 export type ForecastTrend = "up" | "down" | "flat";
 
+/** "low" is reserved in the DB schema but DORMANT: the engine never emits it
+ *  (n<10 produces no prediction at all — see forecasting/engine.py). Don't
+ *  write QA cases that try to trigger it. */
 export type ForecastConfidence = "high" | "medium" | "low";
 export type ForecastStatus = "ok" | "insufficient_data" | "stale";
-export type ForecastMethod = "ma" | "ols" | "feature_ols" | "gbm" | "holt_winters" | "blend" | "naive";
+/** Verified against forecasting/engine.py. Auto tiers write "moving_avg" |
+ *  "blend" | "none" (insufficient rows); explicit selection can write "ma" |
+ *  "ols" | "feature_ols" | "holt_winters" | "gbm". "naive" exists only in the
+ *  backtest harness and is never written to the forecasts table. The field is
+ *  typed `ForecastMethod | string` downstream — always keep a raw fallback in
+ *  the method-label glossary. */
+export type ForecastMethod =
+  | "none"
+  | "moving_avg"
+  | "blend"
+  | "ma"
+  | "ols"
+  | "feature_ols"
+  | "holt_winters"
+  | "gbm";
 
 /** Lot lifecycle. Monotonic — the backend rejects backwards transitions. */
 export type LotStatus = "open" | "offered" | "matched" | "sold" | "withdrawn";
@@ -205,10 +222,10 @@ export interface SaleWindow {
 }
 
 export interface BetterMarket {
-  market_id: string;
   market: string | null;
-  price: number;
-  delta: number;
+  modal_price: number;
+  premium_rs: number;
+  arrival_qty: number | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

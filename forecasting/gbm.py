@@ -37,8 +37,10 @@ class GlobalGBM:
             "district_mean_price", "event_pressure"
         ]
         try:
-            # We explicitly ask lightgbm for 'gain'
-            importances = self.model.feature_importance(importance_type='gain')
+            # We explicitly ask lightgbm for 'gain'. The sklearn wrapper
+            # (LGBMRegressor) has no feature_importance() method; it lives
+            # on the underlying Booster, exposed via `booster_`.
+            importances = self.model.booster_.feature_importance(importance_type='gain')
             pairs = sorted(zip(feature_names, importances), key=lambda x: x[1], reverse=True)
             return [{"feature": f, "gain": round(float(g), 4)} for f, g in pairs[:10]]
         except Exception:
@@ -243,18 +245,51 @@ def train_global_gbm(
     if len(X_train) < 10 or len(X_val) < 5:
         raise CalibrationError("Insufficient global data for valid inner-training and calibration split")
 
+    import numpy as np
+
+    # Chronological early stopping: fit on the pre-cutoff partition and use the
+    # post-cutoff calibration window as eval set. LightGBM requires array-like
+    # eval inputs, so convert to numpy.
+    X_train_arr = np.asarray(X_train, dtype=float)
+    y_train_arr = np.asarray(y_train, dtype=float)
+    X_val_arr = np.asarray(X_val, dtype=float)
+    y_val_arr = np.asarray(y_val, dtype=float)
+
+    MAX_ESTIMATORS = 150
     model = lgb.LGBMRegressor(
-        n_estimators=150,
+        n_estimators=MAX_ESTIMATORS,
         learning_rate=0.05,
         num_leaves=31,
         min_child_samples=5,
         subsample=0.9,
         subsample_freq=1,
-        random_state=42
+        random_state=42,
+        verbose=-1
     )
-    model.fit(X_train, y_train)
-    
-    val_preds = model.predict(X_val)
+    # lightgbm >= 4.7 deprecates `eval_set` in favour of `eval_X`/`eval_y`;
+    # the repo pin (4.6.0) only supports `eval_set`. Detect at runtime so the
+    # code is warning-free on new versions and functional on the pin.
+    import inspect
+    _es_callback = lgb.early_stopping(stopping_rounds=20, verbose=False)
+    if "eval_X" in inspect.signature(model.fit).parameters:
+        model.fit(
+            X_train_arr,
+            y_train_arr,
+            eval_X=X_val_arr,
+            eval_y=y_val_arr,
+            callbacks=[_es_callback]
+        )
+    else:
+        model.fit(
+            X_train_arr,
+            y_train_arr,
+            eval_set=[(X_val_arr, y_val_arr)],
+            callbacks=[_es_callback]
+        )
+    # best_iteration_ is 0 when early stopping never engaged; guard the refit.
+    best_n = int(model.best_iteration_ or 0) or MAX_ESTIMATORS
+
+    val_preds = model.predict(X_val_arr)
     residuals = [a - p for a, p in zip(y_val, val_preds)]
     sigma = pstdev(residuals) if len(residuals) > 1 else 0.0
 
@@ -269,13 +304,12 @@ def train_global_gbm(
     market_map_final = {m: i for i, m in enumerate(sorted(list(all_markets_final)))}
     commodity_map_final = {c: i for i, c in enumerate(sorted(list(all_commodities_final)))}
     
-    # Update X_all with the final maps
-    for i in range(len(X_all)):
-        # Extract m and c from the original maps? Actually we can't do that easily since X_all just has codes.
-        # But wait, X_all was appended sequentially by pair! We can just rebuild X_all.
-        pass
-        
+    # Rebuild the full training matrix with the final categorical maps.
+    # X and y are appended in the SAME loop iteration so features and targets
+    # can never desynchronize (previously y_all from the first pass was reused,
+    # which relied on both loops producing identical row order/counts).
     X_all_final = []
+    y_all_final = []
     for (m, c), rows in pairs_history.items():
         if len(rows) < 40:
             continue
@@ -303,7 +337,7 @@ def train_global_gbm(
         m_code = market_map_final.get(m, len(market_map_final))
         c_code = commodity_map_final.get(c, len(commodity_map_final))
 
-        for feat in features:
+        for (d, price), feat in zip(series, features):
             feat_vec = [
                 m_code,
                 c_code,
@@ -318,19 +352,22 @@ def train_global_gbm(
                 feat.event_pressure
             ]
             X_all_final.append(feat_vec)
+            y_all_final.append(price)
 
     # NOTE: The reported sigma above estimates the error for the pre-refit model.
     # It does not directly represent the final refitted model's error. 
     # Interval coverage must be explicitly measured out-of-sample in the backtest.
+    # Refit on ALL data at the early-stopped iteration count found above.
     model = lgb.LGBMRegressor(
-        n_estimators=150,
+        n_estimators=best_n,
         learning_rate=0.05,
         num_leaves=31,
         min_child_samples=5,
         subsample=0.9,
         subsample_freq=1,
-        random_state=42
+        random_state=42,
+        verbose=-1
     )
-    model.fit(X_all_final, y_all)
+    model.fit(np.asarray(X_all_final, dtype=float), np.asarray(y_all_final, dtype=float))
 
     return GlobalGBM(model=model, sigma=sigma, market_map=market_map_final, commodity_map=commodity_map_final, events=events, strict_pit=strict_pit)

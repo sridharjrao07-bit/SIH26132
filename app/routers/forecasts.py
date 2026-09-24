@@ -34,9 +34,14 @@ def get_forecasts(
     Get the price forecasts for a specific market and commodity pair.
     Returns the next `days` of forward predictions with status='ok'.
     Stale and insufficient_data rows are excluded (use /summary for degraded state).
+
+    Window is today+1 … today+days (S1 fix): the engine writes rows for
+    tomorrow…today+7, so a today-dated row can only come from an OLDER run —
+    including it mixed two generations in one response and made day 7
+    unreachable (old window was today…today+days-1).
     """
-    today    = get_ist_today().isoformat()
-    end_date = (get_ist_today() + timedelta(days=days - 1)).isoformat()
+    start_date = (get_ist_today() + timedelta(days=1)).isoformat()
+    end_date   = (get_ist_today() + timedelta(days=days)).isoformat()
 
     res = (
         supabase.table("forecasts")
@@ -44,7 +49,7 @@ def get_forecasts(
         .eq("market_id", market_id)
         .eq("commodity_id", commodity_id)
         .eq("status", "ok")          # M7: exclude stale/insufficient_data from farmer view
-        .gte("forecast_date", today)
+        .gte("forecast_date", start_date)
         .lte("forecast_date", end_date)
         .order("forecast_date", desc=False)
         .execute()
@@ -82,11 +87,17 @@ def get_forecasts_summary(
     """
     # Fetch recent non-stale forecasts (2000 rows covers all pairs × 7 days for a fresh run)
     cutoff = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
+    # S1 fix: exclude today-dated rows. The engine only writes tomorrow…today+7,
+    # so a forecast_date == today row necessarily comes from an older run and
+    # would win the "earliest date among newest-generation winners" pick,
+    # making the summary's day-1 row silently come from a superseded generation.
+    tomorrow = (get_ist_today() + timedelta(days=1)).isoformat()
     res = (
         supabase.table("forecasts")
         .select("*, markets(name, district), commodities(name_en, name_mr, name_hi)")
         .in_("status", ["ok", "insufficient_data"])  # M7+B2: exclude stale; keep degraded state
         .gte("generated_at", cutoff)
+        .gte("forecast_date", tomorrow)
         .limit(2000)
         .execute()
     )
