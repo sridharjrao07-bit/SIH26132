@@ -52,6 +52,8 @@ export default defineConfig({
         manualChunks(id) {
           if (!id.includes('node_modules')) return;
           if (/recharts|d3-|victory-vendor|decimal\.js|lodash|react-smooth|recharts-scale/.test(id)) return 'charts';
+          // supabase-js is dynamically imported on sign-in only: keep it out of the preloaded vendor chunk
+          if (/@supabase|tslib|isows|[\\/]ws[\\/]/.test(id)) return 'supabase';
           if (/[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return 'react';
           return 'vendor';
         },
@@ -62,7 +64,7 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     allowedHosts: true,
-    proxy: { '/api': { target: API_TARGET, changeOrigin: true } },
+    proxy: { '/api': { target: API_TARGET, changeOrigin: true }, '/__dev': { target: API_TARGET, changeOrigin: true } },
   },
   preview: { host: '0.0.0.0', port: 4173, allowedHosts: true, proxy: { '/api': { target: API_TARGET, changeOrigin: true } } },
   test: { environment: 'jsdom', globals: false, setupFiles: ['src/test/setup.ts'], env: { VITE_API_BASE_URL: process.env.API_TARGET ?? 'http://127.0.0.1:8000' } },

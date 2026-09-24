@@ -38,7 +38,11 @@ export function Providers({ children }: { children: ReactNode }) {
   if (!ready) return null; // first paint waits for one small catalog, not the whole app
 
   return (
-    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, maxAge: 24 * 60 * 60_000, buster: 'v1' }}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={{
+      persister, maxAge: 24 * 60 * 60_000, buster: 'v1',
+      // Only public price data goes to IndexedDB. Account, lots, offers and alerts never outlive the session.
+      dehydrateOptions: { shouldDehydrateQuery: (q) => q.state.status === 'success' && q.queryKey[0] !== 'auth' },
+    }}>
       <I18nProvider i18n={i18n}>{children}</I18nProvider>
     </PersistQueryClientProvider>
   );

@@ -20,9 +20,14 @@ const board = createRoute({
 const about = createRoute({ getParentRoute: () => root, path: '/forecasts/about', component: lazyRouteComponent(() => import('../features/about/ForecastsAboutPage.tsx'), 'ForecastsAboutPage') });
 const setup = createRoute({ getParentRoute: () => root, path: '/setup', component: lazyRouteComponent(() => import('../features/setup/SetupPage.tsx'), 'SetupPage') });
 const alerts = createRoute({ getParentRoute: () => root, path: '/alerts', component: lazyRouteComponent(() => import('../features/alerts/AlertsPage.tsx'), 'AlertsPage') });
+const account = createRoute({ getParentRoute: () => root, path: '/account', component: lazyRouteComponent(() => import('../features/account/AccountPage.tsx'), 'AccountPage') });
+const sell = createRoute({ getParentRoute: () => root, path: '/sell', component: lazyRouteComponent(() => import('../features/sell/LotsPage.tsx'), 'LotsPage') });
+const sellNew = createRoute({ getParentRoute: () => root, path: '/sell/new', component: lazyRouteComponent(() => import('../features/sell/NewLotPage.tsx'), 'NewLotPage') });
+const lot = createRoute({ getParentRoute: () => root, path: '/sell/$lotId', component: lazyRouteComponent(() => import('../features/sell/LotDetailPage.tsx'), 'LotDetailPage') });
+const buy = createRoute({ getParentRoute: () => root, path: '/buy', component: lazyRouteComponent(() => import('../features/buy/BuyPage.tsx'), 'BuyPage') });
 
 export const router = createRouter({
-  routeTree: root.addChildren([today, pair, board, about, setup, alerts]),
+  routeTree: root.addChildren([today, pair, board, about, setup, alerts, account, sell, sellNew, lot, buy]),
   defaultPreload: 'intent',
   scrollRestoration: true,
 });

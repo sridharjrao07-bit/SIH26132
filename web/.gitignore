@@ -3,6 +3,7 @@ dist
 dev-dist
 *.local
 .env*
+!.env.development
 !.env.example
 coverage
 src/i18n/locales/*/messages.ts
