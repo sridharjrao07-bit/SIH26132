@@ -73,7 +73,7 @@ function Delta({ now, before }: { now: number; before: number }) {
   // We use opacity animation here for price change (Motion 2)
   return (
     <p className="tabular text-sm animate-fade">
-      {diff > 0 ? <Trans>▲ {abs} ({p})</Trans> : <Trans>▼ {abs} ({p})</Trans>}
+      {diff > 0 ? <>▲ <Trans>{abs} ({p})</Trans></> : <>▼ <Trans>{abs} ({p})</Trans></>}
     </p>
   );
 }

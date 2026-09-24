@@ -63,17 +63,48 @@ function BottomNav() {
 
 export function AppShell() {
   return (
-    <div className="mx-auto min-h-dvh max-w-[1100px] pb-20">
-      <header className="rule-b flex items-center justify-between gap-2 px-4">
-        <Link to="/" className="tap flex items-center gap-2 font-semibold">
-          <svg aria-hidden width="20" height="20" viewBox="0 0 64 64"><path d="M6 46 L22 30 L34 40 L58 14" fill="none" stroke="currentColor" strokeWidth="7" /><rect x="6" y="54" width="52" height="6" fill="var(--color-sell)" /></svg>
-          <span><Trans>Krishi Bazaar</Trans></span>
-        </Link>
-        <div className="flex items-center gap-3">
-          <SyncStatus />
-          <LanguageSwitch />
+    <div className="bg-background text-on-surface antialiased font-body-md selection:bg-primary selection:text-on-primary min-h-dvh pb-20">
+      <header className="bg-surface/80 backdrop-blur-md sticky top-0 z-50 shadow-sm border-b border-outline-variant/40">
+        <div className="w-full px-space-md lg:px-margin-desktop flex items-center justify-between h-16 max-w-full">
+          {/* Brand & Sync */}
+          <div className="flex items-center gap-6">
+            <Link to="/" className="flex items-center gap-3 tap">
+              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-on-primary shadow-sm shadow-primary/30">
+                <svg aria-hidden width="20" height="20" viewBox="0 0 64 64"><path d="M6 46 L22 30 L34 40 L58 14" fill="none" stroke="currentColor" strokeWidth="7" /><rect x="6" y="54" width="52" height="6" fill="var(--color-primary-fixed)" /></svg>
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-headline-lg text-[1.375rem] font-bold text-primary tracking-tight"><Trans>Krishi Bazaar</Trans></span>
+                  <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-primary border border-emerald-200/80 font-label-sm text-label-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary-container animate-pulse"></span>
+                    <SyncStatus />
+                  </span>
+                </div>
+                <p className="hidden md:block font-label-sm text-label-sm text-on-surface-variant leading-none"><Trans>Indian APMC Telemetry & Predictive Analytics</Trans></p>
+              </div>
+            </Link>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex items-center px-2.5 py-1 rounded-lg bg-surface-container-lowest border border-outline-variant/60 shadow-xs font-label-sm">
+              <LanguageSwitch />
+            </div>
+            <div className="flex md:hidden">
+              <LanguageSwitch />
+            </div>
+            
+            <div className="hidden sm:block h-6 w-px bg-outline-variant/40 mx-1"></div>
+            <div className="hidden sm:flex items-center gap-2 pl-1">
+              <div className="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant/80 flex items-center justify-center font-headline-md text-primary font-bold text-xs">AK</div>
+              <div className="hidden 2xl:block text-left">
+                <div className="font-label-sm text-label-sm font-semibold text-on-surface leading-tight">Anand Kumar</div>
+                <div className="text-[11px] text-on-surface-variant font-body-sm">FPO Lead / Azadpur</div>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
+
       <OfflineBanner />
       <main>
         <Outlet />

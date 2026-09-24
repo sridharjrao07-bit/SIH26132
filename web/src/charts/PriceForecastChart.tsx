@@ -10,7 +10,7 @@ import { istToday, toDay } from '../domain/dates.ts';
 import type { Lang } from '../i18n/locales.ts';
 
 const C = {
-  ink: '#1A1916', ink2: '#57534A', rule: '#DDD6C8', forecast: '#2D5B88', arrivals: '#CBBFA9', paper: '#F7F4EE',
+  ink: '#0F172A', ink2: '#64748B', rule: '#E2E8F0', forecast: '#6366F1', arrivals: '#CBD5E1', paper: '#FFFFFF',
 };
 const DAY = 86_400_000;
 
@@ -120,7 +120,7 @@ export function PriceForecastChart({ series, lang, annotations = [], height = 22
 
       {/* Arrivals: a separate strip on the same time axis, never a second y-axis (Phase 4 §3.4).
           Its scale is internal and unlabeled so nobody reads magnitude across axes. */}
-      <div style={{ height: hasArrivals ? 72 : 28 }} aria-hidden={!hasArrivals}>
+      <div style={{ height: hasArrivals ? 48 : 28 }} aria-hidden={!hasArrivals}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={points} syncId="pair" margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
             {xAxis(false)}
