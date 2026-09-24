@@ -1,0 +1,569 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-09-24 11:43+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: mr\n"
+
+#: src/features/price-detail/PairView.tsx:189
+msgid "— Same as the last price"
+msgstr "— मागील भावाइतकाच"
+
+#. placeholder {0}: formatNumber(sale.arrivals_qty)
+#: src/features/sale-window/SaleWindowCard.tsx:36
+msgid "{0} qtl"
+msgstr "{0} क्विंटल"
+
+#: src/features/trust/ModelChip.tsx:64
+msgid "{observations} days"
+msgstr "{observations} दिवस"
+
+#: src/features/trust/ModelChip.tsx:43
+msgid "{observations} days of data"
+msgstr "{observations} दिवसांचा डेटा"
+
+#: src/features/price-detail/PairView.tsx:118
+msgid "{r}d"
+msgstr "{r} दि."
+
+#: src/features/price-detail/PairView.tsx:94
+msgid "/quintal"
+msgstr "/क्विंटल"
+
+#: src/features/price-detail/PairView.tsx:195
+msgid "▲ {abs} ({p}) since the last price"
+msgstr "▲ मागील भावापेक्षा {abs} ({p}) जास्त"
+
+#: src/features/price-detail/PairView.tsx:195
+msgid "▼ {abs} ({p}) since the last price"
+msgstr "▼ मागील भावापेक्षा {abs} ({p}) कमी"
+
+#: src/features/price-detail/PairView.tsx:118
+msgid "1y"
+msgstr "1 वर्ष"
+
+#: src/features/board/BoardPage.tsx:46
+msgid "7 days"
+msgstr "7 दिवस"
+
+#: src/features/trust/HealthNotice.tsx:24
+msgid "A forecast needs at least {need} days of prices. This mandi has {observations} so far."
+msgstr "अंदाजासाठी किमान {need} दिवसांचे भाव हवेत. या बाजारात आत्तापर्यंत {observations} दिवसांचे भाव आहेत."
+
+#: src/features/trust/methods.ts:26
+msgid "A machine-learning model trained on prices, arrivals, weather and market signals across mandis."
+msgstr "अनेक बाजारांतील भाव, आवक, हवामान आणि बाजारातील घडामोडींवर प्रशिक्षित मशीन-लर्निंग मॉडेल."
+
+#. placeholder {0}: t.min_forecast_days
+#. placeholder {1}: t.min_backtest_days
+#: src/features/trust/AccuracyCard.tsx:40
+msgid "A mandi needs {0} days of prices before we forecast, and {1} days before accuracy can be tested."
+msgstr "अंदाज देण्यापूर्वी बाजाराचे {0} दिवसांचे भाव लागतात, आणि अचूकता तपासण्यासाठी {1} दिवसांचे."
+
+#: src/features/trust/methods.ts:15
+msgid "A mix of the recent average and the recent trend. Used automatically when there is enough history but no advanced model has been approved."
+msgstr "अलीकडील सरासरी आणि अलीकडील कल यांचे मिश्रण. पुरेसा इतिहास असेल पण कोणतेही प्रगत मॉडेल मंजूर झाले नसेल तेव्हा आपोआप वापरले जाते."
+
+#: src/features/about/ForecastsAboutPage.tsx:33
+msgid "A more complex model is used only if it beats a simple one on real past prices. Every forecast names the model that made it."
+msgstr "प्रत्यक्ष जुन्या भावांवर साध्या मॉडेलपेक्षा चांगले ठरले तरच गुंतागुंतीचे मॉडेल वापरले जाते. प्रत्येक अंदाजासोबत तो कोणत्या मॉडेलने दिला ते दाखवले जाते."
+
+#: src/features/trust/methods.ts:21
+msgid "A regression on recent prices, mandi arrivals, rainfall and district prices. Signals that did not change recently are dropped automatically."
+msgstr "अलीकडील भाव, बाजारातील आवक, पाऊस आणि जिल्ह्यातील भाव यांवर आधारित रिग्रेशन. अलीकडे न बदललेले घटक आपोआप वगळले जातात."
+
+#: src/app/AppShell.tsx:58
+msgid "About forecasts"
+msgstr "अंदाजाविषयी"
+
+#: src/features/trust/AccuracyCard.tsx:87
+msgid "Accuracy: not measured yet. We are collecting history first."
+msgstr "अचूकता: अजून मोजलेली नाही. आधी भावांचा इतिहास गोळा करत आहोत."
+
+#: src/features/price-detail/PairView.tsx:158
+msgid "Advice"
+msgstr "सल्ला"
+
+#: src/app/AppShell.tsx:57
+msgid "Alerts"
+msgstr "सूचना"
+
+#: src/features/alerts/AlertsPage.tsx:9
+msgid "Alerts arrive by SMS, not in this app. Signing in is needed to set them up. This screen is coming next."
+msgstr "सूचना SMS ने येतात, या ॲपमध्ये नाही. त्या लावण्यासाठी लॉगिन आवश्यक आहे. ही सुविधा लवकरच येत आहे."
+
+#: src/charts/PriceForecastChart.tsx:49
+msgid "arrivals"
+msgstr "आवक"
+
+#: src/features/sale-window/SaleWindowCard.tsx:33
+msgid "Arrivals"
+msgstr "आवक"
+
+#: src/features/sale-window/SaleWindowCard.tsx:45
+msgid "Available"
+msgstr "उपलब्ध"
+
+#: src/features/trust/AccuracyCard.tsx:69
+msgid "Average % error"
+msgstr "सरासरी % चूक"
+
+#: src/features/trust/methods.ts:14
+msgid "Average + trend"
+msgstr "सरासरी + कल"
+
+#: src/features/trust/methods.ts:17
+msgid "Average of recent prices, carried forward."
+msgstr "अलीकडील भावांची सरासरी, पुढे चालवलेली."
+
+#: src/features/trust/methods.ts:11
+msgid "Average of the last 7 days of prices, carried forward. Used when a mandi has only 10–14 days of history."
+msgstr "मागील 7 दिवसांच्या भावांची सरासरी, पुढे चालवलेली. बाजाराचा फक्त 10–14 दिवसांचा इतिहास असताना वापरली जाते."
+
+#: src/features/about/ForecastsAboutPage.tsx:20
+msgid "Bars below: how much produce arrived at the mandi. More arrivals often mean lower prices."
+msgstr "खालील पट्ट्या: बाजारात किती माल आला. आवक जास्त असल्यास भाव अनेकदा कमी होतो."
+
+#: src/charts/PriceForecastChart.tsx:133
+msgid "Bars: arrivals at the mandi (quintal)"
+msgstr "पट्ट्या: बाजारातील आवक (क्विंटल)"
+
+#: src/features/sale-window/BetterMarketCard.tsx:18
+msgid "Better price nearby"
+msgstr "जवळ चांगला भाव"
+
+#: src/features/board/BoardPage.tsx:46
+msgid "Change"
+msgstr "बदल"
+
+#: src/features/setup/SetupPage.tsx:44
+msgid "Choose your language"
+msgstr "तुमची भाषा निवडा"
+
+#: src/features/trust/ModelChip.tsx:57
+msgid "Close"
+msgstr "बंद करा"
+
+#: src/features/trust/ModelChip.tsx:65
+msgid "Confidence"
+msgstr "विश्वास"
+
+#: src/features/trust/methods.ts:18
+msgid "Continues the recent price trend in a straight line."
+msgstr "अलीकडील भावांचा कल सरळ रेषेत पुढे नेतो."
+
+#: src/features/price-detail/PairView.tsx:77
+msgid "Crop"
+msgstr "पीक"
+
+#: src/features/about/ForecastsAboutPage.tsx:18
+msgid "Dashed line: the model’s forecast for the next few days."
+msgstr "तुटक रेषा: पुढील काही दिवसांचा मॉडेलचा अंदाज."
+
+#: src/features/price-detail/PairView.tsx:140
+msgid "Enlarge the forecast ›"
+msgstr "अंदाज मोठा करून पहा ›"
+
+#: src/features/sale-window/SaleWindowCard.tsx:22
+msgid "Falling"
+msgstr "घसरता"
+
+#: src/features/setup/SetupPage.tsx:72
+msgid "Finding your location…"
+msgstr "तुमचे ठिकाण शोधत आहोत…"
+
+#: src/charts/PriceForecastChart.tsx:54
+msgid "forecast"
+msgstr "अंदाज"
+
+#: src/features/sale-window/SaleWindowCard.tsx:39
+msgid "Forecast"
+msgstr "अंदाज"
+
+#: src/features/trust/AccuracyCard.tsx:21
+msgid "Forecast accuracy"
+msgstr "अंदाजाची अचूकता"
+
+#. placeholder {0}: formatTime(generatedAt, lang)
+#: src/features/trust/AsOfStamp.tsx:23
+msgid "forecast updated {0}"
+msgstr "अंदाज {0} ला अद्ययावत"
+
+#: src/features/trust/ModelChip.tsx:67
+msgid "Generated"
+msgstr "तयार केला"
+
+#: src/features/alerts/AlertsPage.tsx:8
+msgid "Get an SMS when the price at your mandi goes above or below a price you choose."
+msgstr "तुमच्या बाजारातील भाव तुम्ही ठरवलेल्या भावाच्या वर किंवा खाली गेल्यावर SMS मिळवा."
+
+#: src/features/trust/methods.ts:25
+msgid "Gradient boosting (GBM)"
+msgstr "ग्रेडियंट बूस्टिंग (GBM)"
+
+#: src/features/sale-window/SaleWindowCard.tsx:18
+msgid "High"
+msgstr "जास्त"
+
+#: src/features/trust/ModelChip.tsx:30
+msgid "high confidence"
+msgstr "जास्त विश्वास"
+
+#: src/features/trust/methods.ts:23
+msgid "Holt-Winters smoothing: follows the level and trend of prices over time."
+msgstr "होल्ट-विंटर्स पद्धत: वेळेनुसार भावांची पातळी आणि कल यांचा मागोवा घेते."
+
+#: src/features/trust/ModelChip.tsx:76
+msgid "How forecasts are checked"
+msgstr "अंदाज कसे तपासले जातात"
+
+#: src/features/about/ForecastsAboutPage.tsx:12
+msgid "How forecasts work"
+msgstr "अंदाज कसे काढले जातात"
+
+#: src/features/trust/AccuracyCard.tsx:73
+#: src/features/trust/AccuracyCard.tsx:91
+msgid "In past tests, the real price stayed inside the likely range {inTen} times out of 10."
+msgstr "जुन्या चाचण्यांमध्ये प्रत्यक्ष भाव 10 पैकी {inTen} वेळा संभाव्य पट्ट्यात राहिला."
+
+#: src/features/price-detail/ChartCaption.tsx:29
+msgid "In past tests, the real price stayed inside this range {inTen} times out of 10."
+msgstr "जुन्या चाचण्यांमध्ये प्रत्यक्ष भाव 10 पैकी {inTen} वेळा या पट्ट्यात राहिला."
+
+#: src/app/AppShell.tsx:69
+msgid "Krishi Bazaar"
+msgstr "कृषी बाजार"
+
+#: src/app/AppShell.tsx:13
+msgid "Language"
+msgstr "भाषा"
+
+#: src/features/price-detail/PairView.tsx:92
+msgid "Latest mandi price (modal)"
+msgstr "बाजारातील ताजा भाव (सर्वसाधारण)"
+
+#: src/charts/PriceForecastChart.tsx:56
+msgid "likely"
+msgstr "संभाव्य"
+
+#: src/features/price-detail/ChartCaption.tsx:26
+msgid "Likely range for the next {horizonDays} days: {lo}–{hi} (model’s estimate)."
+msgstr "पुढील {horizonDays} दिवसांचा संभाव्य भाव: {lo}–{hi} (मॉडेलचा अंदाज)."
+
+#: src/app/AppShell.tsx:35
+msgid "Live"
+msgstr "चालू"
+
+#: src/features/sale-window/SaleWindowCard.tsx:19
+msgid "Low"
+msgstr "कमी"
+
+#: src/features/trust/ModelChip.tsx:32
+msgid "low confidence"
+msgstr "कमी विश्वास"
+
+#: src/features/board/BoardPage.tsx:46
+#: src/features/price-detail/PairView.tsx:80
+msgid "Mandi"
+msgstr "बाजार"
+
+#: src/features/trust/AsOfStamp.tsx:18
+msgid "Mandi price of {day}"
+msgstr "{day} चा बाजारभाव"
+
+#: src/features/board/BoardPage.tsx:29
+msgid "Mandi prices · {district}"
+msgstr "बाजारभाव · {district}"
+
+#: src/charts/PriceForecastChart.tsx:46
+msgid "max"
+msgstr "कमाल"
+
+#: src/features/trust/ModelChip.tsx:30
+msgid "medium confidence"
+msgstr "मध्यम विश्वास"
+
+#: src/charts/PriceForecastChart.tsx:46
+msgid "min"
+msgstr "किमान"
+
+#. placeholder {0}: formatINR(last.min)
+#. placeholder {1}: formatINR(last.max)
+#: src/features/price-detail/PairView.tsx:98
+msgid "Min {0} · Max {1}"
+msgstr "किमान {0} · कमाल {1}"
+
+#: src/features/trust/ModelChip.tsx:60
+msgid "Model details are not available."
+msgstr "मॉडेलची माहिती उपलब्ध नाही."
+
+#: src/features/trust/ModelChip.tsx:69
+msgid "Model version"
+msgstr "मॉडेल आवृत्ती"
+
+#: src/features/trust/ModelChip.tsx:42
+msgid "Model: {label}"
+msgstr "मॉडेल: {label}"
+
+#: src/features/about/ForecastsAboutPage.tsx:23
+msgid "Models we use"
+msgstr "आम्ही वापरतो ती मॉडेल्स"
+
+#: src/features/trust/methods.ts:10
+#: src/features/trust/methods.ts:17
+msgid "Moving average"
+msgstr "चल सरासरी"
+
+#. placeholder {0}: forecastPts.length
+#: src/charts/PriceForecastChart.tsx:88
+msgid "next {0} days"
+msgstr "पुढील {0} दिवस"
+
+#: src/features/sale-window/SaleWindowCard.tsx:56
+msgid "No advice for today"
+msgstr "आजसाठी सल्ला नाही"
+
+#: src/features/board/BoardPage.tsx:58
+#: src/features/trust/methods.ts:28
+msgid "No forecast"
+msgstr "अंदाज नाही"
+
+#. placeholder {0}: series.missingDays
+#: src/features/price-detail/PairView.tsx:131
+msgid "No mandi price for the last {0} days (dotted line)."
+msgstr "मागील {0} दिवस बाजारभाव नाही (ठिपक्यांची रेषा)."
+
+#: src/features/markets/OtherMarketsList.tsx:28
+msgid "No other mandi reported this crop in the last 7 days."
+msgstr "मागील 7 दिवसांत इतर कोणत्याही बाजारात या पिकाचा भाव नोंदला नाही."
+
+#: src/features/trust/HealthNotice.tsx:28
+msgid "No recent price for this crop at this mandi."
+msgstr "या बाजारात या पिकाचा अलीकडील भाव नाही."
+
+#: src/features/sale-window/SaleWindowCard.tsx:45
+msgid "None nearby"
+msgstr "जवळ नाही"
+
+#: src/features/sale-window/SaleWindowCard.tsx:20
+msgid "Normal"
+msgstr "सामान्य"
+
+#: src/features/board/BoardPage.tsx:59
+msgid "Not enough data for a forecast yet"
+msgstr "अंदाजासाठी अजून पुरेसा डेटा नाही"
+
+#: src/features/trust/methods.ts:28
+msgid "Not enough price history to make an honest forecast."
+msgstr "प्रामाणिक अंदाजासाठी पुरेसा भावांचा इतिहास नाही."
+
+#: src/features/trust/AccuracyCard.tsx:29
+msgid "Not measured yet"
+msgstr "अजून मोजलेली नाही"
+
+#: src/features/trust/ModelChip.tsx:70
+msgid "Not published yet"
+msgstr "अजून प्रकाशित नाही"
+
+#: src/charts/PriceForecastChart.tsx:49
+#: src/features/sale-window/SaleWindowCard.tsx:36
+msgid "not reported"
+msgstr "नोंद नाही"
+
+#: src/app/AppShell.tsx:35
+msgid "Offline"
+msgstr "ऑफलाइन"
+
+#. placeholder {0}: cropName(crop, lang)
+#: src/features/price-detail/PairView.tsx:168
+msgid "Other mandis · {0}"
+msgstr "इतर बाजार · {0}"
+
+#: src/features/board/BoardPage.tsx:46
+msgid "Price"
+msgstr "भाव"
+
+#: src/features/alerts/AlertsPage.tsx:7
+msgid "Price alerts"
+msgstr "भाव सूचना"
+
+#: src/charts/PriceForecastChart.tsx:81
+msgid "Price chart with forecast"
+msgstr "अंदाजासह भावाचा आलेख"
+
+#: src/features/price-detail/ChartCaption.tsx:23
+msgid "Price fell {pct} in {days} days."
+msgstr "{days} दिवसांत भाव {pct} ने घटला."
+
+#: src/features/trust/AsOfStamp.tsx:16
+msgid "Price from {day} ({age} days old)"
+msgstr "{day} चा भाव ({age} दिवस जुना)"
+
+#: src/features/trust/ModelChip.tsx:63
+msgid "Price history used"
+msgstr "वापरलेला भावांचा इतिहास"
+
+#. placeholder {0}: formatDay(row.date, lang)
+#: src/features/board/BoardPage.tsx:63
+msgid "Price of {0}"
+msgstr "{0} चा भाव"
+
+#: src/features/price-detail/ChartCaption.tsx:22
+msgid "Price rose {pct} in {days} days."
+msgstr "{days} दिवसांत भाव {pct} ने वाढला."
+
+#: src/features/price-detail/PairView.tsx:112
+msgid "Price trend"
+msgstr "भावाचा कल"
+
+#: src/features/price-detail/ChartCaption.tsx:24
+msgid "Price was steady over {days} days."
+msgstr "{days} दिवसांत भाव स्थिर राहिला."
+
+#: src/app/AppShell.tsx:56
+msgid "Prices"
+msgstr "बाजारभाव"
+
+#: src/features/board/BoardPage.tsx:77
+msgid "Prices in ₹ per quintal. Change is against the previous reported day."
+msgstr "भाव ₹ प्रति क्विंटल. बदल मागील नोंदवलेल्या दिवसाच्या तुलनेत."
+
+#: src/features/trust/AccuracyCard.tsx:63
+msgid "Provisional: tested on a few mandis only."
+msgstr "तात्पुरते: फक्त काही बाजारांवर तपासलेले."
+
+#: src/charts/PriceForecastChart.tsx:49
+msgid "qtl"
+msgstr "क्विं."
+
+#: src/features/price-detail/PairView.tsx:114
+msgid "Range"
+msgstr "कालावधी"
+
+#: src/features/sale-window/SaleWindowCard.tsx:21
+msgid "Rising"
+msgstr "वाढता"
+
+#: src/features/trust/methods.ts:23
+msgid "Seasonal smoothing"
+msgstr "हंगामी सरासरी पद्धत"
+
+#: src/features/about/ForecastsAboutPage.tsx:38
+msgid "Sell / Hold / Wait is decided by the server from mandi arrivals, nearby storage and the forecast. The app shows the advice exactly as the server gives it."
+msgstr "विका / थांबा हा सल्ला सर्व्हर बाजारातील आवक, जवळची साठवण आणि अंदाज यांवरून ठरवतो. ॲप तो सल्ला जसाच्या तसा दाखवते."
+
+#: src/features/price-detail/PairView.tsx:174
+msgid "Send me an SMS when the price changes"
+msgstr "भाव बदलल्यावर मला SMS पाठवा"
+
+#: src/features/about/ForecastsAboutPage.tsx:19
+msgid "Shaded area: the likely range. The real price can still fall outside it."
+msgstr "छटा असलेला भाग: संभाव्य भाव. प्रत्यक्ष भाव याच्या बाहेरही जाऊ शकतो."
+
+#: src/features/price-detail/PairDetailPage.tsx:24
+msgid "Show this on my Today screen"
+msgstr "हे माझ्या 'आज' स्क्रीनवर दाखवा"
+
+#: src/features/about/ForecastsAboutPage.tsx:17
+msgid "Solid line: real mandi prices (modal price, ₹ per quintal)."
+msgstr "सलग रेषा: प्रत्यक्ष बाजारभाव (सर्वसाधारण भाव, ₹ प्रति क्विंटल)."
+
+#: src/features/setup/SetupPage.tsx:72
+msgid "Sort by distance from me"
+msgstr "माझ्यापासूनच्या अंतरानुसार लावा"
+
+#: src/features/sale-window/SaleWindowCard.tsx:23
+msgid "Steady"
+msgstr "स्थिर"
+
+#. placeholder {0}: step + 1
+#: src/features/setup/SetupPage.tsx:41
+msgid "Step {0} of 3"
+msgstr "पायरी {0} / 3"
+
+#: src/features/sale-window/SaleWindowCard.tsx:44
+msgid "Storage"
+msgstr "साठवण"
+
+#: src/features/trust/methods.ts:18
+msgid "Straight-line trend"
+msgstr "सरळ रेषेतील कल"
+
+#: src/features/trust/HealthNotice.tsx:20
+msgid "The forecast is out of date, so it is hidden. Waiting for new mandi data."
+msgstr "अंदाज जुना आहे, म्हणून लपवला आहे. नवीन बाजार डेटाची वाट पाहत आहोत."
+
+#: src/features/trust/HealthNotice.tsx:25
+msgid "There is not enough price history yet for an honest forecast."
+msgstr "प्रामाणिक अंदाजासाठी अजून पुरेसा भावांचा इतिहास नाही."
+
+#: src/features/trust/HealthNotice.tsx:17
+msgid "This forecast is more than a day old. New prices have not arrived from the mandi yet."
+msgstr "हा अंदाज एक दिवसापेक्षा जुना आहे. बाजारातून नवीन भाव अजून आलेले नाहीत."
+
+#: src/features/sale-window/SaleWindowCard.tsx:58
+msgid "This mandi has not reported a price for this crop in the last 15 days. Try a nearby mandi below."
+msgstr "या बाजाराने मागील 15 दिवसांत या पिकाचा भाव नोंदवलेला नाही. खालील जवळचा बाजार पहा."
+
+#: src/charts/PriceForecastChart.tsx:109
+msgid "today"
+msgstr "आज"
+
+#: src/app/AppShell.tsx:55
+msgid "Today"
+msgstr "आज"
+
+#. placeholder {0}: formatINR(f.predicted_price)
+#: src/features/board/BoardPage.tsx:60
+msgid "Tomorrow likely {0}"
+msgstr "उद्या संभाव्य {0}"
+
+#: src/features/trust/methods.ts:20
+msgid "Trend with arrivals and weather"
+msgstr "आवक व हवामानासह कल"
+
+#: src/features/trust/AccuracyCard.tsx:66
+msgid "Typical error"
+msgstr "सर्वसाधारण चूक"
+
+#: src/features/trust/AccuracyCard.tsx:35
+msgid "Until then, every forecast is shown with its likely range and the name of the model that made it, never as a single certain number."
+msgstr "तोपर्यंत प्रत्येक अंदाज त्याच्या संभाव्य पट्ट्यासह आणि तो देणाऱ्या मॉडेलच्या नावासह दाखवला जातो, कधीही एकच निश्चित आकडा म्हणून नाही."
+
+#: src/app/AppShell.tsx:35
+msgid "Updating…"
+msgstr "अद्ययावत करत आहे…"
+
+#: src/features/trust/AccuracyCard.tsx:46
+msgid "Verified history"
+msgstr "तपासलेला इतिहास"
+
+#: src/features/trust/AccuracyCard.tsx:31
+msgid "We are still collecting mandi history. Accuracy will be published only after the forecasts have been tested against real past prices."
+msgstr "आम्ही अजून बाजारभावांचा इतिहास गोळा करत आहोत. प्रत्यक्ष जुन्या भावांवर अंदाज तपासल्यानंतरच अचूकता प्रकाशित केली जाईल."
+
+#: src/features/about/ForecastsAboutPage.tsx:15
+msgid "What the chart shows"
+msgstr "आलेख काय दाखवतो"
+
+#: src/features/about/ForecastsAboutPage.tsx:36
+msgid "Where the advice comes from"
+msgstr "सल्ला कुठून येतो"
+
+#: src/features/setup/SetupPage.tsx:56
+msgid "Which crop do you sell?"
+msgstr "तुम्ही कोणते पीक विकता?"
+
+#: src/features/setup/SetupPage.tsx:68
+msgid "Which mandi do you sell at?"
+msgstr "तुम्ही कोणत्या बाजारात विकता?"
+
+#: src/features/trust/ModelChip.tsx:56
+msgid "Which model made this forecast?"
+msgstr "हा अंदाज कोणत्या मॉडेलने दिला?"
+
+#: src/app/AppShell.tsx:45
+msgid "You are offline. Showing the prices saved on this phone. Check the date on each price."
+msgstr "तुम्ही ऑफलाइन आहात. या फोनवर साठवलेले भाव दाखवत आहोत. प्रत्येक भावाची तारीख तपासा."
