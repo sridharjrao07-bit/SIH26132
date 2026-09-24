@@ -3,11 +3,11 @@ import type { ReactNode } from 'react';
 /** Elevated Bento Card style. */
 export function Section({ title, aside, children, className = '' }: { title?: ReactNode; aside?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`glass-tile rounded-2xl p-6 relative m-4 ${className} hover:shadow-lg transition-all duration-300`}>
+    <section className={`px-4 py-6 md:py-8 border-b-2 border-rule last:border-b-0 ${className}`}>
       {(title || aside) && (
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5 mb-4">
-          {title && <h2 className="font-headline-md text-headline-md font-bold text-slate-900 tracking-tight">{title}</h2>}
-          {aside && <div className="flex flex-wrap items-center gap-3">{aside}</div>}
+        <div className="flex flex-col md:flex-row md:items-baseline justify-between gap-4 mb-6">
+          {title && <h2 className="text-xl md:text-2xl font-semibold leading-tight text-ink">{title}</h2>}
+          {aside && <div className="flex items-center gap-3 text-sm font-medium">{aside}</div>}
         </div>
       )}
       {children}

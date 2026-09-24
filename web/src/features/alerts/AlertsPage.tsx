@@ -9,7 +9,7 @@ import { commoditiesQuery, latestForCommodityQuery, marketsQuery } from '../../q
 import { usePrefs } from '../../stores/prefs.ts';
 import { cropName } from '../price-detail/PairView.tsx';
 import { formatDateTime, formatDay, formatINR } from '../../domain/format.ts';
-import { Button, ErrorNote, Field, NativeSelect, fieldError, numOrUndef } from '../../ui/Form.tsx';
+import { Button, ErrorNote, fieldError, numOrUndef } from '../../ui/Form.tsx';
 import { Section } from '../../ui/Section.tsx';
 import { Block } from '../../ui/Skeleton.tsx';
 
@@ -69,31 +69,45 @@ function NewAlert() {
 
   return (
     <Section title={<Trans>New alert</Trans>}>
-      <form onSubmit={submit} className="space-y-3">
-        <NativeSelect label={<Trans>Crop</Trans>} value={cropId} onChange={setCrop}>
-          {(commodities.data ?? []).map((c) => <option key={c.id} value={c.id}>{cropName(c, lang)}</option>)}
-        </NativeSelect>
-        <NativeSelect label={<Trans>Mandi</Trans>} value={market} onChange={setMarket}>
-          <option value="">{t`Nearest mandi to me`}</option>
-          {(markets.data ?? []).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-        </NativeSelect>
-        <fieldset>
-          <legend className="text-sm font-semibold"><Trans>Send the SMS when the price</Trans></legend>
-          <div className="mt-1 grid grid-cols-2 gap-2">
-            {(['gte', 'lte'] as const).map((c) => (
-              <label key={c} className={`tap flex items-center gap-2 rounded border px-3 ${condition === c ? 'border-ink font-semibold' : 'border-rule'}`}>
-                <input type="radio" name="condition" value={c} checked={condition === c} onChange={() => setCondition(c)} />
-                {c === 'gte' ? <Trans>goes above</Trans> : <Trans>falls below</Trans>}
-              </label>
-            ))}
-          </div>
-        </fieldset>
-        <Field label={<Trans>Price</Trans>} inputMode="numeric" required value={price} onChange={(e) => setPrice(e.target.value)}
-          suffix={<Trans>₹ / quintal</Trans>} error={fieldError(create.error, 'threshold_price')}
-          hint={current ? <Trans>Latest price here: {formatINR(current.modal)} on {formatDay(current.date, lang)}</Trans> : undefined} />
-        <Field label={<Trans>Stop after (optional)</Trans>} type="date" value={expires} onChange={(e) => setExpires(e.target.value)} />
-        {!fieldError(create.error, 'threshold_price') && <ErrorNote error={create.error} />}
-        <Button type="submit" disabled={create.isPending || !numOrUndef(price)} className="w-full"><Trans>Save alert</Trans></Button>
+      <form onSubmit={submit} className="bg-paper-2 rounded p-4 md:p-6 mb-8 mt-2">
+        <p className="text-lg md:text-xl leading-relaxed md:leading-loose font-medium">
+          <Trans>
+            SMS me when the price at{' '}
+            <select className="bg-paper text-ink border border-ink-2 rounded px-2 py-1 mx-1 text-base md:text-lg font-semibold" value={market} onChange={(e) => setMarket(e.target.value)}>
+              <option value="">{t`nearest mandi`}</option>
+              {(markets.data ?? []).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>{' '}
+            goes{' '}
+            <select className="bg-paper text-ink border border-ink-2 rounded px-2 py-1 mx-1 text-base md:text-lg font-semibold" value={condition} onChange={(e) => setCondition(e.target.value as any)}>
+              <option value="gte">{t`above`}</option>
+              <option value="lte">{t`below`}</option>
+            </select>{' '}
+            <input type="number" className="bg-paper text-ink border border-ink-2 rounded px-2 py-1 mx-1 text-base md:text-lg tabular text-center font-semibold w-24" placeholder="₹" value={price} onChange={(e) => setPrice(e.target.value)} required />{' '}
+            for{' '}
+            <select className="bg-paper text-ink border border-ink-2 rounded px-2 py-1 mx-1 text-base md:text-lg font-semibold" value={cropId} onChange={(e) => setCrop(e.target.value)}>
+              {(commodities.data ?? []).map((c) => <option key={c.id} value={c.id}>{cropName(c, lang)}</option>)}
+            </select>.
+          </Trans>
+        </p>
+
+        {current && (
+          <p className="text-sm text-ink-2 mt-4">
+            <Trans>Latest price here: {formatINR(current.modal)} on {formatDay(current.date, lang)}</Trans>
+          </p>
+        )}
+        
+        <div className="mt-6 flex flex-col md:flex-row items-start md:items-center gap-4">
+           <label className="text-sm flex items-center gap-2">
+             <span className="font-semibold text-ink-2"><Trans>Stop after (optional):</Trans></span>
+             <input type="date" className="bg-paper border border-rule rounded px-2 py-1 text-sm font-semibold tabular" value={expires} onChange={(e) => setExpires(e.target.value)} />
+           </label>
+           <div className="flex-1" />
+           <Button type="submit" disabled={create.isPending || !numOrUndef(price)} className="w-full md:w-auto px-8">
+             <Trans>Save alert</Trans>
+           </Button>
+        </div>
+        {!fieldError(create.error, 'threshold_price') && <ErrorNote error={create.error} className="mt-4" />}
+        {fieldError(create.error, 'threshold_price') && <p className="text-wait font-semibold text-sm mt-2">{fieldError(create.error, 'threshold_price')}</p>}
       </form>
     </Section>
   );
@@ -106,9 +120,9 @@ function AlertList() {
   return (
     <Section title={<Trans>Your alerts</Trans>}>
       {q.data.length === 0 ? (
-        <p className="text-sm text-ink-2"><Trans>No alerts yet.</Trans></p>
+        <p className="text-sm text-ink-2 mt-2"><Trans>No alerts yet.</Trans></p>
       ) : (
-        <ul className="-mx-4">{q.data.map((a) => <AlertRow key={a.id} alert={a} />)}</ul>
+        <ul className="mt-2">{q.data.map((a) => <AlertRow key={a.id} alert={a} />)}</ul>
       )}
     </Section>
   );
@@ -116,6 +130,7 @@ function AlertList() {
 
 function AlertRow({ alert: a }: { alert: Alert }) {
   const { lang, district } = usePrefs();
+  const { t } = useLingui();
   const commodities = useQuery(commoditiesQuery());
   const markets = useQuery(marketsQuery(district));
   const toggle = useAuthMutation(() => alertsApi.update(a.id, { active: !a.active }));   // only the touched field
@@ -128,26 +143,31 @@ function AlertRow({ alert: a }: { alert: Alert }) {
   const price = formatINR(a.threshold_price);
 
   return (
-    <li className="rule-t px-4 py-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className={a.active && !expired ? '' : 'text-ink-2'}>
-          <p className="font-semibold">{crop} · {mandi ?? <Trans>nearest mandi</Trans>}</p>
-          <p className="tabular text-sm">{a.condition === 'gte' ? <Trans>Above {price}</Trans> : <Trans>Below {price}</Trans>}</p>
-          <p className="text-xs text-ink-2">
+    <li className="rule-t py-6 -mx-4 px-4">
+      <div className="flex flex-col md:flex-row items-start justify-between gap-4">
+        <div className={a.active && !expired ? '' : 'text-ink-2 opacity-60'}>
+          <p className="text-lg leading-snug font-medium">
+            <Trans>
+              SMS me when <strong>{mandi ?? t`nearest mandi`}</strong> goes {a.condition === 'gte' ? <strong>{t`above`}</strong> : <strong>{t`below`}</strong>} <strong>{price}</strong> for {crop}.
+            </Trans>
+          </p>
+          <p className="text-sm mt-2 font-medium">
             {expired ? <Trans>Expired</Trans> : !a.active ? <Trans>Paused</Trans> : a.expires_at ? <Trans>Until {formatDay(a.expires_at, lang)}</Trans> : <Trans>No end date</Trans>}
             {a.last_notified_at && <> · <Trans>Last SMS {formatDateTime(a.last_notified_at, lang)}</Trans></>}
           </p>
         </div>
-        <div className="flex shrink-0 gap-1">
+        <div className="flex shrink-0 gap-2 w-full md:w-auto">
           {!expired && (
-            <Button variant="secondary" className="text-sm" disabled={toggle.isPending} onClick={() => toggle.mutate(undefined)}>
+            <Button variant="secondary" className="flex-1 md:flex-none text-sm" disabled={toggle.isPending} onClick={() => toggle.mutate(undefined)}>
               {a.active ? <Trans>Pause</Trans> : <Trans>Resume</Trans>}
             </Button>
           )}
-          <Button variant="quiet" className="text-sm" disabled={remove.isPending} onClick={() => remove.mutate(undefined)}><Trans>Delete</Trans></Button>
+          <Button variant="quiet" className="flex-1 md:flex-none text-sm border border-rule md:border-transparent" disabled={remove.isPending} onClick={() => remove.mutate(undefined)}>
+            <Trans>Delete</Trans>
+          </Button>
         </div>
       </div>
-      <ErrorNote error={toggle.error ?? remove.error} />
+      <ErrorNote error={toggle.error ?? remove.error} className="mt-2" />
     </li>
   );
 }
