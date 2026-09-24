@@ -62,11 +62,13 @@ IST = timezone(timedelta(hours=5, minutes=30))
 TODAY = datetime.now(IST).date()
 
 MARKETS = [
-    {"id": "11111111-1111-1111-1111-111111111101", "name": "Lasalgaon",  "district": "Nashik", "state": "Maharashtra", "taluka": "Niphad",   "lat": 20.1495, "lng": 74.2273, "is_active": True},
-    {"id": "11111111-1111-1111-1111-111111111102", "name": "Pimpalgaon", "district": "Nashik", "state": "Maharashtra", "taluka": "Niphad",   "lat": 20.1694, "lng": 73.9779, "is_active": True},
-    {"id": "11111111-1111-1111-1111-111111111103", "name": "Yeola",      "district": "Nashik", "state": "Maharashtra", "taluka": "Yeola",    "lat": 20.0420, "lng": 74.4833, "is_active": True},
-    {"id": "11111111-1111-1111-1111-111111111104", "name": "Niphad",     "district": "Nashik", "state": "Maharashtra", "taluka": "Niphad",   "lat": 20.0833, "lng": 74.1167, "is_active": True},
-    {"id": "11111111-1111-1111-1111-111111111105", "name": "Malegaon",   "district": "Nashik", "state": "Maharashtra", "taluka": "Malegaon", "lat": 20.5500, "lng": 74.5333, "is_active": True},
+    # Names match db/migrations/002_seed.sql exactly — a frontend built on the
+    # mock must not learn market names the real API will never return.
+    {"id": "11111111-1111-1111-1111-111111111101", "name": "Lasalgaon APCM",          "district": "Nashik", "state": "Maharashtra", "taluka": "Niphad",  "lat": 20.1201, "lng": 74.3374, "is_active": True},
+    {"id": "11111111-1111-1111-1111-111111111102", "name": "Pimpalgaon Baswant APCM", "district": "Nashik", "state": "Maharashtra", "taluka": "Niphad",  "lat": 20.0500, "lng": 74.2700, "is_active": True},
+    {"id": "11111111-1111-1111-1111-111111111103", "name": "Yeola APCM",              "district": "Nashik", "state": "Maharashtra", "taluka": "Yeola",   "lat": 20.0440, "lng": 74.4880, "is_active": True},
+    {"id": "11111111-1111-1111-1111-111111111104", "name": "Nashik APCM",             "district": "Nashik", "state": "Maharashtra", "taluka": "Nashik",  "lat": 20.0059, "lng": 73.7797, "is_active": True},
+    {"id": "11111111-1111-1111-1111-111111111105", "name": "Manmad APCM",             "district": "Nashik", "state": "Maharashtra", "taluka": "Nandgaon","lat": 20.2540, "lng": 74.4390, "is_active": True},
 ]
 
 COMMODITIES = [
@@ -138,23 +140,47 @@ def seed_store() -> None:
                     "source": "data_gov_in", "source_ref": f"{m['name']}|{c['name_en']}",
                     "created_at": _iso(_now()), "updated_at": _iso(_now()),
                 })
-            # 7-day forward forecast from the last observation
+                # S2 fidelity: the real API returns several rows for some days
+                # (variety × source). Every 6th day gets a second row so a
+                # frontend MUST collapse to one row per day (G1) to chart it.
+                # Source precedence: data_gov_in outranks manual, so the row
+                # above must win the collapse.
+                if i % 6 == 0:
+                    prices.append({
+                        "id": _uuid(), "market_id": m["id"], "commodity_id": c["id"],
+                        "arrival_date": d.isoformat(),
+                        "min_price": round(low * 0.97, 2), "max_price": round(high * 1.03, 2),
+                        "modal_price": round(modal * rng.uniform(0.96, 1.04), 2),
+                        "unit": "quintal",
+                        "arrival_qty": None,  # G2: null arrivals exist in the wild
+                        "variety": "Red", "grade": "FAQ",
+                        "source": "manual", "source_ref": f"{m['name']}|{c['name_en']}|manual",
+                        "created_at": _iso(_now()), "updated_at": _iso(_now()),
+                    })
+            # 7-day forward forecast from the last observation.
+            # S2 fidelity, matching forecasting/engine.py:
+            #   - dates start TOMORROW (engine: horizon_start+1…+7), never today;
+            #   - ONE generated_at for the whole run (engine stamps per run);
+            #   - confidence is run-level 'high' or 'medium' — the engine NEVER
+            #     emits 'low' (reserved in schema, n<10 yields no prediction).
             last = [p for p in prices if p["market_id"] == m["id"] and p["commodity_id"] == c["id"]]
             last.sort(key=lambda p: p["arrival_date"])
             tail = last[-14:]
             observed = sum(p["modal_price"] for p in tail) / max(1, len(tail))
             slope = (tail[-1]["modal_price"] - tail[0]["modal_price"]) / max(1, len(tail)) if tail else 0.0
+            run_generated_at = _iso(_now())
+            run_confidence = "high" if rng.random() < 0.5 else "medium"
             for day in range(7):
-                d = TODAY + timedelta(days=day)
+                d = TODAY + timedelta(days=day + 1)
                 pred = round(max(50.0, observed + slope * (day + 1)), 2)
                 band = pred * (0.06 + day * 0.006)
                 forecasts.append({
                     "id": _uuid(), "market_id": m["id"], "commodity_id": c["id"],
                     "forecast_date": d.isoformat(), "predicted_price": pred,
                     "lower_bound": round(pred - band, 2), "upper_bound": round(pred + band, 2),
-                    "confidence": "high" if day < 3 else ("medium" if day < 5 else "low"),
+                    "confidence": run_confidence,
                     "method": "feature_ols", "observations": len(tail),
-                    "status": "ok", "generated_at": _iso(_now()),
+                    "status": "ok", "generated_at": run_generated_at,
                 })
 
     rng2 = random.Random(7)
@@ -298,9 +324,13 @@ def _sale_window(commodity_id: str, market_id: str | None = None, lang: str = "e
               and p["market_id"] != mid]
     if others:
         best = max(others, key=lambda p: p["modal_price"])
-        if best["modal_price"] > latest["modal_price"] * 1.03:
-            better = {"market_id": best["market_id"], "market": (_market(best["market_id"]) or {}).get("name"),
-                      "price": best["modal_price"], "delta": round(best["modal_price"] - latest["modal_price"], 2)}
+        # Shape and 5% threshold match the real API (notifications/sale_window.py):
+        # {market, modal_price, premium_rs, arrival_qty} — no market_id, no price/delta.
+        if best["modal_price"] > latest["modal_price"] * 1.05:
+            better = {"market": (_market(best["market_id"]) or {}).get("name"),
+                      "modal_price": best["modal_price"],
+                      "premium_rs": round(best["modal_price"] - latest["modal_price"], 2),
+                      "arrival_qty": best.get("arrival_qty")}
 
     if supply == "high" and not storage_available:
         rec, code = "sell", "sell_no_storage"
@@ -659,10 +689,12 @@ def _forecasts(r: Req):
         missing = "market_id" if not mid else "commodity_id"
         raise ApiError(422, [{"loc": ["query", missing], "msg": "field required", "type": "missing"}])
     days = min(r.qi("days") or 7, 7)
-    end = (TODAY + timedelta(days=days - 1)).isoformat()
+    # S1: mirror the real router — window is today+1 … today+days.
+    start = (TODAY + timedelta(days=1)).isoformat()
+    end = (TODAY + timedelta(days=days)).isoformat()
     rows = [f for f in STORE["forecasts"]
             if f["market_id"] == mid and f["commodity_id"] == cid
-            and f["status"] == "ok" and TODAY.isoformat() <= f["forecast_date"] <= end]
+            and f["status"] == "ok" and start <= f["forecast_date"] <= end]
     rows.sort(key=lambda f: f["forecast_date"])
     return [_enrich(f) for f in rows]
 
