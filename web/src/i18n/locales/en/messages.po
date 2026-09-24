@@ -13,7 +13,7 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/features/price-detail/PairView.tsx:192
+#: src/features/price-detail/PairView.tsx:69
 msgid "— Same as the last price"
 msgstr "— Same as the last price"
 
@@ -23,9 +23,14 @@ msgid "‹ My produce"
 msgstr "‹ My produce"
 
 #. placeholder {0}: formatNumber(sale.arrivals_qty)
-#: src/features/sale-window/SaleWindowCard.tsx:36
+#: src/features/sale-window/SaleWindowCard.tsx:66
 msgid "{0} qtl"
 msgstr "{0} qtl"
+
+#: src/features/price-detail/PairView.tsx:76
+#: src/features/price-detail/PairView.tsx:76
+msgid "{abs} ({p})"
+msgstr "{abs} ({p})"
 
 #: src/features/trust/ModelChip.tsx:64
 msgid "{observations} days"
@@ -53,7 +58,7 @@ msgstr "{q} qtl"
 msgid "{qty} qtl"
 msgstr "{qty} qtl"
 
-#: src/features/price-detail/PairView.tsx:119
+#: src/features/price-detail/PairView.tsx:187
 msgid "{r}d"
 msgstr "{r}d"
 
@@ -62,21 +67,9 @@ msgstr "{r}d"
 msgid "{rate} per quintal"
 msgstr "{rate} per quintal"
 
-#: src/features/price-detail/PairView.tsx:95
-msgid "/quintal"
-msgstr "/quintal"
-
 #: src/features/sell/LotsPage.tsx:40
 msgid "+ List produce"
 msgstr "+ List produce"
-
-#: src/features/price-detail/PairView.tsx:198
-msgid "▲ {abs} ({p}) since the last price"
-msgstr "▲ {abs} ({p}) since the last price"
-
-#: src/features/price-detail/PairView.tsx:198
-msgid "▼ {abs} ({p}) since the last price"
-msgstr "▼ {abs} ({p}) since the last price"
 
 #: src/features/alerts/AlertsPage.tsx:92
 #: src/features/sell/LotsPage.tsx:114
@@ -84,7 +77,7 @@ msgstr "▼ {abs} ({p}) since the last price"
 msgid "₹ / quintal"
 msgstr "₹ / quintal"
 
-#: src/features/price-detail/PairView.tsx:119
+#: src/features/price-detail/PairView.tsx:187
 msgid "1y"
 msgstr "1y"
 
@@ -151,10 +144,6 @@ msgstr "Add your phone number in Account, otherwise the SMS cannot reach you."
 msgid "Admin account"
 msgstr "Admin account"
 
-#: src/features/price-detail/PairView.tsx:161
-msgid "Advice"
-msgstr "Advice"
-
 #: src/features/sell/LotDetailPage.tsx:116
 msgid "Advice for this lot"
 msgstr "Advice for this lot"
@@ -187,7 +176,7 @@ msgstr "Any crop"
 msgid "arrivals"
 msgstr "arrivals"
 
-#: src/features/sale-window/SaleWindowCard.tsx:33
+#: src/features/sale-window/SaleWindowCard.tsx:63
 msgid "Arrivals"
 msgstr "Arrivals"
 
@@ -207,7 +196,7 @@ msgstr "Asking price (optional)"
 msgid "Asking price for the pool (optional)"
 msgstr "Asking price for the pool (optional)"
 
-#: src/features/sale-window/SaleWindowCard.tsx:45
+#: src/features/sale-window/SaleWindowCard.tsx:75
 msgid "Available"
 msgstr "Available"
 
@@ -332,6 +321,10 @@ msgstr "Close"
 msgid "Close by"
 msgstr "Close by"
 
+#: src/features/price-detail/PairView.tsx:116
+msgid "Commodity"
+msgstr "Commodity"
+
 #: src/features/sell/labels.ts:50
 msgid "Complaint being handled"
 msgstr "Complaint being handled"
@@ -375,7 +368,6 @@ msgid "Create account"
 msgstr "Create account"
 
 #: src/features/alerts/AlertsPage.tsx:73
-#: src/features/price-detail/PairView.tsx:78
 #: src/features/sell/NewLotPage.tsx:61
 msgid "Crop"
 msgstr "Crop"
@@ -421,7 +413,7 @@ msgstr "District"
 msgid "Email"
 msgstr "Email"
 
-#: src/features/price-detail/PairView.tsx:143
+#: src/features/price-detail/PairView.tsx:213
 msgid "Enlarge the forecast ›"
 msgstr "Enlarge the forecast ›"
 
@@ -438,7 +430,7 @@ msgstr "expires in {h} h"
 msgid "Failed"
 msgstr "Failed"
 
-#: src/features/sale-window/SaleWindowCard.tsx:22
+#: src/features/sale-window/SaleWindowCard.tsx:45
 msgid "Falling"
 msgstr "Falling"
 
@@ -470,7 +462,7 @@ msgstr "Finding your location…"
 msgid "forecast"
 msgstr "forecast"
 
-#: src/features/sale-window/SaleWindowCard.tsx:39
+#: src/features/sale-window/SaleWindowCard.tsx:69
 msgid "Forecast"
 msgstr "Forecast"
 
@@ -530,7 +522,7 @@ msgstr "Gradient boosting (GBM)"
 msgid "Harvest date (optional)"
 msgstr "Harvest date (optional)"
 
-#: src/features/sale-window/SaleWindowCard.tsx:18
+#: src/features/sale-window/SaleWindowCard.tsx:41
 msgid "High"
 msgstr "High"
 
@@ -568,11 +560,15 @@ msgstr "In past tests, the real price stayed inside the likely range {inTen} tim
 msgid "In past tests, the real price stayed inside this range {inTen} times out of 10."
 msgstr "In past tests, the real price stayed inside this range {inTen} times out of 10."
 
+#: src/app/AppShell.tsx:83
+msgid "Indian APMC Telemetry & Predictive Analytics"
+msgstr "Indian APMC Telemetry & Predictive Analytics"
+
 #: src/features/sell/labels.ts:55
 msgid "Institution"
 msgstr "Institution"
 
-#: src/app/AppShell.tsx:70
+#: src/app/AppShell.tsx:77
 msgid "Krishi Bazaar"
 msgstr "Krishi Bazaar"
 
@@ -584,10 +580,6 @@ msgstr "Language"
 #: src/features/alerts/AlertsPage.tsx:138
 msgid "Last SMS {0}"
 msgstr "Last SMS {0}"
-
-#: src/features/price-detail/PairView.tsx:93
-msgid "Latest mandi price (modal)"
-msgstr "Latest mandi price (modal)"
 
 #. placeholder {0}: formatINR(here.modal)
 #. placeholder {1}: formatDay(here.date, lang)
@@ -629,7 +621,7 @@ msgstr "Live"
 msgid "Lot listed"
 msgstr "Lot listed"
 
-#: src/features/sale-window/SaleWindowCard.tsx:19
+#: src/features/sale-window/SaleWindowCard.tsx:42
 msgid "Low"
 msgstr "Low"
 
@@ -647,7 +639,6 @@ msgstr "Make offer"
 
 #: src/features/alerts/AlertsPage.tsx:76
 #: src/features/board/BoardPage.tsx:46
-#: src/features/price-detail/PairView.tsx:81
 msgid "Mandi"
 msgstr "Mandi"
 
@@ -674,12 +665,6 @@ msgstr "medium confidence"
 #: src/charts/PriceForecastChart.tsx:46
 msgid "min"
 msgstr "min"
-
-#. placeholder {0}: formatINR(last.min)
-#. placeholder {1}: formatINR(last.max)
-#: src/features/price-detail/PairView.tsx:99
-msgid "Min {0} · Max {1}"
-msgstr "Min {0} · Max {1}"
 
 #: src/features/account/AccountPage.tsx:65
 #: src/features/buy/BuyPage.tsx:98
@@ -745,7 +730,7 @@ msgstr "next {0} days"
 msgid "Next:"
 msgstr "Next:"
 
-#: src/features/sale-window/SaleWindowCard.tsx:56
+#: src/features/sale-window/SaleWindowCard.tsx:86
 msgid "No advice for today"
 msgstr "No advice for today"
 
@@ -767,7 +752,7 @@ msgid "No forecast"
 msgstr "No forecast"
 
 #. placeholder {0}: series.missingDays
-#: src/features/price-detail/PairView.tsx:132
+#: src/features/price-detail/PairView.tsx:200
 msgid "No mandi price for the last {0} days (dotted line)."
 msgstr "No mandi price for the last {0} days (dotted line)."
 
@@ -791,11 +776,11 @@ msgstr "No recent price for this crop at this mandi."
 msgid "No verified local buyer fits this lot yet."
 msgstr "No verified local buyer fits this lot yet."
 
-#: src/features/sale-window/SaleWindowCard.tsx:45
+#: src/features/sale-window/SaleWindowCard.tsx:75
 msgid "None nearby"
 msgstr "None nearby"
 
-#: src/features/sale-window/SaleWindowCard.tsx:20
+#: src/features/sale-window/SaleWindowCard.tsx:43
 msgid "Normal"
 msgstr "Normal"
 
@@ -824,7 +809,7 @@ msgid "Not published yet"
 msgstr "Not published yet"
 
 #: src/charts/PriceForecastChart.tsx:49
-#: src/features/sale-window/SaleWindowCard.tsx:36
+#: src/features/sale-window/SaleWindowCard.tsx:66
 msgid "not reported"
 msgstr "not reported"
 
@@ -882,7 +867,7 @@ msgid "Other"
 msgstr "Other"
 
 #. placeholder {0}: cropName(crop, lang)
-#: src/features/price-detail/PairView.tsx:171
+#: src/features/price-detail/PairView.tsx:234
 msgid "Other mandis · {0}"
 msgstr "Other mandis · {0}"
 
@@ -1009,7 +994,7 @@ msgstr "Price of {0}"
 msgid "Price rose {pct} in {days} days."
 msgstr "Price rose {pct} in {days} days."
 
-#: src/features/price-detail/PairView.tsx:113
+#: src/features/price-detail/PairView.tsx:181
 msgid "Price trend"
 msgstr "Price trend"
 
@@ -1032,6 +1017,10 @@ msgstr "Prices in ₹ per quintal. Change is against the previous reported day."
 #: src/auth/RequireAuth.tsx:69
 msgid "Prices, forecasts and advice work without an account."
 msgstr "Prices, forecasts and advice work without an account."
+
+#: src/features/price-detail/PairView.tsx:119
+msgid "Primary APMC"
+msgstr "Primary APMC"
 
 #: src/features/sell/LotDetailPage.tsx:372
 msgid "Problems"
@@ -1082,7 +1071,7 @@ msgstr "Quantity needed"
 msgid "quintal"
 msgstr "quintal"
 
-#: src/features/price-detail/PairView.tsx:115
+#: src/features/price-detail/PairView.tsx:183
 msgid "Range"
 msgstr "Range"
 
@@ -1130,7 +1119,7 @@ msgstr "Resolved"
 msgid "Resume"
 msgstr "Resume"
 
-#: src/features/sale-window/SaleWindowCard.tsx:21
+#: src/features/sale-window/SaleWindowCard.tsx:44
 msgid "Rising"
 msgstr "Rising"
 
@@ -1172,7 +1161,7 @@ msgstr "Selling needs an account so buyers' offers reach you and every step is r
 msgid "Send"
 msgstr "Send"
 
-#: src/features/price-detail/PairView.tsx:177
+#: src/features/price-detail/PairView.tsx:168
 msgid "Send me an SMS when the price changes"
 msgstr "Send me an SMS when the price changes"
 
@@ -1230,7 +1219,7 @@ msgstr "Sort by distance from me"
 msgid "Special"
 msgstr "Special"
 
-#: src/features/sale-window/SaleWindowCard.tsx:23
+#: src/features/sale-window/SaleWindowCard.tsx:46
 msgid "Steady"
 msgstr "Steady"
 
@@ -1243,7 +1232,7 @@ msgstr "Step {0} of 3"
 msgid "Stop after (optional)"
 msgstr "Stop after (optional)"
 
-#: src/features/sale-window/SaleWindowCard.tsx:44
+#: src/features/sale-window/SaleWindowCard.tsx:74
 #: src/features/sell/LotDetailPage.tsx:172
 msgid "Storage"
 msgstr "Storage"
@@ -1284,7 +1273,7 @@ msgstr "This forecast is more than a day old. New prices have not arrived from t
 msgid "This lot was not found."
 msgstr "This lot was not found."
 
-#: src/features/sale-window/SaleWindowCard.tsx:58
+#: src/features/sale-window/SaleWindowCard.tsx:88
 msgid "This mandi has not reported a price for this crop in the last 15 days. Try a nearby mandi below."
 msgstr "This mandi has not reported a price for this crop in the last 15 days. Try a nearby mandi below."
 
