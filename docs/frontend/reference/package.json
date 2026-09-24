@@ -1,0 +1,13 @@
+{
+  "name": "krishi-bazaar-web-reference",
+  "private": true,
+  "type": "module",
+  "description": "Reference service layer for the frontend repo (Phase 5). Lift src/ into krishi-bazaar-web.",
+  "scripts": {
+    "test": "node --test test/domain.test.ts",
+    "smoke": "node test/mock.smoke.ts",
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": { "valibot": "^1.0.0" },
+  "devDependencies": { "typescript": "^5.8.0", "@types/node": "^22.0.0" }
+}
