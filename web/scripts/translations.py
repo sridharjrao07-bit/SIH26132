@@ -1,5 +1,8 @@
 # Draft mr/hi translations. NEEDS NATIVE-SPEAKER REVIEW before the demo (see README).
 # Placeholders like {0}, {day} must stay exactly as they are. Digits stay Latin.
+import re
+import sys
+
 T = {
 "— Same as the last price": ("— मागील भावाइतकाच", "— पिछले भाव जितना ही"),
 "{0} qtl": ("{0} क्विंटल", "{0} क्विंटल"),
@@ -379,7 +382,6 @@ T.update({
 })
 
 if __name__ == "__main__":
-    import re, sys
     for idx, lang in ((0, "mr"), (1, "hi")):
         p = f"src/i18n/locales/{lang}/messages.po"
         s = open(p, encoding="utf-8").read()
