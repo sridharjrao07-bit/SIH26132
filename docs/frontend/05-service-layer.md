@@ -1,4 +1,4 @@
-# Frontend Design — Phase 5: API Service Layer (PROPOSED)
+# Frontend Design — Phase 5: API Service Layer (APPROVED 2026-09-24)
 
 Reference implementation: [`reference/`](reference/). It type-checks under `strict` + `erasableSyntaxOnly`, has 7 unit tests, and a smoke test that runs against `frontend_handoff/mock/mock_api.py`.
 
@@ -60,3 +60,25 @@ export function usePairChart(p: PairParams, days: number) {
 ```
 
 Changing range from 30 to 90 days changes only the history key, so the forecast stays cached. Changing the pair aborts in-flight requests through `signal`.
+
+## Verified output (mock at `arena/01a0cef3-sih26132` @ 6ae008b, after the S1 and S2 fixes)
+
+```
+rawRows 36 · multiRowDays 5 → dailyPoints 31 · horizonDays 7 · points 38
+lastActual 2026-09-24 · hasGap false · method feature_ols · confidence medium
+error path: 422 → ApiError{kind:'validation', fields:{commodity_id:'field required'}}
+```
+
+`npm run smoke` now **asserts invariants** instead of relying on the numbers above:
+- one point per day, in order
+- multi-row days resolved to `data_gov_in`
+- one run per response
+- `horizonDays` equals the number of forecast points
+
+Seeded random values like `changePct` may differ between mock versions and are not regressions.
+Earlier output (`horizonDays: 6`, today's forecast dropped) came from the pre-S1 mock and is obsolete.
+
+## Standing rules
+- **Thresholds, model names/labels and accuracy copy come from the API** (G6 `thresholds` / `metrics` / `progress`, forecast `method` / `model_version`). They are never constants in the frontend.
+- `selectLatestRun()` stays as a safety net even though S1 is fixed.
+- "Actual wins" stays. It guards the last-actual vs. day-1 edge during data gaps.
