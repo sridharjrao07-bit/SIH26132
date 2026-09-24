@@ -54,8 +54,9 @@ function BottomNav() {
     <nav className="rule-t fixed inset-x-0 bottom-0 z-10 flex bg-paper pb-[env(safe-area-inset-bottom)]">
       <Link to="/" className={item} activeProps={active} activeOptions={{ exact: true }}><Trans>Today</Trans></Link>
       <Link to="/bhav" className={item} activeProps={active}><Trans>Prices</Trans></Link>
+      <Link to="/sell" className={item} activeProps={active}><Trans>Sell</Trans></Link>
       <Link to="/alerts" className={item} activeProps={active}><Trans>Alerts</Trans></Link>
-      <Link to="/forecasts/about" className={item} activeProps={active}><Trans>About forecasts</Trans></Link>
+      <Link to="/account" className={item} activeProps={active}><Trans>Account</Trans></Link>
     </nav>
   );
 }

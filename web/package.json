@@ -18,6 +18,7 @@
     "@fontsource/ibm-plex-sans-devanagari": "^5.3.0",
     "@lingui/core": "^5.9.5",
     "@lingui/react": "^5.9.5",
+    "@supabase/supabase-js": "^2.117.1",
     "@tanstack/query-async-storage-persister": "^5.103.2",
     "@tanstack/react-query": "^5.103.2",
     "@tanstack/react-query-persist-client": "^5.103.2",
