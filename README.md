@@ -120,7 +120,7 @@ python demo/reconcile.py
 python demo/live_smoke.py
 ```
 
-Judge path: [`docs/DEMO.md`](docs/DEMO.md).
+Judge path: [`docs/DEMO.md`](docs/DEMO.md). Full demo runbook (live + offline-mock fallback, pre-flight, recovery): [`docs/DEMO_RUNBOOK.md`](docs/DEMO_RUNBOOK.md).
 
 ## Known Limitations
 

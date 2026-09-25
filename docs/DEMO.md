@@ -1,5 +1,7 @@
 # Backend demo (90 seconds)
 
+> Full judge-demo runbook (live Supabase + offline-mock fallback, pre-flight checklist, per-screen script, recovery): **[`DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md)**. Rehearse the whole farmer journey with `python demo/journey_rehearsal.py`.
+
 Uvicorn must already be running against a project with migrations `001`–`011`.
 
 ```bash

@@ -87,18 +87,23 @@ export function buildChartSeries(daily: readonly DailyPoint[], forecast: readonl
     yDomain = [Math.max(0, Math.floor(lo - pad)), Math.ceil(hi + pad)];
   }
 
-  const first = daily[0];
-  const head = fc[0] ?? null;
-  return {
-    points,
-    lastActualDate: last?.date ?? null,
-    missingDays,
-    hasGap,
-    horizonDays: fc.length,
-    forecastRange: fc.length
-      ? { lower: Math.min(...fc.map((f) => f.lower_bound ?? f.predicted_price!)), upper: Math.max(...fc.map((f) => f.upper_bound ?? f.predicted_price!)) }
-      : null,
-    changePct: first && last && first !== last ? ((last.modal - first.modal) / first.modal) * 100 : null,
+    const first = daily[0];
+    const head = fc[0] ?? null;
+    // Guard the % change: a 0 or non-finite opening price must not yield Infinity/NaN in the caption.
+    const changePct =
+      first && last && first !== last && Number.isFinite(first.modal) && first.modal !== 0
+        ? ((last.modal - first.modal) / first.modal) * 100
+        : null;
+    return {
+      points,
+      lastActualDate: last?.date ?? null,
+      missingDays,
+      hasGap,
+      horizonDays: fc.length,
+      forecastRange: fc.length
+        ? { lower: Math.min(...fc.map((f) => f.lower_bound ?? f.predicted_price!)), upper: Math.max(...fc.map((f) => f.upper_bound ?? f.predicted_price!)) }
+        : null,
+      changePct,
     method: head?.method ?? null,
     confidence: head?.confidence ?? null,
     generatedAt: head?.generated_at ?? null,

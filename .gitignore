@@ -55,6 +55,9 @@ Thumbs.db
 *.swp
 *~
 
+# Seed refresh helper output (scripts/refresh_seed_dates.py)
+data/gov_prices.recent.csv
+
 # Logs / local compose overrides
 *.log
 sms_out.log
