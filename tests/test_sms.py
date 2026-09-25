@@ -9,6 +9,7 @@ Covers:
   - S3 regression: ephemeral keys are per-instance (two verifiers reject each other)
   - M1 regression: MSG91Gateway sends correct Flow API payload shape
 """
+
 import hashlib
 import hmac
 import time
@@ -17,6 +18,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 # ─── InboundVerifier ────────────────────────────────────────────────────────
+
 
 def make_signed_request(body: bytes, secret: str = "demo-secret") -> dict:
     """Build valid HMAC headers for a given body."""
@@ -32,10 +34,12 @@ async def test_valid_hmac_signature_passes(monkeypatch):
     from importlib import reload
 
     import notifications.inbound_verifier as iv_mod
+
     reload(iv_mod)
 
     from fastapi import FastAPI, Request
     from starlette.testclient import TestClient as STC
+
     app = FastAPI()
     verifier = iv_mod.InboundVerifier()
 
@@ -57,10 +61,12 @@ async def test_bad_signature_rejected(monkeypatch):
     from importlib import reload
 
     import notifications.inbound_verifier as iv_mod
+
     reload(iv_mod)
 
     from fastapi import FastAPI, Request
     from starlette.testclient import TestClient as STC
+
     app = FastAPI()
     verifier = iv_mod.InboundVerifier()
 
@@ -83,10 +89,12 @@ async def test_expired_timestamp_rejected(monkeypatch):
     from importlib import reload
 
     import notifications.inbound_verifier as iv_mod
+
     reload(iv_mod)
 
     from fastapi import FastAPI, Request
     from starlette.testclient import TestClient as STC
+
     app = FastAPI()
     verifier = iv_mod.InboundVerifier()
 
@@ -111,10 +119,12 @@ async def test_missing_headers_rejected(monkeypatch):
     from importlib import reload
 
     import notifications.inbound_verifier as iv_mod
+
     reload(iv_mod)
 
     from fastapi import FastAPI, Request
     from starlette.testclient import TestClient as STC
+
     app = FastAPI()
     verifier = iv_mod.InboundVerifier()
 
@@ -132,15 +142,18 @@ async def test_missing_headers_rejected(monkeypatch):
 
 # ─── SMS Simulate Endpoint (Admin-only) ──────────────────────────────────────
 
+
 def make_admin_token() -> str:
     """Generate a valid-looking JWT for testing (just tests routing, not real auth)."""
     import os
 
     import jwt as pyjwt
+
     secret = os.environ.get("SUPABASE_JWT_SECRET", "ci-placeholder-jwt-secret-32b-min")
     token = pyjwt.encode(
         {"sub": "admin-user-id", "role": "authenticated", "aud": "authenticated"},
-        secret, algorithm="HS256"
+        secret,
+        algorithm="HS256",
     )
     return token
 
@@ -148,6 +161,7 @@ def make_admin_token() -> str:
 def test_simulate_endpoint_is_admin_gated(override_supabase):
     """Non-admin call → 401 (no token)"""
     from app.main import app
+
     client = TestClient(app, raise_server_exceptions=False)
 
     resp = client.post("/api/v1/sms/simulate", json={"sender": "+91999", "message": "कांदा"})
@@ -156,6 +170,7 @@ def test_simulate_endpoint_is_admin_gated(override_supabase):
 
 
 # ─── S3: Production secret enforcement ───────────────────────────────────────
+
 
 def test_production_mode_missing_secret_raises_runtime_error(monkeypatch):
     """
@@ -170,11 +185,13 @@ def test_production_mode_missing_secret_raises_runtime_error(monkeypatch):
     # monkeypatched APP_ENV rather than a stale cached Settings object from
     # a prior test that may have left a different env value in cache.
     from app.config import get_settings
+
     get_settings.cache_clear()
 
     from importlib import reload
 
     import notifications.inbound_verifier as iv_mod
+
     reload(iv_mod)
 
     with pytest.raises(RuntimeError, match="INBOUND_HMAC_SECRET"):
@@ -193,6 +210,7 @@ def test_production_mode_demo_secret_raises_runtime_error(monkeypatch):
     from importlib import reload
 
     import notifications.inbound_verifier as iv_mod
+
     reload(iv_mod)
 
     with pytest.raises(RuntimeError, match="INBOUND_HMAC_SECRET"):
@@ -215,11 +233,13 @@ async def test_ephemeral_keys_are_per_instance(monkeypatch):
     # Clear lru_cache so get_settings() reads the monkeypatched env, not a
     # stale Settings object left by a prior production-mode test.
     from app.config import get_settings
+
     get_settings.cache_clear()
 
     from importlib import reload
 
     import notifications.inbound_verifier as iv_mod
+
     reload(iv_mod)
 
     verifier_a = iv_mod.InboundVerifier()
@@ -251,6 +271,7 @@ async def test_ephemeral_keys_are_per_instance(monkeypatch):
 
 
 # ─── M1: MSG91 Gateway payload shape ─────────────────────────────────────────
+
 
 def test_msg91_gateway_sends_correct_flow_api_payload():
     """
@@ -288,6 +309,7 @@ def test_msg91_gateway_sends_correct_flow_api_payload():
         assert mock_route.called
         sent_request = mock_route.calls.last.request
         import json
+
         body = json.loads(sent_request.content)
         assert body["template_id"] == "template-dlt-12345"
         assert "recipients" in body
@@ -317,6 +339,7 @@ def test_msg91_gateway_sends_correct_flow_api_payload():
 def test_msg91_gateway_missing_template_returns_failed():
     """M1: Missing template_id must return ("failed", False) without making an HTTP call."""
     from notifications.sms_gateway import MSG91Gateway
+
     gateway = MSG91Gateway(auth_key="test-key")
     status, success = gateway.send_sms("+919876543210", "msg", template_id=None)
     assert success is False

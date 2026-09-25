@@ -9,6 +9,7 @@ Contract under test:
   - ingestion_log rows: correct column names, lowercase status, per-adapter
   - SourceFetchError from adapter → status='failed' in ingestion_log
 """
+
 import pytest
 from ingestion.base import SourceFetchError
 from ingestion.runner import IngestionRunner
@@ -23,6 +24,7 @@ from tests.conftest import (
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def runner(fake_supabase):
     adapter = StubAdapter(
@@ -33,6 +35,7 @@ def runner(fake_supabase):
 
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
+
 
 async def test_success_path(fake_supabase, runner):
     """Happy path: one valid record → upserted, log row written as success."""
@@ -78,8 +81,7 @@ async def test_market_name_fallback_normalized(fake_supabase):
 
     adapter = StubAdapter(
         source="data_gov_in",
-        records=[make_record(market_name="Pimpalgaon Baswant APCM",
-                             commodity_name="Onion")],
+        records=[make_record(market_name="Pimpalgaon Baswant APCM", commodity_name="Onion")],
     )
     r = IngestionRunner(supabase=fake_supabase, adapters=[adapter])
     await r.run(district="Nashik")
@@ -100,7 +102,7 @@ async def test_unknown_market_drops_record(fake_supabase):
     await r.run(district="Nashik")
 
     upserts = fake_supabase.upsert_calls()
-    assert len(upserts) == 0          # nothing upserted
+    assert len(upserts) == 0  # nothing upserted
 
     log_rows = fake_supabase.log_rows()
     assert log_rows[0]["records_rejected"] >= 1
@@ -120,7 +122,7 @@ async def test_upsert_conflict_columns(fake_supabase):
 
     conflict = fake_supabase.upsert_calls()[0]["conflict"]
     required = {"market_id", "commodity_id", "arrival_date", "variety", "grade", "source"}
-    actual   = {c.strip() for c in conflict.split(",")}
+    actual = {c.strip() for c in conflict.split(",")}
     assert required == actual, f"on_conflict missing columns: {required - actual}"
 
 
@@ -129,12 +131,12 @@ async def test_no_aliases_source_logs_failed(fake_supabase):
     from ingestion.runner import IngestionRunner
 
     from tests.conftest import StubAdapter
-    
+
     # Adapter has source "unknown_source", which has no aliases
     adapter = StubAdapter(source="unknown_source")
     runner = IngestionRunner(supabase=fake_supabase, adapters=[adapter])
     await runner.run(district="Nashik", state="Maharashtra")
-    
+
     logs = fake_supabase.log_rows()
     assert len(logs) == 1
     assert logs[0]["source"] == "unknown_source"
@@ -152,8 +154,8 @@ async def test_log_row_columns_and_status(fake_supabase):
     await r.run(district="Nashik")
 
     row = fake_supabase.log_rows()[0]
-    assert "records_seen"     in row, "Missing records_seen column"
-    assert "records_written"  in row, "Missing records_written column"
+    assert "records_seen" in row, "Missing records_seen column"
+    assert "records_written" in row, "Missing records_written column"
     assert "records_rejected" in row, "Missing records_rejected column"
     assert row["status"] == row["status"].lower(), "status must be lowercase"
     assert row["status"] in ("success", "partial", "failed", "rejected")
@@ -205,8 +207,8 @@ async def test_alias_source_filter_uses_adapter_source(fake_supabase):
 
 async def test_per_adapter_log_row(fake_supabase):
     """Two adapters → two separate ingestion_log rows (one per source)."""
-    a1 = StubAdapter(source="data_gov_in",  records=[make_record()])
-    a2 = StubAdapter(source="agmarknet",    records=[make_record(source="agmarknet")])
+    a1 = StubAdapter(source="data_gov_in", records=[make_record()])
+    a2 = StubAdapter(source="agmarknet", records=[make_record(source="agmarknet")])
     # Add agmarknet aliases so the alias filter query returns something for it
     fake_supabase._data["commodity_alias"].append(
         {"source": "agmarknet", "source_key": "Onion", "commodity_id": COMMODITY_ID_ONION}
@@ -218,4 +220,4 @@ async def test_per_adapter_log_row(fake_supabase):
     log_rows = fake_supabase.log_rows()
     sources_logged = {row["source"] for row in log_rows}
     assert "data_gov_in" in sources_logged
-    assert "agmarknet"   in sources_logged
+    assert "agmarknet" in sources_logged

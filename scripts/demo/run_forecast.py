@@ -3,6 +3,7 @@
 Usage (from repo root):
     python scripts/demo/run_forecast.py
 """
+
 import logging
 
 from app.deps import get_supabase_service_role

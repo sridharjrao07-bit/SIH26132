@@ -9,6 +9,7 @@ grant cleanup in section H.
 Written to FAIL on a database at migration 035 (verified during development
 by rebuilding the chain without 036): the RPCs do not exist there (42883).
 """
+
 import json
 import os
 import threading
@@ -120,6 +121,7 @@ def _rpc(cur, call_sql, params):
 
 # ─── A1: lot status guard ────────────────────────────────────────────────────
 
+
 def test_lot_status_guard_allows_reopen_blocks_regression(db):
     with db.cursor() as cur:
         lot_id = _seed_lot(cur, status="open")
@@ -136,6 +138,7 @@ def test_lot_status_guard_allows_reopen_blocks_regression(db):
 
 
 # ─── A2: lot_withdraw ────────────────────────────────────────────────────────
+
 
 def test_lot_withdraw_ownership_and_matched_guard(db):
     with db.cursor() as cur:
@@ -162,21 +165,21 @@ def test_lot_withdraw_ownership_and_matched_guard(db):
 
 # ─── B1: verified-buyer gate ─────────────────────────────────────────────────
 
+
 def test_offer_create_verified_gate(db):
     with db.cursor() as cur:
         lot_id = _seed_lot(cur, owner=FARMER, status="open")
         _as(cur, FARMER)
         # unverified buyer → P0001
-        _, err = _rpc(cur, "select public.offer_create(%s,%s,%s,%s)",
-                      (lot_id, BUYER_U, 2000, 10))
+        _, err = _rpc(cur, "select public.offer_create(%s,%s,%s,%s)", (lot_id, BUYER_U, 2000, 10))
         assert err is not None and err.pgcode == "P0001"
         # missing buyer → P0002
-        _, err = _rpc(cur, "select public.offer_create(%s,%s,%s,%s)",
-                      (lot_id, _uid(), 2000, 10))
+        _, err = _rpc(cur, "select public.offer_create(%s,%s,%s,%s)", (lot_id, _uid(), 2000, 10))
         assert err is not None and err.pgcode == "P0002"
         # verified buyer → offer created, lot flips to offered
-        result, err = _rpc(cur, "select public.offer_create(%s,%s,%s,%s)",
-                           (lot_id, BUYER_V, 2000, 10))
+        result, err = _rpc(
+            cur, "select public.offer_create(%s,%s,%s,%s)", (lot_id, BUYER_V, 2000, 10)
+        )
         assert err is None and result["status"] == "pending"
         _reset(cur)
         cur.execute("select status from public.lots where id=%s", (lot_id,))
@@ -184,18 +187,19 @@ def test_offer_create_verified_gate(db):
         # sold lot → P0003
         lot2 = _seed_lot(cur, owner=FARMER, status="sold")
         _as(cur, FARMER)
-        _, err = _rpc(cur, "select public.offer_create(%s,%s,%s,%s)",
-                      (lot2, BUYER_V, 2000, 10))
+        _, err = _rpc(cur, "select public.offer_create(%s,%s,%s,%s)", (lot2, BUYER_V, 2000, 10))
         assert err is not None and err.pgcode == "P0003"
         _reset(cur)
 
 
 # ─── B2: offer_decide lifecycle + TTL ────────────────────────────────────────
 
+
 def _make_offer(cur, lot_id, price=2000, qty=10):
     _as(cur, FARMER)
-    result, err = _rpc(cur, "select public.offer_create(%s,%s,%s,%s)",
-                       (lot_id, BUYER_V, price, qty))
+    result, err = _rpc(
+        cur, "select public.offer_create(%s,%s,%s,%s)", (lot_id, BUYER_V, price, qty)
+    )
     assert err is None, err
     return result["id"]
 
@@ -237,8 +241,10 @@ def test_offer_decide_ttl_48h_enforced(db):
         offer_id = _make_offer(cur, lot_id)
         _reset(cur)
         # backdate beyond the TTL
-        cur.execute("update public.offers set created_at = now() - interval '49 hours'"
-                    " where id=%s", (offer_id,))
+        cur.execute(
+            "update public.offers set created_at = now() - interval '49 hours' where id=%s",
+            (offer_id,),
+        )
         _as(cur, FARMER)
         _, err = _rpc(cur, "select public.offer_decide(%s,%s)", (offer_id, "accepted"))
         assert err is not None and err.pgcode == "P0003"
@@ -269,8 +275,7 @@ def test_concurrent_offer_decide_exactly_one_wins(db):
             with conn.cursor() as cur:
                 _as(cur, FARMER)
                 barrier.wait()
-                result, err = _rpc(cur, "select public.offer_decide(%s,%s)",
-                                   (offer_id, "accepted"))
+                result, err = _rpc(cur, "select public.offer_decide(%s,%s)", (offer_id, "accepted"))
                 with lock:
                     results.append((offer_id, result, err))
         finally:
@@ -278,7 +283,10 @@ def test_concurrent_offer_decide_exactly_one_wins(db):
 
     t1 = threading.Thread(target=worker, args=(off1,))
     t2 = threading.Thread(target=worker, args=(off2,))
-    t1.start(); t2.start(); t1.join(30); t2.join(30)
+    t1.start()
+    t2.start()
+    t1.join(30)
+    t2.join(30)
 
     assert len(results) == 2
     ok = [r for r in results if r[2] is None]
@@ -296,12 +304,15 @@ def test_concurrent_offer_decide_exactly_one_wins(db):
         assert cur.fetchone()[0] == "matched"
         cur.execute(
             "select status, count(*) from public.offers where id in (%s,%s)"
-            " group by status order by status", (off1, off2))
+            " group by status order by status",
+            (off1, off2),
+        )
         statuses = dict(cur.fetchall())
         assert statuses == {"accepted": 1, "rejected": 1}
 
 
 # ─── C2: payment_create idempotency ──────────────────────────────────────────
+
 
 def _accepted_offer_with_payment(cur):
     lot_id = _seed_lot(cur, owner=FARMER, status="open")
@@ -309,8 +320,7 @@ def _accepted_offer_with_payment(cur):
     _as(cur, FARMER)
     result, err = _rpc(cur, "select public.offer_decide(%s,%s)", (offer_id, "accepted"))
     assert err is None, err
-    result, err = _rpc(cur, "select public.payment_create(%s,%s,%s)",
-                       (offer_id, 20000, "UPI-1"))
+    result, err = _rpc(cur, "select public.payment_create(%s,%s,%s)", (offer_id, 20000, "UPI-1"))
     assert err is None, err
     _reset(cur)
     return lot_id, offer_id, result
@@ -320,11 +330,9 @@ def test_payment_create_idempotent_for_failed_payment(db):
     """C8: a FAILED payment used to be re-creatable (double billing)."""
     with db.cursor() as cur:
         lot_id, offer_id, payment = _accepted_offer_with_payment(cur)
-        cur.execute("update public.payments set status='failed' where id=%s",
-                    (payment["id"],))
+        cur.execute("update public.payments set status='failed' where id=%s", (payment["id"],))
         _as(cur, FARMER)
-        again, err = _rpc(cur, "select public.payment_create(%s,%s,%s)",
-                          (offer_id, 20000, "UPI-2"))
+        again, err = _rpc(cur, "select public.payment_create(%s,%s,%s)", (offer_id, 20000, "UPI-2"))
         assert err is None, f"re-create after failure must be idempotent: {err}"
         assert again["id"] == payment["id"]
         _reset(cur)
@@ -338,7 +346,8 @@ def test_payments_unique_index_blocks_direct_double_insert(db):
         with pytest.raises(psycopg2.errors.UniqueViolation):
             cur.execute(
                 "insert into public.payments (offer_id, user_id, amount) values (%s,%s,%s)",
-                (offer_id, FARMER, 20000))
+                (offer_id, FARMER, 20000),
+            )
 
 
 def test_concurrent_payment_create_returns_single_row(db):
@@ -362,8 +371,9 @@ def test_concurrent_payment_create_returns_single_row(db):
             with conn.cursor() as cur:
                 _as(cur, FARMER)
                 barrier.wait()
-                result, err = _rpc(cur, "select public.payment_create(%s,%s,%s)",
-                                   (offer_id, 20000, None))
+                result, err = _rpc(
+                    cur, "select public.payment_create(%s,%s,%s)", (offer_id, 20000, None)
+                )
                 with lock:
                     results.append((result, err))
         finally:
@@ -371,7 +381,10 @@ def test_concurrent_payment_create_returns_single_row(db):
 
     t1 = threading.Thread(target=worker)
     t2 = threading.Thread(target=worker)
-    t1.start(); t2.start(); t1.join(30); t2.join(30)
+    t1.start()
+    t2.start()
+    t1.join(30)
+    t2.join(30)
 
     assert len(results) == 2
     for result, err in results:
@@ -385,6 +398,7 @@ def test_concurrent_payment_create_returns_single_row(db):
 
 
 # ─── C3: payment_mark_paid ───────────────────────────────────────────────────
+
 
 def test_payment_mark_paid_transitions_and_guards(db):
     with db.cursor() as cur:
@@ -424,13 +438,13 @@ def test_payment_amount_trigger_enforces_offer_math(db):
         offer_id = _make_offer(cur, lot_id, price=2000, qty=10)
         _reset(cur)
         _as(cur, FARMER)
-        _, err = _rpc(cur, "select public.payment_create(%s,%s,%s)",
-                      (offer_id, 19999, None))
+        _, err = _rpc(cur, "select public.payment_create(%s,%s,%s)", (offer_id, 19999, None))
         assert err is not None, "amount mismatch must be rejected by check_payment_amount"
         _reset(cur)
 
 
 # ─── G: payments.user_id FK is RESTRICT ──────────────────────────────────────
+
 
 def test_payments_user_fk_is_restrict(db):
     with db.cursor() as cur:
@@ -440,6 +454,7 @@ def test_payments_user_fk_is_restrict(db):
 
 
 # ─── D: fpo_aggregate_lots ───────────────────────────────────────────────────
+
 
 def test_fpo_aggregate_deduplicates_repeated_lot_ids(db):
     with db.cursor() as cur:
@@ -451,8 +466,9 @@ def test_fpo_aggregate_deduplicates_repeated_lot_ids(db):
             (lot_id, FPO, FPO, COMMODITY),
         )
         _as(cur, FPO)
-        result, err = _rpc(cur, "select public.fpo_aggregate_lots(%s::uuid[], null, null)",
-                           ([lot_id, lot_id],))
+        result, err = _rpc(
+            cur, "select public.fpo_aggregate_lots(%s::uuid[], null, null)", ([lot_id, lot_id],)
+        )
         assert err is None, err
         assert float(result["quantity_qtl"]) == 100, (
             f"repeated id pooled twice: {result['quantity_qtl']} instead of 100"
@@ -471,25 +487,28 @@ def test_fpo_aggregate_single_commodity_rule(db):
         cur.execute(
             "insert into public.commodities (id, name_en, name_mr, name_hi, category, sanity_min, sanity_max)"
             " values (%s, %s, 'इतर', 'अन्य', 'vegetable', 100, 5000)",
-            (commodity_b, f"Other-{commodity_b[:8]}"))
+            (commodity_b, f"Other-{commodity_b[:8]}"),
+        )
         cur.execute(
             "insert into public.lots (id, user_id, fpo_id, commodity_id, quantity_qtl, status)"
             " values (%s, %s, %s, %s, 10, 'open'), (%s, %s, %s, %s, 20, 'open')",
-            (lot_a, FPO, FPO, COMMODITY, lot_b, FPO, FPO, commodity_b))
+            (lot_a, FPO, FPO, COMMODITY, lot_b, FPO, FPO, commodity_b),
+        )
         _as(cur, FPO)
-        _, err = _rpc(cur, "select public.fpo_aggregate_lots(%s::uuid[], null, null)",
-                      ([lot_a, lot_b],))
+        _, err = _rpc(
+            cur, "select public.fpo_aggregate_lots(%s::uuid[], null, null)", ([lot_a, lot_b],)
+        )
         assert err is not None and err.pgcode == "P0004"
         _reset(cur)
 
 
 # ─── E: buyer verification path ──────────────────────────────────────────────
 
+
 def test_buyer_verified_flag_guarded_outside_buyer_verify(db):
     with db.cursor() as cur:
         with pytest.raises(psycopg2.errors.RaiseException, match="BUYER_SELF_VERIFY"):
-            cur.execute("update public.buyers set verified = not verified where id=%s",
-                        (BUYER_V,))
+            cur.execute("update public.buyers set verified = not verified where id=%s", (BUYER_V,))
 
 
 def test_buyer_verify_rpc_admin_gated(db):
@@ -509,11 +528,14 @@ def test_buyer_verify_rpc_admin_gated(db):
 
 # ─── F: booking RPCs ─────────────────────────────────────────────────────────
 
+
 def _seed_facility(cur, capacity=100):
     fac_id = _uid()
     cur.execute(
         "insert into public.storage_facilities (id, district, name, capacity_qtl, rate_per_qtl)"
-        " values (%s, 'Nashik', '036 Godown', %s, 8)", (fac_id, capacity))
+        " values (%s, 'Nashik', '036 Godown', %s, 8)",
+        (fac_id, capacity),
+    )
     return fac_id
 
 
@@ -524,25 +546,31 @@ def test_storage_booking_create_and_state_machine(db):
 
         # cross-tenant → P0002
         _as(cur, OTHER_FARMER)
-        _, err = _rpc(cur,
-                      "select public.storage_booking_create(%s,%s,%s,null,null,null)",
-                      (lot_id, fac_id, 60))
+        _, err = _rpc(
+            cur,
+            "select public.storage_booking_create(%s,%s,%s,null,null,null)",
+            (lot_id, fac_id, 60),
+        )
         assert err is not None and err.pgcode == "P0002"
         _reset(cur)
 
         # qty above lot → P0004
         _as(cur, FARMER)
-        _, err = _rpc(cur,
-                      "select public.storage_booking_create(%s,%s,%s,null,null,null)",
-                      (lot_id, fac_id, 150))
+        _, err = _rpc(
+            cur,
+            "select public.storage_booking_create(%s,%s,%s,null,null,null)",
+            (lot_id, fac_id, 150),
+        )
         assert err is not None and err.pgcode == "P0004"
         _reset(cur)
 
         # valid booking, notes persisted
         _as(cur, FARMER)
-        booking, err = _rpc(cur,
-                            "select public.storage_booking_create(%s,%s,%s,%s,%s,%s)",
-                            (lot_id, fac_id, 60, "2026-10-01", "2026-11-01", "keep dry"))
+        booking, err = _rpc(
+            cur,
+            "select public.storage_booking_create(%s,%s,%s,%s,%s,%s)",
+            (lot_id, fac_id, 60, "2026-10-01", "2026-11-01", "keep dry"),
+        )
         assert err is None, err
         assert booking["status"] == "requested"
         assert booking["notes"] == "keep dry"
@@ -550,38 +578,53 @@ def test_storage_booking_create_and_state_machine(db):
 
         # capacity: 60 of 100 used, another 60 must fail → P0001
         _as(cur, FARMER)
-        _, err = _rpc(cur,
-                      "select public.storage_booking_create(%s,%s,%s,null,null,null)",
-                      (lot_id, fac_id, 60))
+        _, err = _rpc(
+            cur,
+            "select public.storage_booking_create(%s,%s,%s,null,null,null)",
+            (lot_id, fac_id, 60),
+        )
         assert err is not None and err.pgcode == "P0001"
         _reset(cur)
 
         # state machine
         _as(cur, FARMER)
-        _, err = _rpc(cur, "select public.storage_booking_update(%s,%s,%s)",
-                      (booking["id"], "completed", None))
+        _, err = _rpc(
+            cur,
+            "select public.storage_booking_update(%s,%s,%s)",
+            (booking["id"], "completed", None),
+        )
         assert err is not None and err.pgcode == "P0003", "requested→completed must be refused"
-        updated, err = _rpc(cur, "select public.storage_booking_update(%s,%s,%s)",
-                            (booking["id"], "confirmed", "row B"))
+        updated, err = _rpc(
+            cur,
+            "select public.storage_booking_update(%s,%s,%s)",
+            (booking["id"], "confirmed", "row B"),
+        )
         assert err is None and updated["status"] == "confirmed"
         assert updated["notes"] == "row B", "notes must be persisted on update"
-        updated, err = _rpc(cur, "select public.storage_booking_update(%s,%s,%s)",
-                            (booking["id"], "completed", None))
+        updated, err = _rpc(
+            cur,
+            "select public.storage_booking_update(%s,%s,%s)",
+            (booking["id"], "completed", None),
+        )
         assert err is None and updated["status"] == "completed"
-        _, err = _rpc(cur, "select public.storage_booking_update(%s,%s,%s)",
-                      (booking["id"], "cancelled", None))
+        _, err = _rpc(
+            cur,
+            "select public.storage_booking_update(%s,%s,%s)",
+            (booking["id"], "cancelled", None),
+        )
         assert err is not None and err.pgcode == "P0003", "completed→cancelled must be refused"
-        _, err = _rpc(cur, "select public.storage_booking_update(%s,%s,%s)",
-                      (booking["id"], "bogus", None))
+        _, err = _rpc(
+            cur, "select public.storage_booking_update(%s,%s,%s)", (booking["id"], "bogus", None)
+        )
         assert err is not None and err.pgcode == "P0004"
         _reset(cur)
 
         # sold lot cannot be booked
         lot2 = _seed_lot(cur, owner=FARMER, status="sold")
         _as(cur, FARMER)
-        _, err = _rpc(cur,
-                      "select public.storage_booking_create(%s,%s,%s,null,null,null)",
-                      (lot2, fac_id, 10))
+        _, err = _rpc(
+            cur, "select public.storage_booking_create(%s,%s,%s,null,null,null)", (lot2, fac_id, 10)
+        )
         assert err is not None and err.pgcode == "P0003"
         _reset(cur)
 
@@ -606,9 +649,11 @@ def test_concurrent_storage_booking_cannot_oversubscribe(db):
             with conn.cursor() as cur:
                 _as(cur, FARMER)
                 barrier.wait()
-                result, err = _rpc(cur,
-                                   "select public.storage_booking_create(%s,%s,%s,null,null,null)",
-                                   (lot_id, fac_id, 60))
+                result, err = _rpc(
+                    cur,
+                    "select public.storage_booking_create(%s,%s,%s,null,null,null)",
+                    (lot_id, fac_id, 60),
+                )
                 with lock:
                     results.append((result, err))
         finally:
@@ -616,7 +661,10 @@ def test_concurrent_storage_booking_cannot_oversubscribe(db):
 
     t1 = threading.Thread(target=worker, args=(lot1,))
     t2 = threading.Thread(target=worker, args=(lot2,))
-    t1.start(); t2.start(); t1.join(30); t2.join(30)
+    t1.start()
+    t2.start()
+    t1.join(30)
+    t2.join(30)
 
     assert len(results) == 2
     ok = [r for r in results if r[1] is None]
@@ -629,7 +677,9 @@ def test_concurrent_storage_booking_cannot_oversubscribe(db):
     with db.cursor() as cur:
         cur.execute(
             "select coalesce(sum(quantity_qtl), 0) from public.storage_bookings"
-            " where facility_id=%s and status in ('requested','confirmed')", (fac_id,))
+            " where facility_id=%s and status in ('requested','confirmed')",
+            (fac_id,),
+        )
         assert float(cur.fetchone()[0]) == 60, "booked quantity must never exceed capacity"
 
 
@@ -639,21 +689,27 @@ def test_logistics_booking_create_and_update(db):
         opt_id = _uid()
         cur.execute(
             "insert into public.logistics_options (id, district, kind, name, capacity_qtl)"
-            " values (%s, 'Nashik', 'transport', '036 Tempo', 40)", (opt_id,))
+            " values (%s, 'Nashik', 'transport', '036 Tempo', 40)",
+            (opt_id,),
+        )
 
         # default quantity = lot quantity (50) exceeds capacity (40) → P0001
         _as(cur, FARMER)
-        _, err = _rpc(cur,
-                      "select public.logistics_booking_create(%s,%s,null,%s,%s)",
-                      (lot_id, opt_id, "2026-10-05", "morning pickup"))
+        _, err = _rpc(
+            cur,
+            "select public.logistics_booking_create(%s,%s,null,%s,%s)",
+            (lot_id, opt_id, "2026-10-05", "morning pickup"),
+        )
         assert err is not None and err.pgcode == "P0001"
         _reset(cur)
 
         # explicit quantity fits
         _as(cur, FARMER)
-        booking, err = _rpc(cur,
-                            "select public.logistics_booking_create(%s,%s,%s,%s,%s)",
-                            (lot_id, opt_id, 30, "2026-10-05", "morning pickup"))
+        booking, err = _rpc(
+            cur,
+            "select public.logistics_booking_create(%s,%s,%s,%s,%s)",
+            (lot_id, opt_id, 30, "2026-10-05", "morning pickup"),
+        )
         assert err is None, err
         assert booking["status"] == "requested"
         assert booking["kind"] == "transport"
@@ -662,18 +718,25 @@ def test_logistics_booking_create_and_update(db):
 
         # update: confirm with new notes
         _as(cur, FARMER)
-        updated, err = _rpc(cur, "select public.logistics_booking_update(%s,%s,%s)",
-                            (booking["id"], "confirmed", "gate 3"))
+        updated, err = _rpc(
+            cur,
+            "select public.logistics_booking_update(%s,%s,%s)",
+            (booking["id"], "confirmed", "gate 3"),
+        )
         assert err is None and updated["status"] == "confirmed"
         assert updated["notes"] == "gate 3"
         # 'requested' is not a valid target status at all
-        _, err = _rpc(cur, "select public.logistics_booking_update(%s,%s,%s)",
-                      (booking["id"], "requested", None))
+        _, err = _rpc(
+            cur,
+            "select public.logistics_booking_update(%s,%s,%s)",
+            (booking["id"], "requested", None),
+        )
         assert err is not None and err.pgcode == "P0004"
         _reset(cur)
 
 
 # ─── H: grant cleanup ────────────────────────────────────────────────────────
+
 
 def test_dead_grants_revoked_from_api_roles(db):
     with db.cursor() as cur:
@@ -688,11 +751,14 @@ def test_dead_grants_revoked_from_api_roles(db):
         assert auth_near is False, "nearest_market must not be executable by authenticated"
         assert anon_near is False, "nearest_market must not be executable by anon"
         assert svc_near is True, "nearest_market stays available to the job tier"
-        assert auth_sepd is False, "set_event_publication_date() must not be executable by authenticated"
+        assert auth_sepd is False, (
+            "set_event_publication_date() must not be executable by authenticated"
+        )
         assert svc_sepd is True
 
 
 # ─── apply_migrations --dry-run is read-only safe ────────────────────────────
+
 
 def test_apply_migrations_dry_run_safe_on_read_only_database():
     """A dry run must not even create the ledger table. The old code executed
@@ -725,10 +791,9 @@ def test_apply_migrations_dry_run_safe_on_read_only_database():
             with check.cursor() as cur:
                 cur.execute(
                     "select exists (select 1 from information_schema.tables"
-                    " where table_name = 'schema_migrations')")
-                assert cur.fetchone()[0] is False, (
-                    "dry run must not create the migration ledger"
+                    " where table_name = 'schema_migrations')"
                 )
+                assert cur.fetchone()[0] is False, "dry run must not create the migration ledger"
                 cur.execute("select to_regclass('public.commodities')")
                 assert cur.fetchone()[0] is None, "dry run must not apply anything"
         finally:

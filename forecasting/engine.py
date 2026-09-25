@@ -25,6 +25,7 @@ PostgREST 1,000-row cap avoided by:
   (a) paginated distinct-pairs query (PAGE_SIZE=500),
   (b) per-pair history fetch (bounded by HISTORY_DAYS × ~3 rows ≈ 180 rows).
 """
+
 import collections
 import math
 import time
@@ -44,24 +45,25 @@ logger = structlog.get_logger()
 # ── Constants ──────────────────────────────────────────────────────────────────
 
 SOURCE_PRECEDENCE: Dict[str, int] = {
-    "data_gov_in":  1,   # government API — primary provenance
-    "agmarknet":    2,   # selenium scrape — secondary
-    "manual":       3,   # manual entry
-    "manual_seed":  4,   # seed data
-    "demo_seed":    5,   # demo history
-    "csv":          6,   # historical csv data
+    "data_gov_in": 1,  # government API — primary provenance
+    "agmarknet": 2,  # selenium scrape — secondary
+    "manual": 3,  # manual entry
+    "manual_seed": 4,  # seed data
+    "demo_seed": 5,  # demo history
+    "csv": 6,  # historical csv data
 }
 
-MIN_OBSERVATIONS          = 10   # n <  10 → insufficient_data
-BLEND_THRESHOLD           = 15   # n ≥  15 → blend (else MA-only)
-HIGH_CONFIDENCE_THRESHOLD = 20   # n ≥  20 → high confidence
-MA_WINDOW                 = 7    # look-back window for Moving Average
-OLS_FIT_WINDOW            = 30   # max observations for OLS regression fit
-HORIZON_DAYS              = 7    # calendar days ahead to predict
-CONFIDENCE_Z              = 1.96 # 95% confidence interval multiplier
+MIN_OBSERVATIONS = 10  # n <  10 → insufficient_data
+BLEND_THRESHOLD = 15  # n ≥  15 → blend (else MA-only)
+HIGH_CONFIDENCE_THRESHOLD = 20  # n ≥  20 → high confidence
+MA_WINDOW = 7  # look-back window for Moving Average
+OLS_FIT_WINDOW = 30  # max observations for OLS regression fit
+HORIZON_DAYS = 7  # calendar days ahead to predict
+CONFIDENCE_Z = 1.96  # 95% confidence interval multiplier
 
 
 # ── Series builder ─────────────────────────────────────────────────────────────
+
 
 def _source_rank(source: str) -> int:
     """Lower = higher priority. Unknown sources rank last."""
@@ -80,10 +82,10 @@ def build_daily_rows(rows: List[dict]) -> List[Tuple[date, dict]]:
 
     series: List[Tuple[date, dict]] = []
     for d, day_rows in by_date.items():
-        best_rank   = min(_source_rank(r.get("source", "")) for r in day_rows)
-        candidates  = [r for r in day_rows if _source_rank(r.get("source", "")) == best_rank]
-        general     = [r for r in candidates if (r.get("variety") or "General") == "General"]
-        chosen      = general[0] if general else candidates[0]
+        best_rank = min(_source_rank(r.get("source", "")) for r in day_rows)
+        candidates = [r for r in day_rows if _source_rank(r.get("source", "")) == best_rank]
+        general = [r for r in candidates if (r.get("variety") or "General") == "General"]
+        chosen = general[0] if general else candidates[0]
         series.append((d, chosen))
 
     series.sort(key=lambda t: t[0])
@@ -95,7 +97,6 @@ def build_daily_series(rows: List[dict]) -> List[Tuple[date, float]]:
     Legacy wrapper for build_daily_rows returning just (date, modal_price).
     """
     return [(d, float(row["modal_price"])) for d, row in build_daily_rows(rows)]
-
 
 
 def build_district_daily_series(rows: List[dict]) -> List[Tuple[date, float]]:
@@ -126,9 +127,10 @@ def get_daily_series(rows: List[dict]) -> List[Tuple[date, float]]:
     return build_daily_series(rows)
 
 
-# ── Models ────────────────────────────────────────────────────────────────     
+# ── Models ────────────────────────────────────────────────────────────────
 
-MODELS = {} # Populated below after class definitions
+MODELS = {}  # Populated below after class definitions
+
 
 class MovingAverageModel:
     """
@@ -140,11 +142,13 @@ class MovingAverageModel:
     """
 
     def __init__(self, prices: List[float]):
-        window      = prices[-MA_WINDOW:] if len(prices) >= MA_WINDOW else prices[:]
-        self.level  = sum(window) / len(window)
-        self.sigma  = pstdev(window) if len(window) > 1 else 0.0
+        window = prices[-MA_WINDOW:] if len(prices) >= MA_WINDOW else prices[:]
+        self.level = sum(window) / len(window)
+        self.sigma = pstdev(window) if len(window) > 1 else 0.0
 
-    def predict(self, horizon: int = HORIZON_DAYS, forecast_origin: Optional[date] = None) -> List[float]:
+    def predict(
+        self, horizon: int = HORIZON_DAYS, forecast_origin: Optional[date] = None
+    ) -> List[float]:
         """Returns [predicted, ...] for each day ahead."""
         return [self.level for _ in range(horizon)]
 
@@ -167,29 +171,31 @@ class LinearRegressionModel:
     """
 
     def __init__(self, prices: List[float]):
-        window  = prices[-OLS_FIT_WINDOW:] if len(prices) >= OLS_FIT_WINDOW else prices[:]
-        n       = len(window)
-        xs      = list(range(n))
+        window = prices[-OLS_FIT_WINDOW:] if len(prices) >= OLS_FIT_WINDOW else prices[:]
+        n = len(window)
+        xs = list(range(n))
 
-        sum_x   = sum(xs)
-        sum_y   = sum(window)
-        sum_xy  = sum(x * y for x, y in zip(xs, window))
-        sum_x2  = sum(x * x for x in xs)
+        sum_x = sum(xs)
+        sum_y = sum(window)
+        sum_xy = sum(x * y for x, y in zip(xs, window))
+        sum_x2 = sum(x * x for x in xs)
 
-        denom   = n * sum_x2 - sum_x ** 2
+        denom = n * sum_x2 - sum_x**2
         if denom == 0:
-            self.slope     = 0.0
+            self.slope = 0.0
             self.intercept = sum_y / n if n else 0.0
         else:
-            self.slope     = (n * sum_xy  - sum_x * sum_y) / denom
+            self.slope = (n * sum_xy - sum_x * sum_y) / denom
             self.intercept = (sum_y - self.slope * sum_x) / n
 
-        fitted    = [self.intercept + self.slope * x for x in xs]
+        fitted = [self.intercept + self.slope * x for x in xs]
         residuals = [a - f for a, f in zip(window, fitted)]
         self.sigma = pstdev(residuals) if len(residuals) > 1 else 0.0
-        self._n    = n   # next x index for projection
+        self._n = n  # next x index for projection
 
-    def predict(self, horizon: int = HORIZON_DAYS, forecast_origin: Optional[date] = None) -> List[float]:
+    def predict(
+        self, horizon: int = HORIZON_DAYS, forecast_origin: Optional[date] = None
+    ) -> List[float]:
         """Returns [predicted, ...] for each day ahead."""
         return [self.intercept + self.slope * (self._n + i) for i in range(horizon)]
 
@@ -203,19 +209,18 @@ def _blend_predictions(
     Blend MA and LR: 0.4·MA + 0.6·LR.
     Returns (raw_preds, blended_sigma).
     """
-    sigma  = max(ma.sigma, lr.sigma)
+    sigma = max(ma.sigma, lr.sigma)
     results = []
     for i in range(horizon):
         ma_p = ma.level
         lr_p = lr.intercept + lr.slope * (lr._n + i)
-        p    = 0.4 * ma_p + 0.6 * lr_p
+        p = 0.4 * ma_p + 0.6 * lr_p
         results.append(p)
     return results, sigma
 
+
 def apply_postprocessing(
-    raw_preds: List[float], 
-    sigma: float, 
-    sanity: Optional[Tuple[float, float]] = None
+    raw_preds: List[float], sigma: float, sanity: Optional[Tuple[float, float]] = None
 ) -> List[Tuple[float, Optional[float], Optional[float]]]:
     """
     Apply standard interval widening (sqrt(h)), nonnegative bounding,
@@ -224,19 +229,19 @@ def apply_postprocessing(
     """
     results = []
     for i, p in enumerate(raw_preds, start=1):
-        # We assume 1.96 multiplier is applied outside or here? 
+        # We assume 1.96 multiplier is applied outside or here?
         # Wait, CONFIDENCE_Z is 1.96.
         margin = CONFIDENCE_Z * sigma * math.sqrt(i) if sigma > 0 else 0.0
-        
+
         if sanity is not None:
             p = _clamp(p, sanity[0], sanity[1])
-            
+
         if sigma <= 0:
             lo, hi = p, p
         else:
             lo = max(0.0, p - margin)
             hi = p + margin
-            
+
         if sanity is not None:
             lo = _clamp(lo, sanity[0], sanity[1])
             hi = _clamp(hi, sanity[0], sanity[1])
@@ -244,12 +249,14 @@ def apply_postprocessing(
                 lo = p
             if hi < p:
                 hi = p
-        
-        results.append((
-            round(p, 2), 
-            round(lo, 2) if lo is not None else None, 
-            round(hi, 2) if hi is not None else None
-        ))
+
+        results.append(
+            (
+                round(p, 2),
+                round(lo, 2) if lo is not None else None,
+                round(hi, 2) if hi is not None else None,
+            )
+        )
     return results
 
 
@@ -267,6 +274,7 @@ MODELS = {
 
 # ── Forecast row builder (module-level for unit-testability) ───────────────────
 
+
 def _clamp(value: float, lo: float, hi: float) -> float:
     if lo > hi:
         logger.warning("reversed_sanity_band", lo=lo, hi=hi, action="skipping_clamp")
@@ -275,12 +283,12 @@ def _clamp(value: float, lo: float, hi: float) -> float:
 
 
 def _make_forecast_rows(
-    market_id:    str,
+    market_id: str,
     commodity_id: str,
-    series:       List[Tuple[date, float]],
-    sanity:       Optional[Tuple[float, float]],
-    as_of:        Optional[date] = None,
-    features:     Optional[List[Any]] = None,
+    series: List[Tuple[date, float]],
+    sanity: Optional[Tuple[float, float]],
+    as_of: Optional[date] = None,
+    features: Optional[List[Any]] = None,
     pretrained_model: Optional[Any] = None,
     model_registry: Optional[Dict[str, str]] = None,
 ) -> List[dict]:
@@ -293,9 +301,9 @@ def _make_forecast_rows(
     predicted_price is clamped to [sanity_min, sanity_max] when a band is given.
     lower_bound / upper_bound are also clamped into the band (and floored at 0).
     """
-    n         = len(series)
+    n = len(series)
     last_date = series[-1][0] if series else None
-    as_of     = as_of or get_ist_today()
+    as_of = as_of or get_ist_today()
 
     # n = 0: skip entirely — no data at all
     if n == 0 or last_date is None:
@@ -305,30 +313,32 @@ def _make_forecast_rows(
 
     # n = 1–9: insufficient data — 1 honest row, no prediction fabricated
     if n < MIN_OBSERVATIONS:
-        return [{
-            "market_id":       market_id,
-            "commodity_id":    commodity_id,
-            "forecast_date":   (horizon_start + timedelta(days=1)).isoformat(),
-            "predicted_price": None,
-            "lower_bound":     None,
-            "upper_bound":     None,
-            "confidence":      None,
-            "method":          "none",
-            "model_id":        (model_registry or {}).get("auto"),
-            "observations":    n,
-            "status":          "insufficient_data",
-            "generated_at":    datetime.now(timezone.utc).isoformat(),
-        }]
+        return [
+            {
+                "market_id": market_id,
+                "commodity_id": commodity_id,
+                "forecast_date": (horizon_start + timedelta(days=1)).isoformat(),
+                "predicted_price": None,
+                "lower_bound": None,
+                "upper_bound": None,
+                "confidence": None,
+                "method": "none",
+                "model_id": (model_registry or {}).get("auto"),
+                "observations": n,
+                "status": "insufficient_data",
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        ]
 
     prices = [p for _, p in series]
-    
+
     settings = get_settings()
     requested_model = settings.forecast_model
-    
+
     preds = None
     method = "none"
     confidence = "none"
-    
+
     # Try the requested model if it's not "auto"
     if requested_model != "auto" and (requested_model in MODELS or requested_model == "gbm"):
         model_cls = MODELS.get(requested_model)
@@ -345,16 +355,27 @@ def _make_forecast_rows(
                 model_inst = model_cls(prices, features)
             else:
                 model_inst = model_cls(prices)
-                
-            if getattr(model_inst, 'fallback', False):
-                logger.warning("forecast_model_fallback", market_id=market_id, commodity_id=commodity_id, model=requested_model)
+
+            if getattr(model_inst, "fallback", False):
+                logger.warning(
+                    "forecast_model_fallback",
+                    market_id=market_id,
+                    commodity_id=commodity_id,
+                    model=requested_model,
+                )
             else:
                 raw_preds = model_inst.predict(horizon=HORIZON_DAYS, forecast_origin=horizon_start)
                 preds = apply_postprocessing(raw_preds, model_inst.sigma, sanity)
                 method = requested_model
                 confidence = "high" if n >= HIGH_CONFIDENCE_THRESHOLD else "medium"
         except Exception as e:
-            logger.warning("forecast_model_failed", market_id=market_id, commodity_id=commodity_id, model=requested_model, error=str(e))
+            logger.warning(
+                "forecast_model_failed",
+                market_id=market_id,
+                commodity_id=commodity_id,
+                model=requested_model,
+                error=str(e),
+            )
 
     # Regression fallback for LightGBM when gbm fails or is unavailable
     if preds is None and requested_model == "gbm":
@@ -364,14 +385,26 @@ def _make_forecast_rows(
             try:
                 reg_model = FeatureOLSModel(prices, features)
                 if not getattr(reg_model, "fallback", False):
-                    raw_preds = reg_model.predict(horizon=HORIZON_DAYS, forecast_origin=horizon_start)
+                    raw_preds = reg_model.predict(
+                        horizon=HORIZON_DAYS, forecast_origin=horizon_start
+                    )
                     preds = apply_postprocessing(raw_preds, reg_model.sigma, sanity)
                     method = "feature_ols"
                     confidence = "high" if n >= HIGH_CONFIDENCE_THRESHOLD else "medium"
                     model_inst = reg_model
-                    logger.info("gbm_fallback_succeeded", fallback_model="feature_ols", market_id=market_id, commodity_id=commodity_id)
+                    logger.info(
+                        "gbm_fallback_succeeded",
+                        fallback_model="feature_ols",
+                        market_id=market_id,
+                        commodity_id=commodity_id,
+                    )
             except Exception as e:
-                logger.warning("gbm_feature_ols_fallback_failed", error=str(e), market_id=market_id, commodity_id=commodity_id)
+                logger.warning(
+                    "gbm_feature_ols_fallback_failed",
+                    error=str(e),
+                    market_id=market_id,
+                    commodity_id=commodity_id,
+                )
 
         # 2. Linear regression (univariate OLS on day index) if feature_ols unavailable or fell back
         if preds is None and n >= BLEND_THRESHOLD:
@@ -382,25 +415,35 @@ def _make_forecast_rows(
                 method = "ols"
                 confidence = "high" if n >= HIGH_CONFIDENCE_THRESHOLD else "medium"
                 model_inst = reg_model
-                logger.info("gbm_fallback_succeeded", fallback_model="ols", market_id=market_id, commodity_id=commodity_id)
+                logger.info(
+                    "gbm_fallback_succeeded",
+                    fallback_model="ols",
+                    market_id=market_id,
+                    commodity_id=commodity_id,
+                )
             except Exception as e:
-                logger.warning("gbm_linear_regression_fallback_failed", error=str(e), market_id=market_id, commodity_id=commodity_id)
-            
+                logger.warning(
+                    "gbm_linear_regression_fallback_failed",
+                    error=str(e),
+                    market_id=market_id,
+                    commodity_id=commodity_id,
+                )
+
     # Fallback / Auto Tier Logic
     if preds is None:
         if n >= BLEND_THRESHOLD:
-            ma_model   = MovingAverageModel(prices)
-            lr_model   = LinearRegressionModel(prices)
+            ma_model = MovingAverageModel(prices)
+            lr_model = LinearRegressionModel(prices)
             raw_preds, blended_sigma = _blend_predictions(ma_model, lr_model)
-            preds      = apply_postprocessing(raw_preds, blended_sigma, sanity)
-            method     = "blend"
+            preds = apply_postprocessing(raw_preds, blended_sigma, sanity)
+            method = "blend"
             confidence = "high" if n >= HIGH_CONFIDENCE_THRESHOLD else "medium"
         else:
             # 10 ≤ n ≤ 14 — MA only
-            ma_model   = MovingAverageModel(prices)
-            raw_preds  = ma_model.predict(forecast_origin=horizon_start)
-            preds      = apply_postprocessing(raw_preds, ma_model.sigma, sanity)
-            method     = "moving_avg"
+            ma_model = MovingAverageModel(prices)
+            raw_preds = ma_model.predict(forecast_origin=horizon_start)
+            preds = apply_postprocessing(raw_preds, ma_model.sigma, sanity)
+            method = "moving_avg"
             confidence = "medium"
 
     # One timestamp for the whole row set: "generated_at" identifies the
@@ -412,48 +455,71 @@ def _make_forecast_rows(
     for i, (predicted, lower, upper) in enumerate(preds):
         fdate = (horizon_start + timedelta(days=i + 1)).isoformat()
 
-        
         features_used = []
         if method in ("feature_ols", "gbm"):
-            names = ["bias", "lag_1", "lag_7", "lag_14", "arrivals_7d_avg", "momentum_14d", "rain_7d_cum_mm", "district_mean_price", "event_pressure"]
+            names = [
+                "bias",
+                "lag_1",
+                "lag_7",
+                "lag_14",
+                "arrivals_7d_avg",
+                "momentum_14d",
+                "rain_7d_cum_mm",
+                "district_mean_price",
+                "event_pressure",
+            ]
             if method == "feature_ols":
                 features_used = [names[c] for c in getattr(model_inst, "keep_cols", [])]
             else:
-                features_used = ["market_id", "commodity_id", "dow", "lag_1", "lag_7", "lag_14", "arrivals_7d_avg", "momentum_14d", "rain_7d_cum_mm", "district_mean_price", "event_pressure"]
-            
-        
+                features_used = [
+                    "market_id",
+                    "commodity_id",
+                    "dow",
+                    "lag_1",
+                    "lag_7",
+                    "lag_14",
+                    "arrivals_7d_avg",
+                    "momentum_14d",
+                    "rain_7d_cum_mm",
+                    "district_mean_price",
+                    "event_pressure",
+                ]
+
         # The registry key must describe the model that ACTUALLY produced the
         # row.  A requested model that fell back to the blend/MA tier must not
         # be stamped with the requested model's id (FORECAST_MODEL=gbm with
         # lightgbm unavailable previously wrote model_id=<GBM id> over
         # method=blend rows — the accuracy card then over-claimed).
         if method == requested_model:
-            mapped_model = requested_model          # honoured as requested
+            mapped_model = requested_model  # honoured as requested
         elif method in (model_registry or {}):
-            mapped_model = method                   # valid registered model (e.g. feature_ols)
+            mapped_model = method  # valid registered model (e.g. feature_ols)
         else:
-            mapped_model = "auto"                   # fallback tier (blend / moving_avg / ols)
+            mapped_model = "auto"  # fallback tier (blend / moving_avg / ols)
 
-        rows.append({
-            "market_id":       market_id,
-            "commodity_id":    commodity_id,
-            "forecast_date":   fdate,
-            "predicted_price": predicted,
-            "lower_bound":     lower,
-            "upper_bound":     upper,
-            "confidence":      confidence,
-            "method":          method,
-            "model_id":        (model_registry or {}).get(mapped_model),
-            "observations":    n,
-            "status":          "ok",
-            "model_version":   "1.0",
-            "features_used":   features_used,
-            "generated_at":    v_generated_at,
-        })
+        rows.append(
+            {
+                "market_id": market_id,
+                "commodity_id": commodity_id,
+                "forecast_date": fdate,
+                "predicted_price": predicted,
+                "lower_bound": lower,
+                "upper_bound": upper,
+                "confidence": confidence,
+                "method": method,
+                "model_id": (model_registry or {}).get(mapped_model),
+                "observations": n,
+                "status": "ok",
+                "model_version": "1.0",
+                "features_used": features_used,
+                "generated_at": v_generated_at,
+            }
+        )
     return rows
 
 
 # ── Engine ─────────────────────────────────────────────────────────────────────
+
 
 class ForecastEngine:
     """
@@ -468,20 +534,20 @@ class ForecastEngine:
     5. Return summary dict for the scheduler log.
     """
 
-    PAGE_SIZE    = 500
+    PAGE_SIZE = 500
     HISTORY_DAYS = 150
 
     def __init__(self, supabase: Client):
         self.supabase = supabase
         self.model_registry = {}
 
-    # ── Private helpers ────────────────────────────────────────────────        
+    # ── Private helpers ────────────────────────────────────────────────
 
     def _load_sanity_bands(self) -> Dict[str, Tuple[float, float]]:
         # Load registry as well
         models_resp = self.supabase.table("forecast_models").select("id, name").execute()
         self.model_registry = {m["name"]: m["id"] for m in (models_resp.data or [])}
-        
+
         resp = self.supabase.table("commodities").select("id, sanity_min, sanity_max").execute()
         return {
             row["id"]: (float(row["sanity_min"]), float(row["sanity_max"]))
@@ -497,7 +563,7 @@ class ForecastEngine:
         (5 mandis × 4 crops × 60 days × 2 varieties ≈ 2,400 rows) a single
         query silently drops pairs. PAGE_SIZE=500 + loop keeps each page safe.
         """
-        pairs:  set = set()
+        pairs: set = set()
         offset: int = 0
         cutoff = (get_ist_today() - timedelta(days=self.HISTORY_DAYS)).isoformat()
         while True:
@@ -523,11 +589,11 @@ class ForecastEngine:
         Paginate the fetch to bypass the PostgREST 1000 row limit.
         """
         cutoff = (get_ist_today() - timedelta(days=self.HISTORY_DAYS)).isoformat()
-        
+
         history_map = collections.defaultdict(list)
         offset = 0
         PAGE_SIZE = 1000
-        
+
         while True:
             resp = (
                 self.supabase.table("prices")
@@ -544,10 +610,10 @@ class ForecastEngine:
             if len(resp.data) < PAGE_SIZE:
                 break
             offset += PAGE_SIZE
-            
+
         return history_map
 
-    # ── Public entry point ────────────────────────────────────────────────     
+    # ── Public entry point ────────────────────────────────────────────────
 
     def run(self) -> dict:
         """
@@ -555,11 +621,11 @@ class ForecastEngine:
         Returns a summary dict with counts and wall-clock timing.
         """
         start = time.monotonic()
-        log   = logger.bind(job="forecast_engine")
+        log = logger.bind(job="forecast_engine")
         log.info("forecast_run_started")
 
         sanity_bands = self._load_sanity_bands()
-        pairs        = self._distinct_pairs()
+        pairs = self._distinct_pairs()
         log.info("pairs_found", count=len(pairs))
 
         pairs_ok = pairs_insufficient = pairs_skipped = 0
@@ -570,12 +636,22 @@ class ForecastEngine:
         events = []
         try:
             cutoff = (get_ist_today() - timedelta(days=self.HISTORY_DAYS)).isoformat()
-            weather_daily = self.supabase.table("weather_daily").select("*").gte("observation_date", cutoff).execute().data or []
+            weather_daily = (
+                self.supabase.table("weather_daily")
+                .select("*")
+                .gte("observation_date", cutoff)
+                .execute()
+                .data
+                or []
+            )
             from events.loader import load_published_events
-            events = load_published_events(self.supabase, event_date_from=get_ist_today() - timedelta(days=self.HISTORY_DAYS))
+
+            events = load_published_events(
+                self.supabase, event_date_from=get_ist_today() - timedelta(days=self.HISTORY_DAYS)
+            )
         except Exception as e:
             logger.warning("global_features_fetch_failed", error=str(e))
-            
+
         # Group weather by market_id for fast lookup
         weather_by_market = {}
         for w in weather_daily:
@@ -591,12 +667,13 @@ class ForecastEngine:
         if requested_model == "gbm":
             try:
                 from forecasting.gbm import train_global_gbm
+
                 global_gbm = train_global_gbm(
                     pairs_history=pairs_history,
                     weather=weather_daily,
                     events=events,
                     district_prices=[],
-                    strict_pit=False
+                    strict_pit=False,
                 )
             except Exception as e:
                 logger.warning("global_gbm_training_failed", error=str(e))
@@ -604,27 +681,34 @@ class ForecastEngine:
         for market_id, commodity_id in pairs:
             try:
                 history = pairs_history.get((market_id, commodity_id), [])
-                series  = build_daily_series(history)
-                sanity  = sanity_bands.get(commodity_id)
-                
+                series = build_daily_series(history)
+                sanity = sanity_bands.get(commodity_id)
+
                 features = None
                 if get_settings().forecast_model in ("feature_ols", "gbm"):
                     try:
                         from forecasting.features import build_feature_matrix
+
                         market_weather = weather_by_market.get(market_id, [])
                         winning_rows = [row for _, row in build_daily_rows(history)]
                         features = build_feature_matrix(
-                            winning_rows, 
-                            weather=market_weather, 
-                            events=events, 
-                            district_prices=[], 
-                            target_commodity_id=commodity_id
+                            winning_rows,
+                            weather=market_weather,
+                            events=events,
+                            district_prices=[],
+                            target_commodity_id=commodity_id,
                         )
                     except Exception as e:
                         logger.warning("feature_build_failed", error=str(e))
-                
-                rows    = _make_forecast_rows(
-                    market_id, commodity_id, series, sanity, features=features, pretrained_model=global_gbm, model_registry=self.model_registry
+
+                rows = _make_forecast_rows(
+                    market_id,
+                    commodity_id,
+                    series,
+                    sanity,
+                    features=features,
+                    pretrained_model=global_gbm,
+                    model_registry=self.model_registry,
                 )
 
                 if not rows:
@@ -653,11 +737,11 @@ class ForecastEngine:
 
         duration_ms = int((time.monotonic() - start) * 1000)
         summary = {
-            "pairs_ok":           pairs_ok,
+            "pairs_ok": pairs_ok,
             "pairs_insufficient": pairs_insufficient,
-            "pairs_skipped":      pairs_skipped,
-            "rows_written":       total_rows,
-            "duration_ms":        duration_ms,
+            "pairs_skipped": pairs_skipped,
+            "rows_written": total_rows,
+            "duration_ms": duration_ms,
         }
         log.info("forecast_run_complete", **summary)
         return summary

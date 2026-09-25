@@ -44,7 +44,10 @@ class AgmarknetAdapter(IngestionSourceAdapter):
         try:
             from APIwebScraping import script
         except ImportError as e:
-            log.error("agmarknet_scraper_import_failed", reason="Is selenium installed and agmarknetAPI cloned?")
+            log.error(
+                "agmarknet_scraper_import_failed",
+                reason="Is selenium installed and agmarknetAPI cloned?",
+            )
             raise SourceFetchError("agmarknetAPI script import failed") from e
 
         last_err = None

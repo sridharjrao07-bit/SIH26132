@@ -5,6 +5,7 @@ Usage (from repo root):
 
 Requires the FastAPI app to be importable (i.e. .env loaded with real credentials).
 """
+
 import logging
 import sys
 

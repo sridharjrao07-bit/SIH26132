@@ -16,6 +16,7 @@ PostgREST errors:
   PGRST301  JWT expired/invalid                       → 401
   PGRST100  malformed request / parse error           → 422
 """
+
 from __future__ import annotations
 
 from fastapi.responses import JSONResponse

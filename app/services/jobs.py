@@ -18,6 +18,7 @@ settings = get_settings()
 
 SCHEDULER_ID = f"scheduler_{uuid.uuid4().hex[:8]}"
 
+
 def get_supabase_client():
     """
     Service-role client for background jobs — bypasses RLS.
@@ -37,7 +38,6 @@ def _claim(supabase, job_key: str, holder: str = SCHEDULER_ID, ttl_minutes: int 
 
 def _release(supabase, job_key: str, holder: str = SCHEDULER_ID):
     supabase.rpc("release_job_lock", {"p_job_key": job_key, "p_holder": holder}).execute()
-
 
 
 async def run_alert_job():
@@ -65,9 +65,7 @@ async def run_stale_forecasts_job():
         return
 
     try:
-        res = await asyncio.to_thread(
-            lambda: supabase.rpc("mark_stale_forecasts").execute()
-        )
+        res = await asyncio.to_thread(lambda: supabase.rpc("mark_stale_forecasts").execute())
         logger.info("mark_stale_forecasts_done", count=res.data)
     finally:
         _release(supabase, "mark_stale")
@@ -84,7 +82,9 @@ async def run_expire_offers_job():
         return {"status": "locked"}
     try:
         summary = await asyncio.to_thread(expire_stale_offers, supabase)
-        logger.info("expire_offers_job_done", **{k: v for k, v in summary.items() if k != "offer_ids"})
+        logger.info(
+            "expire_offers_job_done", **{k: v for k, v in summary.items() if k != "offer_ids"}
+        )
         return summary
     finally:
         _release(supabase, "expire_offers")
@@ -100,7 +100,7 @@ async def run_events_job():
     if not lock_res.data:
         logger.info("events_job_locked")
         return {"status": "locked"}
-    
+
     try:
         summary = await run_events(supabase, since_days=2)
         logger.info("events_job_done", **summary)
@@ -125,7 +125,10 @@ async def run_ingestion_job():
     try:
         adapters = []
 
-        if settings.data_gov_in_api_key and "your-data-gov-in-key" not in settings.data_gov_in_api_key:
+        if (
+            settings.data_gov_in_api_key
+            and "your-data-gov-in-key" not in settings.data_gov_in_api_key
+        ):
             adapters.append(DataGovInAdapter(api_key=settings.data_gov_in_api_key))
         else:
             logger.warning("data_gov_in_api_key_missing", action="skipping data.gov.in adapter")
@@ -133,6 +136,7 @@ async def run_ingestion_job():
         if settings.enable_agmarknet:
             try:
                 from ingestion.agmarknet import AgmarknetAdapter
+
                 adapters.append(AgmarknetAdapter())
                 logger.info("agmarknet_adapter_enabled")
             except ImportError as e:
@@ -156,24 +160,24 @@ async def _run_catchup_task():
     """
     try:
         supabase = get_supabase_client()
-        resp = supabase.table("ingestion_log").select("run_at").eq(
-            "status", "success"
-        ).order("run_at", desc=True).limit(1).execute()
+        resp = (
+            supabase.table("ingestion_log")
+            .select("run_at")
+            .eq("status", "success")
+            .order("run_at", desc=True)
+            .limit(1)
+            .execute()
+        )
 
         if resp.data:
             last_run_str = resp.data[0]["run_at"]
-            last_run = datetime.fromisoformat(
-                last_run_str.replace("Z", "+00:00")
-            )
-            cutoff = datetime.now(timezone.utc) - timedelta(
-                hours=settings.ingestion_interval_hours
-            )
+            last_run = datetime.fromisoformat(last_run_str.replace("Z", "+00:00"))
+            cutoff = datetime.now(timezone.utc) - timedelta(hours=settings.ingestion_interval_hours)
             if last_run > cutoff:
                 logger.info("startup_catchup_skipped", last_run=str(last_run))
                 return
 
-        logger.info("startup_catchup_running",
-                    reason="no recent successful ingestion found")
+        logger.info("startup_catchup_running", reason="no recent successful ingestion found")
         await run_ingestion_job()
         await run_forecast_job()
 
@@ -183,6 +187,7 @@ async def _run_catchup_task():
 
 def schedule_startup_catchup():
     import asyncio
+
     asyncio.create_task(_run_catchup_task())
 
 

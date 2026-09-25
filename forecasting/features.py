@@ -17,8 +17,8 @@ When strict_pit=True (used in backtests and any quantitative evaluation):
   This prevents retroactive leakage from articles published after T
   even when the underlying event_date pre-dates T.
 
-  NOTE: This does NOT fully reconstruct actual deployed availability, 
-  as it lacks protection against retrospective review changes or true 
+  NOTE: This does NOT fully reconstruct actual deployed availability,
+  as it lacks protection against retrospective review changes or true
   ingestion delay tracking.
 
 When strict_pit=False (default for production inference):
@@ -34,6 +34,7 @@ District price availability
 district_mean_price uses the previous calendar day's data to prevent
 same-day leakage. winner-row construction is identical to build_daily_series.
 """
+
 import math
 from dataclasses import dataclass
 from datetime import date, timedelta
@@ -63,17 +64,18 @@ class FeatureRow:
                                  retroactive information (strict_pit=False or
                                  publication_date=NULL events were included).
     """
-    day_offset:          int            # Days since the start of the series
-    dow:                 int            # Day of week (0=Monday, 6=Sunday)
-    lag_1:               Optional[float]  # Price 1 day ago
-    lag_7:               Optional[float]  # Price 7 days ago
-    lag_14:              Optional[float]  # Price 14 days ago
-    arrivals_7d_avg:     Optional[float]  # 7-day average of arrivals (T-7..T-1)
-    momentum_14d:        Optional[float]  # (price[T-1] - price[T-15]) / price[T-15]
-    rain_7d_cum_mm:      Optional[float]  # 7-day cumulative rainfall (T-7..T-1)
+
+    day_offset: int  # Days since the start of the series
+    dow: int  # Day of week (0=Monday, 6=Sunday)
+    lag_1: Optional[float]  # Price 1 day ago
+    lag_7: Optional[float]  # Price 7 days ago
+    lag_14: Optional[float]  # Price 14 days ago
+    arrivals_7d_avg: Optional[float]  # 7-day average of arrivals (T-7..T-1)
+    momentum_14d: Optional[float]  # (price[T-1] - price[T-15]) / price[T-15]
+    rain_7d_cum_mm: Optional[float]  # 7-day cumulative rainfall (T-7..T-1)
     district_mean_price: Optional[float]  # Previous-day district average (see contract)
-    event_pressure:      float            # Computed event pressure score (-2.0 to 2.0)
-    events_approximate:  bool = False     # True when event_pressure is not PIT-clean
+    event_pressure: float  # Computed event pressure score (-2.0 to 2.0)
+    events_approximate: bool = False  # True when event_pressure is not PIT-clean
     # NOTE: 0.0 is also returned when all eligible events are excluded by provenance
     # (fixture/unknown). events_approximate remains False in that case — a genuine
     # zero (no signal) is different from an approximate non-zero signal.
@@ -237,10 +239,8 @@ def build_feature_matrix(
     district_prices = district_prices or []
 
     # Pre-index auxiliary data
-    weather_by_date  = {w["observation_date"]: w.get("precipitation_sum_mm", 0.0)
-                        for w in weather}
-    district_by_date = {d["arrival_date"]: d.get("mean_price")
-                        for d in district_prices}
+    weather_by_date = {w["observation_date"]: w.get("precipitation_sum_mm", 0.0) for w in weather}
+    district_by_date = {d["arrival_date"]: d.get("mean_price") for d in district_prices}
 
     start_date = date.fromisoformat(series[0]["arrival_date"])
 
@@ -253,16 +253,16 @@ def build_feature_matrix(
     matrix: List[FeatureRow] = []
 
     for r in series:
-        curr_date  = date.fromisoformat(r["arrival_date"])
+        curr_date = date.fromisoformat(r["arrival_date"])
         day_offset = (curr_date - start_date).days
-        dow        = curr_date.weekday()
+        dow = curr_date.weekday()
 
         def get_lag_price(days_back: int) -> Optional[float]:
             d = curr_date - timedelta(days=days_back)
             return series_by_date[d].get("modal_price") if d in series_by_date else None
 
-        lag_1  = get_lag_price(1)
-        lag_7  = get_lag_price(7)
+        lag_1 = get_lag_price(1)
+        lag_7 = get_lag_price(7)
         lag_14 = get_lag_price(14)
 
         # Arrivals: 7-day average, fully lagged (T-7 .. T-1)
@@ -294,7 +294,7 @@ def build_feature_matrix(
         rain_7d_cum_mm = rain_sum if rain_count > 0 else None
 
         # District price: use T-1 to avoid same-day leakage
-        prev_day   = (curr_date - timedelta(days=1)).isoformat()
+        prev_day = (curr_date - timedelta(days=1)).isoformat()
         dist_price = district_by_date.get(prev_day)
 
         # Event pressure: forecast_origin = curr_date (events must be available
@@ -306,18 +306,20 @@ def build_feature_matrix(
             strict_pit=strict_pit,
         )
 
-        matrix.append(FeatureRow(
-            day_offset=day_offset,
-            dow=dow,
-            lag_1=lag_1,
-            lag_7=lag_7,
-            lag_14=lag_14,
-            arrivals_7d_avg=arrivals_7d_avg,
-            momentum_14d=momentum_14d,
-            rain_7d_cum_mm=rain_7d_cum_mm,
-            district_mean_price=dist_price,
-            event_pressure=pressure,
-            events_approximate=approx,
-        ))
+        matrix.append(
+            FeatureRow(
+                day_offset=day_offset,
+                dow=dow,
+                lag_1=lag_1,
+                lag_7=lag_7,
+                lag_14=lag_14,
+                arrivals_7d_avg=arrivals_7d_avg,
+                momentum_14d=momentum_14d,
+                rain_7d_cum_mm=rain_7d_cum_mm,
+                district_mean_price=dist_price,
+                event_pressure=pressure,
+                events_approximate=approx,
+            )
+        )
 
     return matrix

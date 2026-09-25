@@ -17,6 +17,7 @@ non-zero if any step fails, so you can wire it into a pre-flight check.
 
 Exit code 0 == every step behaved. No secrets are printed.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -25,8 +26,8 @@ import sys
 import urllib.error
 import urllib.request
 
-ONION = "22222222-2222-2222-2222-222222222201"      # mock + seed commodity id
-LASALGAON = "11111111-1111-1111-1111-111111111101"   # mock + seed market id
+ONION = "22222222-2222-2222-2222-222222222201"  # mock + seed commodity id
+LASALGAON = "11111111-1111-1111-1111-111111111101"  # mock + seed market id
 
 _ok = 0
 _fail = 0
@@ -95,96 +96,203 @@ def main() -> int:
     step("/health is 200 ok", code == 200 and health == {"status": "ok"}, f"{code}")
 
     code, comms = call(base, "GET", "/api/v1/commodities/")
-    onion = next((c["id"] for c in comms if c.get("name_en") == "Onion"), ONION) if isinstance(comms, list) else ONION
-    step("/commodities lists Onion", isinstance(comms, list) and len(comms) >= 4, f"{len(comms) if isinstance(comms, list) else code}")
+    onion = (
+        next((c["id"] for c in comms if c.get("name_en") == "Onion"), ONION)
+        if isinstance(comms, list)
+        else ONION
+    )
+    step(
+        "/commodities lists Onion",
+        isinstance(comms, list) and len(comms) >= 4,
+        f"{len(comms) if isinstance(comms, list) else code}",
+    )
 
     code, markets = call(base, "GET", "/api/v1/markets/")
-    lasalgaon = next((m["id"] for m in markets if "Lasalgaon" in (m.get("name") or "")), LASALGAON) if isinstance(markets, list) else LASALGAON
-    step("/markets lists Nashik APMCs", isinstance(markets, list) and len(markets) >= 5, f"{len(markets) if isinstance(markets, list) else code}")
+    lasalgaon = (
+        next((m["id"] for m in markets if "Lasalgaon" in (m.get("name") or "")), LASALGAON)
+        if isinstance(markets, list)
+        else LASALGAON
+    )
+    step(
+        "/markets lists Nashik APMCs",
+        isinstance(markets, list) and len(markets) >= 5,
+        f"{len(markets) if isinstance(markets, list) else code}",
+    )
 
     code, latest = call(base, "GET", "/api/v1/prices/latest?limit=5")
-    step("/prices/latest returns rows", code == 200 and isinstance(latest, list) and len(latest) > 0, f"{len(latest) if isinstance(latest, list) else code} rows")
+    step(
+        "/prices/latest returns rows",
+        code == 200 and isinstance(latest, list) and len(latest) > 0,
+        f"{len(latest) if isinstance(latest, list) else code} rows",
+    )
 
     code, summ = call(base, "GET", "/api/v1/forecasts/summary")
     step("/forecasts/summary is 200", code == 200, f"{code}")
 
-    code, win = call(base, "GET", f"/api/v1/sale-window/?commodity_id={onion}&market_id={lasalgaon}&lang={args.lang}")
+    code, win = call(
+        base,
+        "GET",
+        f"/api/v1/sale-window/?commodity_id={onion}&market_id={lasalgaon}&lang={args.lang}",
+    )
     action = (win or {}).get("action") if isinstance(win, dict) else None
-    step(f"/sale-window returns a verdict ({args.lang})", code == 200 and action in ("SELL_NOW", "HOLD", "WAIT"),
-         f"action={action}, label={(win or {}).get('action_label')!r}")
+    step(
+        f"/sale-window returns a verdict ({args.lang})",
+        code == 200 and action in ("SELL_NOW", "HOLD", "WAIT"),
+        f"action={action}, label={(win or {}).get('action_label')!r}",
+    )
 
     code, nearby = call(base, "GET", "/api/v1/markets/nearby?lat=20.1201&lng=74.3374&radius_km=50")
-    step("/markets/nearby returns mandis by distance", code == 200 and isinstance(nearby, list) and len(nearby) > 0,
-         f"{len(nearby) if isinstance(nearby, list) else code} within 50km")
+    step(
+        "/markets/nearby returns mandis by distance",
+        code == 200 and isinstance(nearby, list) and len(nearby) > 0,
+        f"{len(nearby) if isinstance(nearby, list) else code} within 50km",
+    )
 
     # ── Setup: profile ────────────────────────────────────────────────────────
     print("\nSetup — profile")
     code, me = call(base, "GET", "/api/v1/me/", headers=auth)
     step("GET /me is 200 (token accepted)", code == 200 and isinstance(me, dict), f"{code}")
 
-    code, me2 = call(base, "PATCH", "/api/v1/me/", body={"phone": "9876543210", "district": "Nashik", "preferred_language": args.lang}, headers=auth)
+    code, me2 = call(
+        base,
+        "PATCH",
+        "/api/v1/me/",
+        body={"phone": "9876543210", "district": "Nashik", "preferred_language": args.lang},
+        headers=auth,
+    )
     step("PATCH /me updates profile", code == 200 and isinstance(me2, dict), f"{code}")
 
     # ── List produce ──────────────────────────────────────────────────────────
     print("\nSell — list produce")
-    code, lot = call(base, "POST", "/api/v1/lots/", body={
-        "commodity_id": onion, "quantity_qtl": 20, "grade": "General",
-        "asking_price": 2400, "market_id": lasalgaon, "quality_notes": "demo lot",
-    }, headers=auth)
+    code, lot = call(
+        base,
+        "POST",
+        "/api/v1/lots/",
+        body={
+            "commodity_id": onion,
+            "quantity_qtl": 20,
+            "grade": "General",
+            "asking_price": 2400,
+            "market_id": lasalgaon,
+            "quality_notes": "demo lot",
+        },
+        headers=auth,
+    )
     lot_id = lot.get("id") if isinstance(lot, dict) else None
-    step("POST /lots creates an open lot", code == 200 and lot_id and lot.get("status") == "open", f"status={lot.get('status') if isinstance(lot, dict) else code}")
+    step(
+        "POST /lots creates an open lot",
+        code == 200 and lot_id and lot.get("status") == "open",
+        f"status={lot.get('status') if isinstance(lot, dict) else code}",
+    )
 
     # ── Advice ────────────────────────────────────────────────────────────────
     print("\nAdvice — sell / hold / wait + best buyer")
     code, adv = call(base, "GET", f"/api/v1/lots/{lot_id}/advice?lang={args.lang}", headers=auth)
-    step("GET advice returns action + label", code == 200 and (adv or {}).get("action"), f"action={(adv or {}).get('action')}")
+    step(
+        "GET advice returns action + label",
+        code == 200 and (adv or {}).get("action"),
+        f"action={(adv or {}).get('action')}",
+    )
 
     # ── Matches ───────────────────────────────────────────────────────────────
     print("\nMatches — verified buyers")
     code, matches = call(base, "GET", f"/api/v1/lots/{lot_id}/matches", headers=auth)
     best = (matches or {}).get("best_buyer") if isinstance(matches, dict) else None
     buyer_id = (best or {}).get("buyer_id") or (best or {}).get("id")
-    step("GET matches ranks buyers", code == 200 and isinstance(matches, dict) and "matches" in matches,
-         f"best={(best or {}).get('buyer_name') or (best or {}).get('name')}")
+    step(
+        "GET matches ranks buyers",
+        code == 200 and isinstance(matches, dict) and "matches" in matches,
+        f"best={(best or {}).get('buyer_name') or (best or {}).get('name')}",
+    )
 
     # ── Offer → accept → pay ──────────────────────────────────────────────────
     print("\nMarketplace — offer, accept, payment")
     if not buyer_id:
         # Fall back to a seeded buyer id from the public list.
         code, buyers = call(base, "GET", "/api/v1/buyers/")
-        buyer_id = buyers[0]["id"] if isinstance(buyers, list) and buyers else "66666666-6666-6666-6666-666666666601"
-    code, offer = call(base, "POST", "/api/v1/offers/", body={
-        "lot_id": lot_id, "buyer_id": buyer_id, "price_per_qtl": 2450, "quantity_qtl": 20,
-    }, headers=auth)
+        buyer_id = (
+            buyers[0]["id"]
+            if isinstance(buyers, list) and buyers
+            else "66666666-6666-6666-6666-666666666601"
+        )
+    code, offer = call(
+        base,
+        "POST",
+        "/api/v1/offers/",
+        body={
+            "lot_id": lot_id,
+            "buyer_id": buyer_id,
+            "price_per_qtl": 2450,
+            "quantity_qtl": 20,
+        },
+        headers=auth,
+    )
     offer_id = offer.get("id") if isinstance(offer, dict) else None
-    step("POST /offers creates a pending offer (lot -> offered)", code == 200 and offer_id, f"{code}")
+    step(
+        "POST /offers creates a pending offer (lot -> offered)", code == 200 and offer_id, f"{code}"
+    )
 
-    code, accepted = call(base, "PATCH", f"/api/v1/offers/{offer_id}", body={"status": "accepted"}, headers=auth)
-    step("PATCH offer accepted (lot -> matched)", code == 200 and (accepted or {}).get("status") == "accepted", f"status={(accepted or {}).get('status')}")
+    code, accepted = call(
+        base, "PATCH", f"/api/v1/offers/{offer_id}", body={"status": "accepted"}, headers=auth
+    )
+    step(
+        "PATCH offer accepted (lot -> matched)",
+        code == 200 and (accepted or {}).get("status") == "accepted",
+        f"status={(accepted or {}).get('status')}",
+    )
 
-    code, pay = call(base, "POST", "/api/v1/payments/", body={"offer_id": offer_id, "amount": 49000, "reference": "UPI-DEMO"}, headers=auth)
+    code, pay = call(
+        base,
+        "POST",
+        "/api/v1/payments/",
+        body={"offer_id": offer_id, "amount": 49000, "reference": "UPI-DEMO"},
+        headers=auth,
+    )
     pay_id = pay.get("id") if isinstance(pay, dict) else None
-    step("POST /payments is idempotent pending", code == 200 and pay_id, f"status={(pay or {}).get('status')}")
+    step(
+        "POST /payments is idempotent pending",
+        code == 200 and pay_id,
+        f"status={(pay or {}).get('status')}",
+    )
 
     code, paid = call(base, "PATCH", f"/api/v1/payments/{pay_id}/paid", headers=auth)
-    step("PATCH payment paid", code == 200 and (paid or {}).get("status") == "paid", f"status={(paid or {}).get('status')}")
+    step(
+        "PATCH payment paid",
+        code == 200 and (paid or {}).get("status") == "paid",
+        f"status={(paid or {}).get('status')}",
+    )
 
     # ── Ledger ────────────────────────────────────────────────────────────────
     print("\nLedger — transparent record")
     code, ledger = call(base, "GET", f"/api/v1/lots/{lot_id}/ledger", headers=auth)
     n_events = len(ledger.get("events", [])) if isinstance(ledger, dict) else 0
-    step("GET ledger shows the transaction trail", code == 200 and n_events > 0, f"{n_events} events")
+    step(
+        "GET ledger shows the transaction trail", code == 200 and n_events > 0, f"{n_events} events"
+    )
 
     # ── Alerts ────────────────────────────────────────────────────────────────
     print("\nAlerts — SMS price alert")
-    code, alert = call(base, "POST", "/api/v1/alerts/", body={
-        "commodity_id": onion, "market_id": lasalgaon, "threshold_price": 2400, "condition": "gte",
-    }, headers=auth)
+    code, alert = call(
+        base,
+        "POST",
+        "/api/v1/alerts/",
+        body={
+            "commodity_id": onion,
+            "market_id": lasalgaon,
+            "threshold_price": 2400,
+            "condition": "gte",
+        },
+        headers=auth,
+    )
     alert_id = alert.get("id") if isinstance(alert, dict) else None
     step("POST /alerts creates an alert", code == 200 and alert_id, f"{code}")
 
     code, alerts = call(base, "GET", "/api/v1/alerts/", headers=auth)
-    step("GET /alerts lists it", code == 200 and isinstance(alerts, list) and len(alerts) >= 1, f"{len(alerts) if isinstance(alerts, list) else code}")
+    step(
+        "GET /alerts lists it",
+        code == 200 and isinstance(alerts, list) and len(alerts) >= 1,
+        f"{len(alerts) if isinstance(alerts, list) else code}",
+    )
 
     code, _ = call(base, "DELETE", f"/api/v1/alerts/{alert_id}", headers=auth)
     step("DELETE /alerts removes it", code == 200, f"{code}")
@@ -193,11 +301,25 @@ def main() -> int:
     # ── SMS (admin simulates an inbound 'PYAJ'; the mock supports this too) ───
     print("\nSMS — reply-to-price (admin simulates inbound 'PYAJ')")
     admin = {"Authorization": f"Bearer {mint_token(base, 'admin') or token}"}
-    code, sms = call(base, "POST", "/api/v1/sms/simulate", body={"sender": "919876543210", "message": "PYAJ"}, headers=admin)
-    step("POST /sms/simulate replies with modal + verdict (admin)",
-         code == 200 and isinstance(sms, dict) and sms.get("status") == "replied",
-         f"{code} {str((sms or {}).get('message', ''))[:52]!r}")
-    code_f, _ = call(base, "POST", "/api/v1/sms/simulate", body={"sender": "919876543210", "message": "PYAJ"}, headers=auth)
+    code, sms = call(
+        base,
+        "POST",
+        "/api/v1/sms/simulate",
+        body={"sender": "919876543210", "message": "PYAJ"},
+        headers=admin,
+    )
+    step(
+        "POST /sms/simulate replies with modal + verdict (admin)",
+        code == 200 and isinstance(sms, dict) and sms.get("status") == "replied",
+        f"{code} {str((sms or {}).get('message', ''))[:52]!r}",
+    )
+    code_f, _ = call(
+        base,
+        "POST",
+        "/api/v1/sms/simulate",
+        body={"sender": "919876543210", "message": "PYAJ"},
+        headers=auth,
+    )
     step("farmer is correctly refused /sms/simulate (403)", code_f == 403, f"{code_f}")
 
     print(f"\n{'=' * 46}\n{_ok} passed, {_fail} failed")

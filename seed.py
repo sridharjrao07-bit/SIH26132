@@ -2,6 +2,7 @@
 Seed script to ingest dummy data for evaluation.
 Wraps scripts/ingest_csv.py for a 'zero-friction' setup.
 """
+
 import asyncio
 import os
 import sys

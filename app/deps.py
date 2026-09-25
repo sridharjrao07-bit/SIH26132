@@ -13,6 +13,7 @@ Client tiers
 IMPORTANT: ``get_supabase_as_user`` is **never** @lru_cached — caching a
 user-scoped client is a cross-user data-leak vector.
 """
+
 from functools import lru_cache
 
 import structlog
@@ -22,6 +23,7 @@ from supabase import Client, ClientOptions, create_client
 from .config import get_settings
 
 _log = structlog.get_logger()
+
 
 def get_supabase_as_user(authorization: str = Header(None)) -> Client:
     """Return a Supabase client scoped to the authenticated caller.
@@ -39,6 +41,7 @@ def get_supabase_as_user(authorization: str = Header(None)) -> Client:
 
     # Validate JWT regardless of mode — lazy import avoids circular dep.
     from app.auth import decode_access_token
+
     decode_access_token(authorization[7:])
 
     settings = get_settings()

@@ -30,6 +30,7 @@ The project targets Supabase/PostgREST which already owns the schema lifecycle.
 A lightweight numbered-file runner avoids introducing a second migration tool
 that must be kept in sync with Supabase's own migration system.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -131,8 +132,13 @@ def apply_migrations(db_url: str, dry_run: bool = False, from_version: int = 0) 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Apply SQL migrations to Postgres.")
     parser.add_argument("--dry-run", action="store_true", help="Print migrations without applying")
-    parser.add_argument("--from", dest="from_version", type=int, default=0,
-                        help="Start applying from this migration number (inclusive)")
+    parser.add_argument(
+        "--from",
+        dest="from_version",
+        type=int,
+        default=0,
+        help="Start applying from this migration number (inclusive)",
+    )
     args = parser.parse_args()
 
     db_url = os.environ.get("SUPABASE_DB_URL", "")

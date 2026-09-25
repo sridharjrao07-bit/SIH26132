@@ -3,6 +3,7 @@
 Usage (from repo root):
     python scripts/demo/quick_forecast_onion.py
 """
+
 import logging
 from datetime import timedelta
 

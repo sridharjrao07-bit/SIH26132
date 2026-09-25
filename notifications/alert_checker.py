@@ -49,6 +49,7 @@ def _parse_ts(value) -> Optional[datetime]:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc)
 
+
 def normalize_phone(phone: Optional[str]) -> Optional[str]:
     if phone is None or phone == "":
         return None
@@ -58,18 +59,19 @@ def normalize_phone(phone: Optional[str]) -> Optional[str]:
         return None
 
     digits = "".join(c for c in s if c.isdigit())
-    
+
     if len(digits) == 10 and not digits.startswith("0"):
         return "+91" + digits
     if len(digits) == 11 and digits.startswith("0"):
         return "+91" + digits[1:]
     if len(digits) == 12 and digits.startswith("91"):
         return "+" + digits
-        
+
     return None
 
+
 class AlertChecker:
-    HISTORY_DAYS = 15   # look-back window for crossing detection
+    HISTORY_DAYS = 15  # look-back window for crossing detection
     MAX_SMS_PER_USER = 3
 
     def __init__(self, supabase: Client):
@@ -85,7 +87,9 @@ class AlertChecker:
         cooldown_cutoff = _hours_ago(24)
 
         # 1. Deactivate expired alerts (has expires_at AND it's in the past)
-        self.supabase.table("alerts").update({"active": False}).eq("active", True).lt("expires_at", now_iso).execute()
+        self.supabase.table("alerts").update({"active": False}).eq("active", True).lt(
+            "expires_at", now_iso
+        ).execute()
 
         # 2. Fetch active alerts (separate queries — no PostgREST join needed)
         alerts_res = self.supabase.table("alerts").select("*").eq("active", True).execute()
@@ -94,16 +98,22 @@ class AlertChecker:
             return {"status": "ok", "fired": 0}
 
         # 3. Enrich alerts with user and commodity data via separate queries
-        user_ids   = list({a["user_id"] for a in alerts})
-        comm_ids   = list({a["commodity_id"] for a in alerts})
+        user_ids = list({a["user_id"] for a in alerts})
+        comm_ids = list({a["commodity_id"] for a in alerts})
 
         users_data = {
             u["id"]: u
-            for u in (self.supabase.table("user_profiles").select("*").in_("id", user_ids).execute().data or [])
+            for u in (
+                self.supabase.table("user_profiles").select("*").in_("id", user_ids).execute().data
+                or []
+            )
         }
         comms_data = {
             c["id"]: c
-            for c in (self.supabase.table("commodities").select("*").in_("id", comm_ids).execute().data or [])
+            for c in (
+                self.supabase.table("commodities").select("*").in_("id", comm_ids).execute().data
+                or []
+            )
         }
 
         due_alerts = []
@@ -142,7 +152,7 @@ class AlertChecker:
 
         for alert in due_alerts:
             user = alert["_user"]
-            uid  = user["id"]
+            uid = user["id"]
 
             if user_sms_count.get(uid, 0) >= self.MAX_SMS_PER_USER:
                 continue  # SMS cap: max 3 per user per run
@@ -182,17 +192,17 @@ class AlertChecker:
                     continue  # Genuinely lost the race
 
             # Send SMS
-            lang      = user.get("preferred_language", "en")
+            lang = user.get("preferred_language", "en")
             commodity = alert["_commodity"]
             comm_name = commodity.get(f"name_{lang}") or commodity.get("name_en", "")
-            price     = alert["_current_price"]
+            price = alert["_current_price"]
             threshold = alert["threshold_price"]
-            scope     = alert["_scope_note"]
+            scope = alert["_scope_note"]
 
             msg = format_alert_sms(lang, comm_name, price, threshold, scope)
 
             template_id = resolve_template(lang)
-            
+
             try:
                 sms_status, success = self.gateway.send_sms(
                     phone,
@@ -220,27 +230,27 @@ class AlertChecker:
                 # Rollback guarded by the claim timestamp
                 if rollback_ts is None:
                     # Supabase Python handles None as NULL via update
-                    self.supabase.table("alerts").update({
-                        "last_notified_at": None,
-                        "notified_count": old_count
-                    }).eq("id", alert["id"]).eq("last_notified_at", now_iso).execute()
+                    self.supabase.table("alerts").update(
+                        {"last_notified_at": None, "notified_count": old_count}
+                    ).eq("id", alert["id"]).eq("last_notified_at", now_iso).execute()
                 else:
-                    self.supabase.table("alerts").update({
-                        "last_notified_at": rollback_ts,
-                        "notified_count": old_count
-                    }).eq("id", alert["id"]).eq("last_notified_at", now_iso).execute()
+                    self.supabase.table("alerts").update(
+                        {"last_notified_at": rollback_ts, "notified_count": old_count}
+                    ).eq("id", alert["id"]).eq("last_notified_at", now_iso).execute()
 
             # Write to notification_log — status comes from the gateway
             # ("mock" for MockGateway, "sent" for MSG91 2xx, "failed" for errors)
-            self.supabase.table("notification_log").insert({
-                "alert_id":     alert["id"],
-                "user_id":      uid,
-                "recipient":    phone,
-                "message":      msg,
-                "language":     lang,
-                "status":       sms_status,
-                "provider_ref": getattr(self.gateway, "last_provider_ref", None),
-            }).execute()
+            self.supabase.table("notification_log").insert(
+                {
+                    "alert_id": alert["id"],
+                    "user_id": uid,
+                    "recipient": phone,
+                    "message": msg,
+                    "language": lang,
+                    "status": sms_status,
+                    "provider_ref": getattr(self.gateway, "last_provider_ref", None),
+                }
+            ).execute()
 
             if success:
                 user_sms_count[uid] = user_sms_count.get(uid, 0) + 1
@@ -257,20 +267,22 @@ class AlertChecker:
         Reuses build_daily_series from forecasting.engine for consistent source
         precedence + variety selection.
         """
-        market_id    = alert.get("market_id")
+        market_id = alert.get("market_id")
         commodity_id = alert["commodity_id"]
-        threshold    = float(alert["threshold_price"])
-        condition    = alert["condition"]
-        scope_note   = "direct"
-        cutoff       = _days_ago_date(self.HISTORY_DAYS)
+        threshold = float(alert["threshold_price"])
+        condition = alert["condition"]
+        scope_note = "direct"
+        cutoff = _days_ago_date(self.HISTORY_DAYS)
 
         # ── Resolve market ───────────────────────────────────────────────────
         if not market_id:
             lat, lng = user.get("lat"), user.get("lng")
             if lat is not None and lng is not None:
                 res = self.supabase.rpc("nearest_market", {"lat": lat, "lng": lng}).execute()
-                if res.data and (isinstance(res.data, list) and res.data[0].get("distance_km", 999) <= 50.0):
-                    market_id  = res.data[0]["id"]
+                if res.data and (
+                    isinstance(res.data, list) and res.data[0].get("distance_km", 999) <= 50.0
+                ):
+                    market_id = res.data[0]["id"]
                     scope_note = "nearest_market"
 
         # ── Fetch prices ─────────────────────────────────────────────────────
@@ -287,7 +299,7 @@ class AlertChecker:
         else:
             # District fallback
             scope_note = "district_mean"
-            district   = user.get("district", "Nashik")
+            district = user.get("district", "Nashik")
             market_rows = (
                 self.supabase.table("markets")
                 .select("id")
@@ -314,7 +326,7 @@ class AlertChecker:
         if len(series) < 2:
             return False, scope_note, 0.0
 
-        prev_price   = series[-2][1]
+        prev_price = series[-2][1]
         latest_price = series[-1][1]
 
         # Edge-only: fire when the threshold is crossed, not while it stays breached.

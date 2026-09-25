@@ -9,6 +9,7 @@ CREATE  → logistics_booking_create  (ownership + lot state + capacity under lo
 UPDATE  → logistics_booking_update  (owner-only state machine, notes persisted)
 LIST    → direct SELECT (no write; RLS enforces visibility)
 """
+
 from typing import Optional
 
 from app.auth import get_current_user

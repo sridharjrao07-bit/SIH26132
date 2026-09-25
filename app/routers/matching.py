@@ -1,4 +1,5 @@
 """Rank verified buyers for a farmer lot (SIH26132 matching)."""
+
 from typing import Literal, Optional
 
 from app.auth import get_current_user
@@ -68,10 +69,11 @@ def lot_advice(
 ):
     """Sell Now / Hold plus the best local buyer — not a price dump."""
     from datetime import timedelta
+
     today = get_ist_today()
     lot, profile = _load_lot_and_profile(as_user, lot_id, user_id)
     lang = lang or profile.get("preferred_language") or "en"
-    
+
     evt_resp = (
         admin.table("events")
         .select("id")
@@ -81,7 +83,7 @@ def lot_advice(
         .limit(20)
         .execute()
     )
-    
+
     window = compute_sale_window(
         public,
         lot["commodity_id"],
@@ -100,12 +102,7 @@ def lot_advice(
     if action == "SELL_NOW" and best:
         reason = f"{reason} {best['summary']}"
     bookings = (
-        as_user.table("logistics_bookings")
-        .select("*")
-        .eq("lot_id", lot_id)
-        .execute()
-        .data
-        or []
+        as_user.table("logistics_bookings").select("*").eq("lot_id", lot_id).execute().data or []
     )
     district = profile.get("district") or (window or {}).get("district") or "Nashik"
     transport_q = (

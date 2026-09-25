@@ -28,7 +28,7 @@ def get_forecasts(
     market_id: str = Query(..., description="Filter by market ID"),
     commodity_id: str = Query(..., description="Filter by commodity ID"),
     days: int = Query(7, ge=1, le=7, description="Number of days ahead to fetch"),
-    supabase: Client = Depends(get_supabase)
+    supabase: Client = Depends(get_supabase),
 ):
     """
     Get the price forecasts for a specific market and commodity pair.
@@ -41,24 +41,24 @@ def get_forecasts(
     unreachable (old window was today…today+days-1).
     """
     start_date = (get_ist_today() + timedelta(days=1)).isoformat()
-    end_date   = (get_ist_today() + timedelta(days=days)).isoformat()
+    end_date = (get_ist_today() + timedelta(days=days)).isoformat()
 
     res = (
         supabase.table("forecasts")
         .select("*, markets(name, district), commodities(name_en, name_mr, name_hi)")
         .eq("market_id", market_id)
         .eq("commodity_id", commodity_id)
-        .eq("status", "ok")          # M7: exclude stale/insufficient_data from farmer view
+        .eq("status", "ok")  # M7: exclude stale/insufficient_data from farmer view
         .gte("forecast_date", start_date)
         .lte("forecast_date", end_date)
         .order("forecast_date", desc=False)
         .execute()
     )
-    
+
     rows = list(res.data or [])
     # Re-sort to put newest generated_at first to handle revision history
     rows.sort(key=lambda r: str(r.get("generated_at") or ""), reverse=True)
-    
+
     seen_dates = set()
     deduped = []
     for r in rows:
@@ -66,7 +66,7 @@ def get_forecasts(
         if fdate not in seen_dates:
             seen_dates.add(fdate)
             deduped.append(r)
-            
+
     # Sort back by forecast_date ascending
     deduped.sort(key=lambda r: str(r.get("forecast_date") or ""))
 
@@ -74,9 +74,7 @@ def get_forecasts(
 
 
 @router.get("/summary", response_model=List[ForecastResponse])
-def get_forecasts_summary(
-    supabase: Client = Depends(get_supabase)
-):
+def get_forecasts_summary(supabase: Client = Depends(get_supabase)):
     """
     Get the latest summary of forecasts for all active market/commodity pairs.
     Includes 'ok' and 'insufficient_data' rows so the UI can show a degraded-data

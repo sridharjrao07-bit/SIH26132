@@ -41,6 +41,7 @@ logger = structlog.get_logger()
 
 def _configure_logging(log_level: str) -> None:
     import logging
+
     logging.basicConfig(level=getattr(logging, log_level.upper(), logging.INFO))
     structlog.configure(
         processors=[
@@ -58,12 +59,15 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     _configure_logging(settings.log_level)
     from app.startup_checks import run_startup_checks
+
     run_startup_checks(settings)
     from app.routers.sms import warmup_verifier
+
     warmup_verifier()
     scheduler = None
     if settings.run_scheduler:
         from app.services.jobs import schedule_startup_catchup, setup_scheduler
+
         scheduler = setup_scheduler()
         if scheduler:
             scheduler.start()
@@ -131,11 +135,8 @@ def create_app() -> FastAPI:
     def metrics():
         """Process liveness in Prometheus text. No secrets. Does not probe Supabase."""
         from fastapi.responses import PlainTextResponse
-        body = (
-            "# HELP kb_up 1 if this process is serving HTTP\n"
-            "# TYPE kb_up gauge\n"
-            "kb_up 1\n"
-        )
+
+        body = "# HELP kb_up 1 if this process is serving HTTP\n# TYPE kb_up gauge\nkb_up 1\n"
         return PlainTextResponse(body, media_type="text/plain; version=0.0.4")
 
     @app.exception_handler(APIError)
@@ -154,7 +155,9 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception):
-        if isinstance(exc, (HTTPException, StarletteHTTPException, RequestValidationError, APIError)):
+        if isinstance(
+            exc, (HTTPException, StarletteHTTPException, RequestValidationError, APIError)
+        ):
             raise exc
         logger.error(
             "unhandled_exception",

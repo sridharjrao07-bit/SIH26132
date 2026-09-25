@@ -4,6 +4,7 @@ The third case (test_fpo_cannot_pool_unaffiliated_farmer_lot) is the critical
 NULL-case. Plain `!=` lets it through via SQL three-valued logic; IS DISTINCT FROM
 does not. This test is the proof-of-fix for the NULL hole.
 """
+
 import json
 import os
 

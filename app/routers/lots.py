@@ -4,6 +4,7 @@ READ operations still use the Supabase table API (SELECT is not revoked).
 WRITE operations (create, withdraw, grade) call security-definer RPCs that
 own the write privilege and enforce ownership + state-machine in one transaction.
 """
+
 from typing import Optional
 
 from app.auth import get_current_user

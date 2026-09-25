@@ -65,8 +65,13 @@ docker-compose.override.yml
 
 # Dev artifacts — never commit at root (see CONTRIBUTING.md hygiene policy)
 out*.txt
+out*.json
 curl_out*.txt
-scratch_*.py
+scratch*.py
+old_*.py
 run_*.bat
 rewrite_*.sh
+err*.txt
+diff.*
+unique_skips.txt
 .vercel

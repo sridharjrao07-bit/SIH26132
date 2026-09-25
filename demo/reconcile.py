@@ -37,16 +37,25 @@ def load_env():
             env[k.strip()] = v.strip()
     return env
 
+
 env = load_env()
 
-API_KEY      = env.get("DATA_GOV_IN_API_KEY", "")
+API_KEY = env.get("DATA_GOV_IN_API_KEY", "")
 SUPABASE_URL = env.get("SUPABASE_URL", "")
-ANON_KEY     = env.get("SUPABASE_ANON_KEY", "")
-RESOURCE     = "9ef84268-d588-465a-a308-a864a43d0070"
-BASE_URL     = f"https://api.data.gov.in/resource/{RESOURCE}"
+ANON_KEY = env.get("SUPABASE_ANON_KEY", "")
+RESOURCE = "9ef84268-d588-465a-a308-a864a43d0070"
+BASE_URL = f"https://api.data.gov.in/resource/{RESOURCE}"
 
 SEEDED_SOURCE_CODES = ["Lasalgaon", "Pimpalgaon(Niphad)", "Yeola", "Nashik", "Manmad"]
-SEEDED_COMMODITIES  = ["Onion", "Onion(Red)", "Onion (Red)", "Tomato", "Soyabean", "Soybean", "Maize"]
+SEEDED_COMMODITIES = [
+    "Onion",
+    "Onion(Red)",
+    "Onion (Red)",
+    "Tomato",
+    "Soyabean",
+    "Soybean",
+    "Maize",
+]
 
 PASS = "[PASS]"
 FAIL = "[FAIL]"
@@ -60,16 +69,21 @@ def fetch_json(url: str, headers: dict = None) -> dict:
     with urllib.request.urlopen(req, timeout=10) as r:
         return json.loads(r.read().decode())
 
+
 def api_get(params: dict) -> dict:
     qs = urllib.parse.urlencode(params)
     return fetch_json(f"{BASE_URL}?{qs}")
 
+
 def supabase_get(path: str) -> tuple[int, dict]:
     url = f"{SUPABASE_URL}/rest/v1/{path}"
-    req = urllib.request.Request(url, headers={
-        "apikey": ANON_KEY,
-        "Authorization": f"Bearer {ANON_KEY}",
-    })
+    req = urllib.request.Request(
+        url,
+        headers={
+            "apikey": ANON_KEY,
+            "Authorization": f"Bearer {ANON_KEY}",
+        },
+    )
     try:
         with urllib.request.urlopen(req, timeout=10) as r:
             return r.status, json.loads(r.read().decode())
@@ -87,16 +101,20 @@ def test_api_connectivity():
     found_markets = set()
     for district in ["Nashik", "Nasik"]:
         try:
-            data = api_get({
-                "api-key": API_KEY,
-                "format": "json",
-                "filters[state]": "Maharashtra",
-                "filters[district]": district,
-                "filters[commodity]": "Onion",
-                "limit": 50,
-            })
+            data = api_get(
+                {
+                    "api-key": API_KEY,
+                    "format": "json",
+                    "filters[state]": "Maharashtra",
+                    "filters[district]": district,
+                    "filters[commodity]": "Onion",
+                    "limit": 50,
+                }
+            )
             records = data.get("records", [])
-            print(f"{PASS if records else WARN} filters[district]={district!r} → {len(records)} records")
+            print(
+                f"{PASS if records else WARN} filters[district]={district!r} → {len(records)} records"
+            )
             for r in records:
                 found_markets.add(r.get("market", "").strip())
         except Exception as e:
@@ -111,11 +129,11 @@ def test_market_reconciliation(api_markets: list[str]):
         print(f"{WARN} No API markets to reconcile (API key missing or returned 0 records).")
         return
 
-    api_set   = {m.strip().lower() for m in api_markets}
-    seed_set  = {s.strip().lower() for s in SEEDED_SOURCE_CODES}
-    matched   = api_set & seed_set
+    api_set = {m.strip().lower() for m in api_markets}
+    seed_set = {s.strip().lower() for s in SEEDED_SOURCE_CODES}
+    matched = api_set & seed_set
     unmatched = api_set - seed_set
-    missing   = seed_set - api_set
+    missing = seed_set - api_set
 
     print(f"{INFO} API returned {len(api_set)} distinct market strings")
     for m in sorted(matched):
@@ -123,7 +141,9 @@ def test_market_reconciliation(api_markets: list[str]):
     for m in sorted(unmatched):
         print(f"  {WARN} '{m}' from API has NO matching source_code in seed — UPDATE 002_seed.sql!")
     for m in sorted(missing):
-        print(f"  {WARN} seeded '{m}' not seen in API response — may be wrong spelling or no data today")
+        print(
+            f"  {WARN} seeded '{m}' not seen in API response — may be wrong spelling or no data today"
+        )
 
 
 # ── Test 3: Commodity string reconciliation ───────────────────────────────────
@@ -134,17 +154,16 @@ def test_commodity_reconciliation():
         return
 
     try:
-        data = api_get({
-            "api-key": API_KEY,
-            "format": "json",
-            "filters[state]": "Maharashtra",
-            "filters[district]": "Nashik",
-            "limit": 100,
-        })
-        api_commodities = {
-            r.get("commodity", "").strip()
-            for r in data.get("records", [])
-        }
+        data = api_get(
+            {
+                "api-key": API_KEY,
+                "format": "json",
+                "filters[state]": "Maharashtra",
+                "filters[district]": "Nashik",
+                "limit": 100,
+            }
+        )
+        api_commodities = {r.get("commodity", "").strip() for r in data.get("records", [])}
     except Exception as e:
         print(f"{FAIL} Could not fetch commodity list: {e}")
         return
@@ -152,7 +171,7 @@ def test_commodity_reconciliation():
     seed_set = {s.strip().lower() for s in SEEDED_COMMODITIES}
     for c in sorted(api_commodities):
         status = PASS if c.lower() in seed_set else WARN
-        note   = "" if c.lower() in seed_set else " ← ADD to 002_seed.sql commodity_alias!"
+        note = "" if c.lower() in seed_set else " ← ADD to 002_seed.sql commodity_alias!"
         print(f"  {status} API commodity: '{c}'{note}")
 
 
@@ -177,7 +196,9 @@ def test_rls():
 
     status, data = supabase_get("ingestion_log?select=id&limit=1")
     if status in (200,) and isinstance(data, list) and len(data) > 0:
-        print(f"  {FAIL} anon can read ingestion_log — RLS is NOT blocking! Run 003_security_patch.sql")
+        print(
+            f"  {FAIL} anon can read ingestion_log — RLS is NOT blocking! Run 003_security_patch.sql"
+        )
     elif status in (401, 403) or (status == 200 and isinstance(data, list) and len(data) == 0):
         print(f"  {PASS} anon blocked from ingestion_log (HTTP {status} or empty — RLS working)")
     else:

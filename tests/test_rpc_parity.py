@@ -32,6 +32,7 @@ derived, computed, or deliberately ignored). Those are declared via the
 not_forwarded=(...) kwarg on the Target class with a written reason, so that a *new* omission
 fails loudly instead of being silently blessed.
 """
+
 from __future__ import annotations
 
 import ast
@@ -74,16 +75,14 @@ class Target:
 TARGETS = [
     # The original bug. Nothing may be dropped here — every field is meaningful
     # to buyer/lot matching (commodity, volume, price ceiling, coordinates).
-    Target("buyers.register_buyer", "buyers.py", "register_buyer",
-           BuyerRegisterRequest),
+    Target("buyers.register_buyer", "buyers.py", "register_buyer", BuyerRegisterRequest),
     Target("lots.create_lot", "lots.py", "create_lot", LotCreate),
     Target("lots.aggregate_lots", "lots.py", "aggregate_lots", LotAggregate),
     Target("offers.create_offer", "offers.py", "create_offer", OfferCreate),
     Target("payments.create_payment", "payments.py", "create_payment", PaymentCreate),
     # `user_id`/`status`/`id` are server-derived, not model fields, so this
     # payload forwards every model field unchanged.
-    Target("grievances.create_grievance", "grievances.py", "create_grievance",
-           GrievanceCreate),
+    Target("grievances.create_grievance", "grievances.py", "create_grievance", GrievanceCreate),
     Target("alerts.create_alert", "alerts.py", "create_alert", AlertCreate),
     Target("lots.grade_lot", "lots.py", "grade_lot", LotGradeUpdate),
     Target("admin.admin_verify_buyer", "admin.py", "admin_verify_buyer", BuyerVerificationUpdate),
@@ -161,11 +160,19 @@ def _payload_attribute_names(func: ast.FunctionDef, param_name: str) -> set[str]
         elif isinstance(node, ast.If):
             test_node = node.test
             field_name = None
-            if isinstance(test_node, ast.Attribute) and hasattr(test_node.value, "id") and test_node.value.id == param_name:
+            if (
+                isinstance(test_node, ast.Attribute)
+                and hasattr(test_node.value, "id")
+                and test_node.value.id == param_name
+            ):
                 field_name = test_node.attr
             elif isinstance(test_node, ast.Compare):
                 left = test_node.left
-                if isinstance(left, ast.Attribute) and hasattr(left.value, "id") and left.value.id == param_name:
+                if (
+                    isinstance(left, ast.Attribute)
+                    and hasattr(left.value, "id")
+                    and left.value.id == param_name
+                ):
                     field_name = left.attr
 
             if field_name:
@@ -219,6 +226,7 @@ def test_no_phantom_fields_are_sent(target: Target):
 
 # ── The specific regression, asserted by name ────────────────────────────────
 
+
 def test_buyer_register_forwards_matching_critical_fields():
     """The 7 fields that were silently dropped must reach the RPC.
 
@@ -229,12 +237,12 @@ def test_buyer_register_forwards_matching_critical_fields():
     forwarded = _payload_attribute_names(func, _request_param_name(func, BuyerRegisterRequest))
 
     critical = {
-        "commodity_id",        # without it, buyer never matches that crop
-        "demand_qty_qtl",      # without it, volume_fit can never score
-        "max_price",           # without it, price_covers_ask can never score
+        "commodity_id",  # without it, buyer never matches that crop
+        "demand_qty_qtl",  # without it, volume_fit can never score
+        "max_price",  # without it, price_covers_ask can never score
         "quality_requirements",
         "payment_reliability",  # feeds the reliability component of the score
-        "lat",                 # without lat/lng, distance can never be scored
+        "lat",  # without lat/lng, distance can never be scored
         "lng",
     }
     missing = critical - forwarded
@@ -256,9 +264,17 @@ def test_buyer_register_rpc_parameter_names():
                     keys.add(k.value)
 
     expected = {
-        "p_name", "p_type", "p_phone", "p_district",
-        "p_commodity_id", "p_demand_qty_qtl", "p_max_price",
-        "p_quality_requirements", "p_payment_reliability", "p_lat", "p_lng",
+        "p_name",
+        "p_type",
+        "p_phone",
+        "p_district",
+        "p_commodity_id",
+        "p_demand_qty_qtl",
+        "p_max_price",
+        "p_quality_requirements",
+        "p_payment_reliability",
+        "p_lat",
+        "p_lng",
     }
     missing = expected - keys
     assert not missing, (

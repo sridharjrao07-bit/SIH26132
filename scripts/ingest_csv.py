@@ -14,6 +14,7 @@ from ingestion.validator import PriceValidator
 
 load_dotenv()
 
+
 async def main():
     supabase_url = os.environ.get("SUPABASE_URL")
     supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
@@ -23,7 +24,7 @@ async def main():
 
     supabase: Client = create_client(supabase_url, supabase_key)
     csv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "gov_prices.csv")
-    
+
     if not os.path.exists(csv_path):
         print(f"CSV not found at {csv_path}")
         sys.exit(1)
@@ -42,7 +43,7 @@ async def main():
         for row in resp.data
         if row["sanity_min"] is not None and row["sanity_max"] is not None
     }
-    
+
     resp = supabase.table("markets").select("id, name, source_code").execute()
     market_map = {}
     for row in resp.data:
@@ -52,7 +53,7 @@ async def main():
                 market_map[norm_k] = row["id"]
 
     validator = PriceValidator(commodity_id_map, sanity_bands)
-    
+
     print("Parsing CSV...")
     valid_records = []
     rejected_count = 0
@@ -77,24 +78,24 @@ async def main():
                     variety=row.get("Variety", "General"),
                     grade=row.get("Grade", "General"),
                     source="csv",
-                    raw_payload=row
+                    raw_payload=row,
                 )
-                
+
                 valid_dict, reason = validator.validate_and_normalize(raw)
                 if not valid_dict:
                     rejected_count += 1
                     continue
-                
+
                 market_key = " ".join(row["Market"].strip().lower().split())
                 market_id = market_map.get(market_key)
                 if not market_id:
                     alt_key = market_key.replace(" apmc", "").replace(" market", "").strip()
                     market_id = market_map.get(alt_key)
-                    
+
                 if not market_id:
                     rejected_count += 1
                     continue
-                    
+
                 valid_dict["market_id"] = market_id
                 valid_records.append(valid_dict)
             except Exception as e:
@@ -105,20 +106,21 @@ async def main():
     print(f"Parsed {len(valid_records)} valid records. Rejected {rejected_count} records.")
     for err in parse_errors:
         print(f"  malformed row example: {err}")
-    
+
     if valid_records:
         print("Upserting to DB...")
         chunk_size = 200
         conflict = "market_id, commodity_id, arrival_date, variety, grade, source"
         written = 0
         for i in range(0, len(valid_records), chunk_size):
-            chunk = valid_records[i:i+chunk_size]
+            chunk = valid_records[i : i + chunk_size]
             try:
                 supabase.table("prices").upsert(chunk, on_conflict=conflict).execute()
                 written += len(chunk)
             except Exception as e:
                 print(f"Error upserting chunk: {e}")
         print(f"Upserted {written} records.")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

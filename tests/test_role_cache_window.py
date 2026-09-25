@@ -61,8 +61,7 @@ def test_demotion_is_masked_within_ttl_and_applies_after(override_supabase, fake
         _expire_every_entry()
         enforced = client.get("/api/v1/admin/buyers", headers=admin_headers())
         assert enforced.status_code == 403, (
-            f"the demotion must apply once the TTL elapses; got "
-            f"{enforced.status_code}"
+            f"the demotion must apply once the TTL elapses; got {enforced.status_code}"
         )
     finally:
         # Never leak a poisoned cache into later tests.

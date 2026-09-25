@@ -13,6 +13,7 @@ Conventions
 * NaN / None / missing pairs are omitted from every metric (caller may log them
   separately via the NaN-rate column in BacktestReport).
 """
+
 from __future__ import annotations
 
 import math
@@ -21,6 +22,7 @@ from typing import Sequence, Tuple
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _valid_pairs(
     actuals: Sequence[float],
@@ -43,6 +45,7 @@ def _valid_pairs(
 # ---------------------------------------------------------------------------
 # Public metric functions
 # ---------------------------------------------------------------------------
+
 
 def mae(actuals: Sequence[float], preds: Sequence[float]) -> float:
     """
@@ -100,7 +103,7 @@ def directional_accuracy(
     flat_eps: float = 0.01,
 ) -> Tuple[int, int, int, list[int]]:
     """
-    Count folds where the *direction* of the weekly mean price movement 
+    Count folds where the *direction* of the weekly mean price movement
     relative to forecast_origin price was correctly predicted.
 
     A fold contributes to the denominator only if the mean actual price change
@@ -125,46 +128,54 @@ def directional_accuracy(
     considered = 0
     incomplete = 0
     evaluated_fold_indices = []
-    
-    for i, (anchor, preds, actuals) in enumerate(zip(folds_last_train_price, folds_preds, folds_actuals)):
+
+    for i, (anchor, preds, actuals) in enumerate(
+        zip(folds_last_train_price, folds_preds, folds_actuals)
+    ):
         if anchor is None or anchor == 0.0:
             continue
-            
+
         try:
             ancf = float(anchor)
         except (TypeError, ValueError):
             continue
-            
+
         if not math.isfinite(ancf):
             continue
-            
-        valid_pairs = [(float(p), float(a)) for p, a in zip(preds, actuals) 
-                       if p is not None and a is not None and math.isfinite(float(p)) and math.isfinite(float(a))]
-        
+
+        valid_pairs = [
+            (float(p), float(a))
+            for p, a in zip(preds, actuals)
+            if p is not None
+            and a is not None
+            and math.isfinite(float(p))
+            and math.isfinite(float(a))
+        ]
+
         if len(valid_pairs) != len(actuals):
             # Incomplete fold predictions block directional accuracy evaluation for this fold
             incomplete += 1
             # However, for conditional performance, we compute it on the valid pairs.
-        
+
         if not valid_pairs:
             continue
-            
+
         mean_pred = sum(p for p, _ in valid_pairs) / len(valid_pairs)
         mean_actual = sum(a for _, a in valid_pairs) / len(valid_pairs)
-        
+
         actual_change = mean_actual - ancf
         if abs(actual_change) / abs(ancf) <= flat_eps:
             continue  # flat fold — excluded from denominator
-            
+
         considered += 1
         pred_change = mean_pred - ancf
-        
+
         # Same sign ↔ correct direction
         if actual_change > 0 and pred_change > 0:
             hits += 1
         elif actual_change < 0 and pred_change < 0:
             hits += 1
-            
+
         evaluated_fold_indices.append(i)
 
     return hits, considered, incomplete, evaluated_fold_indices

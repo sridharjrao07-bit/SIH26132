@@ -5,6 +5,7 @@ Provides a single authoritative function for resolving the latest market price
 for a given commodity + user, reusing the same nearest-market logic and
 source-precedence series builder as alert_checker._check_crossing.
 """
+
 from datetime import timedelta
 from typing import Optional, Tuple
 
@@ -35,7 +36,7 @@ def latest_price_for_user(
       3. Returns (None, None) if no data found in either path.
     """
     cutoff = (get_ist_today() - timedelta(days=history_days)).isoformat()
-    market_id   = None
+    market_id = None
     market_name = None
 
     try:
@@ -51,7 +52,7 @@ def latest_price_for_user(
                 and isinstance(rpc_res.data, list)
                 and rpc_res.data[0].get("distance_km", 999) <= NEAREST_MARKET_RADIUS_KM
             ):
-                market_id   = rpc_res.data[0]["id"]
+                market_id = rpc_res.data[0]["id"]
                 market_name = rpc_res.data[0]["name"]
     except Exception as e:
         logger.warning("nearest_market_rpc_failed", error=str(e))

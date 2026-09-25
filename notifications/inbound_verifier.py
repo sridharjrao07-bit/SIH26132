@@ -42,6 +42,7 @@ def _load_secret() -> bytes:
     settings = None
     try:
         from app.config import get_settings
+
         settings = get_settings()
     except Exception:
         settings = None
@@ -59,7 +60,7 @@ def _load_secret() -> bytes:
         if not secret_str or secret_str == "demo-secret":
             raise RuntimeError(
                 "INBOUND_HMAC_SECRET must be set to a strong secret in production. "
-                "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+                'Generate one with: python -c "import secrets; print(secrets.token_hex(32))"'
             )
         return secret_str.encode("utf-8")
 
@@ -70,8 +71,8 @@ def _load_secret() -> bytes:
     logger.warning(
         "inbound_hmac_ephemeral_key",
         reason="INBOUND_HMAC_SECRET not set (or was 'demo-secret'). "
-               "Using a randomly generated ephemeral key — webhook signatures "
-               "will not survive a restart. Set INBOUND_HMAC_SECRET in .env for stability.",
+        "Using a randomly generated ephemeral key — webhook signatures "
+        "will not survive a restart. Set INBOUND_HMAC_SECRET in .env for stability.",
     )
     return ephemeral.encode("utf-8")
 
@@ -85,6 +86,7 @@ class InboundVerifier:
         self.secret = _load_secret()
         try:
             from app.config import get_settings
+
             s = get_settings()
             self.header_name = os.environ.get("INBOUND_SIG_HEADER") or s.inbound_sig_header
             self.ts_header_name = os.environ.get("INBOUND_TS_HEADER") or s.inbound_ts_header

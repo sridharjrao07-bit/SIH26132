@@ -4,6 +4,7 @@ tests/test_evaluation.py — Unit tests for forecasting/evaluation.py.
 All tests use hand-computed expected values so failures are immediately
 diagnosable without running the production engine.
 """
+
 from __future__ import annotations
 
 import math
@@ -19,6 +20,7 @@ from forecasting.evaluation import (
 # ---------------------------------------------------------------------------
 # mae
 # ---------------------------------------------------------------------------
+
 
 class TestMAE:
     def test_perfect_prediction(self):
@@ -47,6 +49,7 @@ class TestMAE:
 # mape_winsorized
 # ---------------------------------------------------------------------------
 
+
 class TestMAPEWinsorized:
     def test_zero_error(self):
         assert mape_winsorized([100, 200], [100, 200]) == pytest.approx(0.0)
@@ -72,8 +75,7 @@ class TestMAPEWinsorized:
         # APE for (200, 220) = |200-220|/200*100 = 10%
         result = mape_winsorized([0.0, 200.0], [999.0, 220.0])
         assert result == pytest.approx(10.0), (
-            "Pair with actual=0 must be skipped entirely; "
-            "only the non-zero actual contributes."
+            "Pair with actual=0 must be skipped entirely; only the non-zero actual contributes."
         )
 
     def test_all_zero_actuals_returns_nan(self):
@@ -94,6 +96,7 @@ class TestMAPEWinsorized:
 # ---------------------------------------------------------------------------
 # directional_accuracy
 # ---------------------------------------------------------------------------
+
 
 class TestDirectionalAccuracy:
     def test_correct_up(self):
@@ -131,7 +134,7 @@ class TestDirectionalAccuracy:
         h, c, inc, idx = directional_accuracy(
             [1000.0, 1000.0, 1000.0],
             [[1100.0], [900.0], [1005.0]],
-            [[900.0],  [800.0], [1003.0]],
+            [[900.0], [800.0], [1003.0]],
         )
         assert c == 2
         assert h == 1
@@ -150,6 +153,7 @@ class TestDirectionalAccuracy:
 # ---------------------------------------------------------------------------
 # interval_coverage
 # ---------------------------------------------------------------------------
+
 
 class TestIntervalCoverage:
     def test_fully_covered(self):
@@ -172,8 +176,8 @@ class TestIntervalCoverage:
 
     def test_partial_coverage(self):
         # 2 covered out of 3
-        lowers  = [90.0,  90.0, 90.0]
-        uppers  = [110.0, 110.0, 110.0]
+        lowers = [90.0, 90.0, 90.0]
+        uppers = [110.0, 110.0, 110.0]
         actuals = [100.0, 95.0, 200.0]  # 200 not covered
         assert interval_coverage(uppers, lowers, actuals) == pytest.approx(2 / 3)
 

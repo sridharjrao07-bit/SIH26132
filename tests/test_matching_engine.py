@@ -4,6 +4,7 @@ The engine is pure and was previously exercised only indirectly; these lock its
 invariants: verified-only, locality-first, price/volume/payer signals, and the
 score-then-distance ordering used to pick the "best local buyer".
 """
+
 from app.services.matching_engine import (
     haversine_km,
     rank_buyers,
@@ -13,8 +14,14 @@ from app.services.matching_engine import (
 )
 
 LOT = {
-    "id": "lot-1", "commodity_id": "c-onion", "market_id": "m-1", "quantity_qtl": 20,
-    "grade": "General", "asking_price": 2400, "status": "open", "fpo_id": None,
+    "id": "lot-1",
+    "commodity_id": "c-onion",
+    "market_id": "m-1",
+    "quantity_qtl": 20,
+    "grade": "General",
+    "asking_price": 2400,
+    "status": "open",
+    "fpo_id": None,
 }
 PROFILE = {"district": "Nashik", "lat": 20.0, "lng": 74.0}
 MARKET = {"district": "Nashik", "name": "Lasalgaon"}
@@ -22,9 +29,17 @@ MARKET = {"district": "Nashik", "name": "Lasalgaon"}
 
 def buyer(**kw):
     b = {
-        "id": "b-1", "name": "Local Traders", "type": "trader", "verified": True,
-        "district": "Nashik", "lat": 20.05, "lng": 74.05, "commodity_id": "c-onion",
-        "max_price": 2500, "demand_qty_qtl": 100, "payment_reliability": "high",
+        "id": "b-1",
+        "name": "Local Traders",
+        "type": "trader",
+        "verified": True,
+        "district": "Nashik",
+        "lat": 20.05,
+        "lng": 74.05,
+        "commodity_id": "c-onion",
+        "max_price": 2500,
+        "demand_qty_qtl": 100,
+        "payment_reliability": "high",
         "quality_requirements": "general",
     }
     b.update(kw)
@@ -59,8 +74,14 @@ def test_buyer_without_commodity_pref_matches_any():
 def test_local_verified_buyer_reasons():
     row = score_buyer(LOT, PROFILE, buyer())
     r = row["reasons"]
-    for tag in ("verified_buyer", "same_district", "price_covers_ask", "volume_fit",
-                "reliable_payer", "nearby_25km"):
+    for tag in (
+        "verified_buyer",
+        "same_district",
+        "price_covers_ask",
+        "volume_fit",
+        "reliable_payer",
+        "nearby_25km",
+    ):
         assert tag in r, f"missing reason {tag}"
     assert row["distance_km"] is not None and row["distance_km"] <= 25
 
@@ -75,7 +96,9 @@ def test_bid_below_ask_penalised():
 
 
 def test_unreliable_payer_penalised():
-    assert "unreliable_payer" in score_buyer(LOT, PROFILE, buyer(payment_reliability="low"))["reasons"]
+    assert (
+        "unreliable_payer" in score_buyer(LOT, PROFILE, buyer(payment_reliability="low"))["reasons"]
+    )
 
 
 def test_no_coords_still_scored_by_district():
@@ -86,17 +109,25 @@ def test_no_coords_still_scored_by_district():
 
 # ── ranking + tie-break ────────────────────────────────────────────────────────
 def test_rank_buyers_orders_by_score():
-    ranked = rank_buyers(LOT, PROFILE, [
-        buyer(id="weak", max_price=2000, payment_reliability="low"),
-        buyer(id="strong"),
-    ])
+    ranked = rank_buyers(
+        LOT,
+        PROFILE,
+        [
+            buyer(id="weak", max_price=2000, payment_reliability="low"),
+            buyer(id="strong"),
+        ],
+    )
     assert ranked[0]["buyer_id"] == "strong"
 
 
 def test_rank_buyers_tiebreak_prefers_closer():
     # Two far buyers (>100km): equal score (both far_buyer -15), so the closer wins.
-    near = buyer(id="near", lat=21.0, lng=74.0, max_price=None, demand_qty_qtl=None, payment_reliability=None)
-    far = buyer(id="far", lat=21.9, lng=74.0, max_price=None, demand_qty_qtl=None, payment_reliability=None)
+    near = buyer(
+        id="near", lat=21.0, lng=74.0, max_price=None, demand_qty_qtl=None, payment_reliability=None
+    )
+    far = buyer(
+        id="far", lat=21.9, lng=74.0, max_price=None, demand_qty_qtl=None, payment_reliability=None
+    )
     assert "far_buyer" in score_buyer(LOT, PROFILE, near)["reasons"]
     assert "far_buyer" in score_buyer(LOT, PROFILE, far)["reasons"]
     ranked = rank_buyers(LOT, PROFILE, [far, near])

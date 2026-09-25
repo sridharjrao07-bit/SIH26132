@@ -20,6 +20,7 @@ Usage
 Everything except ``Arrival_Date`` is preserved byte-for-byte (same columns,
 same quoting). Dates are parsed/written as DD/MM/YYYY, matching ingest_csv.py.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -31,7 +32,9 @@ from zoneinfo import ZoneInfo
 
 DATE_COL = "Arrival_Date"
 DATE_FMT = "%d/%m/%Y"
-DEFAULT_CSV = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "gov_prices.csv")
+DEFAULT_CSV = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "gov_prices.csv"
+)
 
 
 def ist_today() -> date:
@@ -39,11 +42,19 @@ def ist_today() -> date:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--csv", default=DEFAULT_CSV, help="path to gov_prices.csv")
-    ap.add_argument("--end", default=None, help="target latest date YYYY-MM-DD (default: today IST)")
-    ap.add_argument("--out", default=None, help="write here instead of the input (default: <csv>.recent)")
-    ap.add_argument("--in-place", action="store_true", help="overwrite --csv in place (what seed.py reads)")
+    ap.add_argument(
+        "--end", default=None, help="target latest date YYYY-MM-DD (default: today IST)"
+    )
+    ap.add_argument(
+        "--out", default=None, help="write here instead of the input (default: <csv>.recent)"
+    )
+    ap.add_argument(
+        "--in-place", action="store_true", help="overwrite --csv in place (what seed.py reads)"
+    )
     ap.add_argument("--dry-run", action="store_true", help="print the plan, write nothing")
     args = ap.parse_args()
 
@@ -78,7 +89,9 @@ def main() -> int:
     print(f"rows={len(dates)}  current range {cur_min:%Y-%m-%d} .. {cur_max:%Y-%m-%d}")
     print(f"shift by {shift:+d} days -> latest becomes {target_end:%Y-%m-%d}")
     if shift < 0:
-        print(f"note: shifting backwards; earliest becomes {cur_min + timedelta(days=shift):%Y-%m-%d}")
+        print(
+            f"note: shifting backwards; earliest becomes {cur_min + timedelta(days=shift):%Y-%m-%d}"
+        )
 
     if args.dry_run:
         return 0

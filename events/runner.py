@@ -36,12 +36,16 @@ def _canonical_event_hash(comm_id, district, event_type: str, occurrence_date: d
     the (source_document_id, event_hash) level, so each document retains its
     own independent provenance record.
     """
-    identity = json.dumps({
-        "commodity_id": str(comm_id) if comm_id else None,
-        "district": (district or "").strip().lower() or None,
-        "event_type": event_type.strip().lower(),
-        "event_date": occurrence_date.isoformat(),
-    }, sort_keys=True, ensure_ascii=True)
+    identity = json.dumps(
+        {
+            "commodity_id": str(comm_id) if comm_id else None,
+            "district": (district or "").strip().lower() or None,
+            "event_type": event_type.strip().lower(),
+            "event_date": occurrence_date.isoformat(),
+        },
+        sort_keys=True,
+        ensure_ascii=True,
+    )
     return hashlib.sha256(identity.encode()).hexdigest()
 
 
@@ -67,7 +71,7 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
         extractor = LLMEventExtractor(
             api_key=settings.event_llm_api_key,
             base_url=settings.event_llm_base_url,
-            model=settings.event_llm_model
+            model=settings.event_llm_model,
         )
         extractor_name = f"llm:{settings.event_llm_provider}"
 
@@ -87,7 +91,7 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
     sources = [
         ("pib", PIBSource(mode=mode)),
         ("news", NewsFeedSource(mode=mode)),
-        ("state_bulletins", StateBulletinsSource(mode=mode))
+        ("state_bulletins", StateBulletinsSource(mode=mode)),
     ]
 
     failed_sources = []
@@ -113,7 +117,7 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
             "new_written": 0,
             "quarantined": 0,
             "failed_sources": failed_sources,
-            "extractor": extractor_name
+            "extractor": extractor_name,
         }
 
     # 2. Pre-deduplicate: skip 'complete' documents. Re-queue 'failed' and
@@ -122,11 +126,14 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
     skip_urls: set = set()
 
     for i in range(0, len(source_urls), 100):
-        chunk = source_urls[i:i + 100]
+        chunk = source_urls[i : i + 100]
         try:
-            resp = supabase.table("source_documents").select(
-                "source_url, extraction_status, lease_expires_at"
-            ).in_("source_url", chunk).execute()
+            resp = (
+                supabase.table("source_documents")
+                .select("source_url, extraction_status, lease_expires_at")
+                .in_("source_url", chunk)
+                .execute()
+            )
             for row in resp.data:
                 status = row.get("extraction_status")
                 lease_str = row.get("lease_expires_at")
@@ -154,21 +161,26 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
         claim_token = None
         try:
             # Atomic Claim
-            content_hash = hashlib.sha256((headline.headline + headline.raw_text).encode()).hexdigest()
-            claim_resp = supabase.rpc("claim_source_document", {
-                "p_source_url": headline.source_url,
-                "p_source_name": source_name,
-                "p_headline": headline.headline,
-                "p_content_text": headline.raw_text,
-                "p_published_at": headline.published_date.isoformat(),
-                "p_provenance_mode": provenance_mode,
-                "p_content_hash": content_hash
-            }).execute()
+            content_hash = hashlib.sha256(
+                (headline.headline + headline.raw_text).encode()
+            ).hexdigest()
+            claim_resp = supabase.rpc(
+                "claim_source_document",
+                {
+                    "p_source_url": headline.source_url,
+                    "p_source_name": source_name,
+                    "p_headline": headline.headline,
+                    "p_content_text": headline.raw_text,
+                    "p_published_at": headline.published_date.isoformat(),
+                    "p_provenance_mode": provenance_mode,
+                    "p_content_hash": content_hash,
+                },
+            ).execute()
 
             claim_data = claim_resp.data
             if not claim_data or claim_data.get("status") in ["already_complete", "lease_active"]:
                 continue
-                
+
             if claim_data.get("status") != "claimed":
                 raise Exception(f"Unexpected claim status: {claim_data.get('status')}")
 
@@ -181,12 +193,17 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
             snapshot_published_date = claim_data.get("publication_date")
             snapshot_content_hash = claim_data.get("content_hash")
 
-            if snapshot_headline is None or snapshot_raw_text is None or snapshot_published_date is None or snapshot_content_hash is None:
+            if (
+                snapshot_headline is None
+                or snapshot_raw_text is None
+                or snapshot_published_date is None
+                or snapshot_content_hash is None
+            ):
                 raise Exception("claim_source_document returned an incomplete snapshot")
 
             headline.headline = snapshot_headline
             headline.raw_text = snapshot_raw_text
-            
+
             # publication_date comes as ISO string
             pub_dt = datetime.fromisoformat(snapshot_published_date.replace("Z", "+00:00"))
             headline.published_date = pub_dt.date() if hasattr(pub_dt, "date") else pub_dt
@@ -224,58 +241,78 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
                     occurrence_date=occurrence_date,
                 )
 
-                events_payload.append({
-                    "event_hash": event_hash,
-                    "headline": headline.headline,
-                    "event_date": occurrence_date.isoformat(),
-                    "commodity_id": str(comm_id) if comm_id else None,
-                    "district": evt.district,
-                    "event_type": evt.event_type,
-                    "direction": evt.direction,
-                    "magnitude": evt.magnitude,
-                    "confidence": float(evt.confidence),
-                    "reasoning": evt.reasoning,
-                    "raw_text": headline.raw_text,
-                })
+                events_payload.append(
+                    {
+                        "event_hash": event_hash,
+                        "headline": headline.headline,
+                        "event_date": occurrence_date.isoformat(),
+                        "commodity_id": str(comm_id) if comm_id else None,
+                        "district": evt.district,
+                        "event_type": evt.event_type,
+                        "direction": evt.direction,
+                        "magnitude": evt.magnitude,
+                        "confidence": float(evt.confidence),
+                        "reasoning": evt.reasoning,
+                        "raw_text": headline.raw_text,
+                    }
+                )
 
                 if evt.confidence < 0.5:
                     quarantined += 1
 
-            rpc_resp = supabase.rpc("publish_extracted_events_v2", {
-                "p_doc_id": doc_id,
-                "p_claim_token": claim_token,
-                "p_extractor_version": extractor_name,
-                "p_events": events_payload,
-            }).execute()
+            rpc_resp = supabase.rpc(
+                "publish_extracted_events_v2",
+                {
+                    "p_doc_id": doc_id,
+                    "p_claim_token": claim_token,
+                    "p_extractor_version": extractor_name,
+                    "p_events": events_payload,
+                },
+            ).execute()
 
             result_data = rpc_resp.data
             if not isinstance(result_data, dict):
                 raise Exception("publish_extracted_events_v2 returned non-dictionary response")
-                
+
             rpc_status = result_data.get("status")
             if rpc_status == "failed":
-                logger.error("event_runner_publish_failed", doc_id=doc_id, reason=result_data.get("reason"))
+                logger.error(
+                    "event_runner_publish_failed", doc_id=doc_id, reason=result_data.get("reason")
+                )
                 failed_docs += 1
                 continue
             elif rpc_status != "complete":
                 raise Exception(f"Publish RPC returned invalid status: {rpc_status}")
-                
+
             written_count = result_data.get("written", 0)
             new_written += written_count
-            logger.info("event_runner_doc_published", doc_id=doc_id, status=rpc_status, written=written_count)
+            logger.info(
+                "event_runner_doc_published",
+                doc_id=doc_id,
+                status=rpc_status,
+                written=written_count,
+            )
 
         except Exception as e:
             failed_docs += 1
             logger.error("event_runner_extract_write_error", url=headline.source_url, error=str(e))
             if doc_id and claim_token:
                 try:
-                    supabase.rpc("report_extraction_failure", {
-                        "p_doc_id": doc_id,
-                        "p_claim_token": claim_token,
-                        "p_reason": str(e)[:250]
-                    }).execute()
+                    supabase.rpc(
+                        "report_extraction_failure",
+                        {
+                            "p_doc_id": doc_id,
+                            "p_claim_token": claim_token,
+                            "p_reason": str(e)[:250],
+                        },
+                    ).execute()
                 except Exception as ex:
-                    logger.error("event_runner_report_failure_error", doc_id=doc_id, original_error=str(e), reporting_error=str(ex))
+                    logger.error(
+                        "event_runner_report_failure_error",
+                        doc_id=doc_id,
+                        original_error=str(e),
+                        reporting_error=str(ex),
+                    )
 
     return {
         "seen": seen,
@@ -283,5 +320,5 @@ async def run(supabase, since_days: int = 2) -> Dict[str, Any]:
         "failed_docs": failed_docs,
         "quarantined": quarantined,
         "failed_sources": failed_sources,
-        "extractor": extractor_name
+        "extractor": extractor_name,
     }

@@ -4,6 +4,7 @@ tests/test_backtest.py — Tests for the walk-forward backtest harness.
 Uses FakeSupabase so no live DB is needed.  Deterministic price series
 (seeded random / exact formulas) make the metric assertions stable across runs.
 """
+
 from __future__ import annotations
 
 import math
@@ -37,6 +38,7 @@ client = TestClient(app, raise_server_exceptions=False)
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def admin_headers():
     return {"Authorization": f"Bearer {mint_jwt(ADMIN_USER_ID)}"}
 
@@ -52,12 +54,12 @@ def _make_price_rows(
 ) -> List[dict]:
     return [
         {
-            "market_id":    market_id,
+            "market_id": market_id,
             "commodity_id": commodity_id,
             "arrival_date": d.isoformat(),
-            "modal_price":  p,
-            "source":       "data_gov_in",
-            "variety":      "General",
+            "modal_price": p,
+            "source": "data_gov_in",
+            "variety": "General",
         }
         for d, p in series
     ]
@@ -89,12 +91,13 @@ def _random_walk_series(n: int) -> List[Tuple[date, float]]:
 # NaiveLastWeekSameDay
 # ---------------------------------------------------------------------------
 
+
 class TestNaive:
     def test_predict_returns_lag7(self):
         series = _trended_series(20)
-        naive  = NaiveLastWeekSameDay()
+        naive = NaiveLastWeekSameDay()
         naive.fit(series)
-        preds  = naive.predict(horizon=7)
+        preds = naive.predict(horizon=7)
         # Day-1 prediction should be the price from 7 days before the last obs date
         last_date = series[-1][0]
         expected_lag = {d: p for d, p in series}.get(last_date - timedelta(days=6))
@@ -102,10 +105,10 @@ class TestNaive:
             assert preds[0][0] == pytest.approx(expected_lag)
 
     def test_no_lag_available_returns_nan(self):
-        series = _trended_series(6)   # too short for t-7 lookups
-        naive  = NaiveLastWeekSameDay()
+        series = _trended_series(6)  # too short for t-7 lookups
+        naive = NaiveLastWeekSameDay()
         naive.fit(series)
-        preds  = naive.predict(horizon=7)
+        preds = naive.predict(horizon=7)
         # If lag date is not in lookup, should be NaN
         for p, lo, hi in preds:
             # At least some should be NaN since series only has 6 days
@@ -115,6 +118,7 @@ class TestNaive:
 # ---------------------------------------------------------------------------
 # Trended series: OLS should beat naive
 # ---------------------------------------------------------------------------
+
 
 class TestTrendedSeries:
     """On a strongly trended series, OLS MAE must be < naive MAE."""
@@ -135,7 +139,7 @@ class TestTrendedSeries:
             model_names=["ols", "naive"],
         )
         agg = report.aggregate
-        ols_mae   = agg["ols"]["mae"]
+        ols_mae = agg["ols"]["mae"]
         naive_mae = agg["naive"]["mae"]
         # Both must be computable (finite)
         assert ols_mae is not None, "OLS MAE must not be None on trended series"
@@ -170,6 +174,7 @@ class TestTrendedSeries:
 # Random walk: harness must complete with finite metrics
 # ---------------------------------------------------------------------------
 
+
 class TestRandomWalk:
     """On a random walk, harness must complete and return finite metrics."""
 
@@ -192,7 +197,7 @@ class TestRandomWalk:
         for name in ["ma", "ols", "naive"]:
             assert name in agg, f"model {name} missing from aggregate"
             # MAE and MAPE should be finite (may be large but not NaN)
-            mae_val  = agg[name]["mae"]
+            mae_val = agg[name]["mae"]
             mape_val = agg[name]["mape_winsorized"]
             if mae_val is not None:
                 assert math.isfinite(mae_val), f"{name}.mae not finite"
@@ -204,8 +209,10 @@ class TestRandomWalk:
 # Model that raises mid-run: NaN row returned, run completes
 # ---------------------------------------------------------------------------
 
+
 class _BrokenModel:
     """A model that always raises on predict."""
+
     name = "broken"
 
     def fit(self, series, features=None):
@@ -224,6 +231,7 @@ class TestBrokenModel:
         - still complete and return a BacktestReport
         """
         from forecasting.backtest import run_backtest
+
         MODEL_REGISTRY["broken"] = _BrokenModel
 
         series = _trended_series(120)
@@ -253,6 +261,7 @@ class TestBrokenModel:
 # ---------------------------------------------------------------------------
 # Admin endpoint: auth tests
 # ---------------------------------------------------------------------------
+
 
 class TestBacktestEndpoint:
     def test_farmer_gets_403(self):
