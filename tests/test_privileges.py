@@ -34,11 +34,26 @@ def check_ratchet(key, current_violations):
 
 @pytest.mark.db
 def test_revoked_table_conformance():
-    """Verify that direct DML is strictly revoked for workflow tables by authenticated users."""
+    """Direct DML on workflow tables must be blocked at BOTH layers.
+
+    Two independent controls, asserted separately because they raise the same
+    SQLSTATE:
+
+    * **Grants** — migration 031 revokes INSERT/UPDATE/DELETE from anon and
+      authenticated.  Asserted via has_table_privilege, which is the only way
+      to see this layer: with RLS in force a re-granted INSERT still fails with
+      42501 ("new row violates row-level security policy"), so a runtime-only
+      check stays green even if the revokes are deleted.
+    * **RLS** — even with the privilege, no policy admits the write.  Asserted
+      by actually attempting the DML.
+
+    SELECT is deliberately left granted: reads are the API's normal path and
+    are row-scoped by policy, not by revoking the privilege.
+    """
     db_url = os.environ.get("SUPABASE_DB_URL")
     if not db_url or db_url == "postgresql://p@db.placeholder.supabase.co:5432/postgres":
         pytest.skip("No real DB URL provided")
-        
+
     tables = ["buyers", "lots", "offers", "payments", "storage_bookings", "logistics_bookings"]
     import psycopg2
     conn = psycopg2.connect(db_url)
@@ -48,23 +63,38 @@ def test_revoked_table_conformance():
             for table in tables:
                 cur.execute(f"SELECT to_regclass('public.{table}')")
                 assert cur.fetchone()[0] is not None, f"Table {table} does not exist in DB"
+
+                # Layer 1 — the grant itself is gone.
+                for priv in ("INSERT", "UPDATE", "DELETE"):
+                    for role in ("authenticated", "anon"):
+                        cur.execute(
+                            "SELECT has_table_privilege(%s, %s, %s)",
+                            (role, f"public.{table}", priv),
+                        )
+                        assert cur.fetchone()[0] is False, (
+                            f"{role} still holds {priv} on {table}; "
+                            f"migration 031 must revoke it (writes go through RPCs)"
+                        )
+
                 cur.execute("SET ROLE authenticated")
-                
+
+                # Layer 2 — and the write still fails at runtime.
                 with pytest.raises(psycopg2.errors.InsufficientPrivilege) as exc:
                     cur.execute(f"INSERT INTO public.{table} DEFAULT VALUES")
                 assert exc.value.pgcode == "42501"
-                
+
                 with pytest.raises(psycopg2.errors.InsufficientPrivilege) as exc:
                     cur.execute(f"UPDATE public.{table} SET id = id")
                 assert exc.value.pgcode == "42501"
-                
+
                 with pytest.raises(psycopg2.errors.InsufficientPrivilege) as exc:
                     cur.execute(f"DELETE FROM public.{table}")
                 assert exc.value.pgcode == "42501"
-                
+
                 cur.execute("RESET ROLE")
     finally:
         conn.close()
+
 
 def test_migration_coverage():
     """Guard P2-3: the runner must discover every migration, 003b included."""
@@ -78,7 +108,9 @@ def test_migration_coverage():
         assert re.match(r"^\d{3}[a-z]?_.*\.sql$", name), f"Invalid migration name: {name}"
 
     # Count ratchet — bump when a migration is intentionally added.
-    EXPECTED_MIGRATIONS = 37
+    # 001..037 plus the 003b insert = 38 files (037 landed without this bump,
+    # which is exactly the drift this ratchet exists to catch).
+    EXPECTED_MIGRATIONS = 38
     assert len(sql_files) == EXPECTED_MIGRATIONS, (
         f"Expected {EXPECTED_MIGRATIONS} migrations, found {len(sql_files)}"
     )

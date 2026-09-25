@@ -12,7 +12,7 @@ from typing import List, Optional
 from app.auth import get_current_user, require_role
 from app.deps import get_supabase, get_supabase_as_user
 from app.errors import json_for_api_error
-from app.schemas.marketplace import BuyerRegisterRequest, BuyerResponse
+from app.schemas.marketplace import BuyerRegisterRequest, BuyerResponse, MyBuyerProfile
 from app.services.matching_engine import rank_lots_for_buyer
 from fastapi import APIRouter, Depends, HTTPException, Query
 from postgrest.exceptions import APIError
@@ -87,6 +87,35 @@ def verify_buyer(
     from happening via direct UPDATE even with service-role if not via RPC.
     """
     return _call_rpc(user_client, "buyer_verify", {"p_buyer_id": buyer_id})
+
+
+@router.get("/me", response_model=MyBuyerProfile)
+def my_buyer_profile(
+    user_id: str = Depends(get_current_user),
+    supabase: Client = Depends(get_supabase_as_user),
+):
+    """The caller's own buyer profile (ticket G12).
+
+    A buyer who clears their browser loses the id returned by
+    ``POST /buyers/register``; this endpoint lets the PWA recover the profile
+    from the JWT alone.  Scoping is by ``owner_user_id`` (migration 014), which
+    the ``buyer_register`` RPC sets server-side — the client never supplies it.
+
+    404 (not 403) when the caller has no buyer profile, matching the contract
+    rule that owner-only resources render as "not found".
+    """
+    res = (
+        supabase.table("buyers")
+        .select("*")
+        .eq("owner_user_id", user_id)
+        .order("submitted_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    rows = res.data or []
+    if not rows:
+        raise HTTPException(404, "no buyer profile for this user")
+    return rows[0]
 
 
 @router.get("/{buyer_id}/supply")

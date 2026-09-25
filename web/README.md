@@ -21,7 +21,7 @@ supply, FPO pooling). Mobile-first at 360px, Marathi by default, built for weak 
 
 The design record lives in [`../docs/frontend/`](../docs/frontend/) (`01…05`); backend gap tickets in [`../docs/tickets/`](../docs/tickets/).
 The API contract is [`../frontend_handoff/API_CONTRACT.md`](../frontend_handoff/API_CONTRACT.md).
-Backend gaps are G5–G7 (plus G12 below). Frontend tickets are G1, G2, G3, G8, G9 and G11.
+Backend gaps are G5–G7 (G12 below is now shipped). Frontend tickets are G1, G2, G3, G8, G9 and G11.
 
 ## Run
 
@@ -67,9 +67,12 @@ The browser only calls `/api/...` on its own origin. Point `API_TARGET` at the r
 
 ## Known gaps
 
-- **G12:** the API has no "my buyer profile" endpoint. `/buyers/register` returns the id, which is stored on the device.
-  If a buyer clears the browser, they can't find their profile again. The backend needs `GET /api/v1/buyers/me`.
-- **Buyer's own offers:** `GET /offers/` is scoped to the lot owner, so a buyer can't list the bids they made.
+- ~~**G12:** the API has no "my buyer profile" endpoint.~~ **Shipped:** `GET /api/v1/buyers/me` returns the
+  caller's own profile from the JWT (`owner_user_id`), including `verification_state` for the pending screen.
+  `404` when the user has no profile. No client-side id storage needed any more.
+- ~~**Buyer's own offers:** `GET /offers/` is scoped to the lot owner.~~ **Shipped:** the route no longer
+  re-filters on `offers.user_id`; visibility comes from the `Owners read offers` RLS policy, so a buyer now
+  gets the bids made on their profile alongside a farmer's incoming offers.
 - Rendering has been checked in jsdom only (`npm test`). Nobody has yet done a visual pass on a real phone.
 
 ## Translations

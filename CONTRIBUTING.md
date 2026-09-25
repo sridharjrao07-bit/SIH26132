@@ -36,6 +36,42 @@ pytest -q
 
 Optional: `pre-commit install` then `pre-commit run --all-files`.
 
+## Database integration tests (`-m db`)
+
+`pytest -q` on its own **skips** every test marked `db` — the RLS policies,
+`SECURITY DEFINER` RPCs and triggers are untested unless you point it at a real
+Postgres. Two ways to get one:
+
+**Any Postgres 16** — a throwaway container, a scratch Supabase project, or a
+local cluster. `docker-compose.yml` deliberately has **no** `db` service (the
+app targets hosted Supabase), so start your own:
+
+```bash
+docker run -d --name local-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=krishi_test \
+  -p 5432:5432 postgres:16
+export SUPABASE_DB_URL=postgresql://postgres:postgres@localhost:5432/krishi_test
+```
+
+**No Docker at all** (locked-down sandbox, bare runner) — prebuilt binaries, no
+root, nothing installed system-wide:
+
+```bash
+pip install embedded-postgres
+python ci/local_postgres.py up                                  # prints the URL
+export SUPABASE_DB_URL=$(python ci/local_postgres.py uri)
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f db/ci_bootstrap.sql
+python scripts/apply_migrations.py
+```
+
+Then, with `SUPABASE_DB_URL` exported:
+
+```bash
+ENABLE_DB_INTEGRATION_TESTS=1 pytest -m db -q --strict-markers -rs
+```
+
+`-rs` matters: a `db` test that *skips* proves nothing, and CI fails the job on
+any skip. `python ci/local_postgres.py reset` tears the cluster down.
+
 ## Architecture rules (do not break)
 
 1. FastAPI verifies JWTs. **Never** cache a user-scoped Supabase client (e.g. via `@lru_cache`). Authenticated handlers use `get_supabase_as_user()` which mints a new client per request. State mutations bypass RLS via `SECURITY DEFINER` RPCs to enforce rules, but queries rely strictly on Postgres RLS. See [`docs/SECURITY_MODEL.md`](docs/SECURITY_MODEL.md) for details.

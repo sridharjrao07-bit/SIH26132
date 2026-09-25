@@ -20,6 +20,19 @@ class BuyerResponse(BaseModel):
     payment_reliability: Optional[str] = None
 
 
+class MyBuyerProfile(BuyerResponse):
+    """The caller's own buyer profile (GET /api/v1/buyers/me — ticket G12).
+
+    Extends the public shape with the onboarding state the owner is allowed to
+    see on their own row but the public is not: verification_state/review_notes
+    drive the "waiting for verification" screen.
+    """
+    owner_user_id: Optional[str] = None
+    verification_state: Optional[Literal["pending", "approved", "rejected"]] = None
+    submitted_at: Optional[datetime] = None
+    review_notes: Optional[str] = None
+
+
 class LotCreate(BaseModel):
     commodity_id: str
     market_id: Optional[str] = None

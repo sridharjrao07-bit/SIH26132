@@ -22,6 +22,7 @@ wheels/
 
 # Virtualenv
 .venv/
+.venv*/
 venv/
 ENV/
 env.bak/
@@ -59,6 +60,9 @@ Thumbs.db
 *.log
 sms_out.log
 docker-compose.override.yml
+
+# Local throwaway Postgres cluster (ci/local_postgres.py)
+.local-pg/
 
 # Dev artifacts — never commit at root (see CONTRIBUTING.md hygiene policy)
 out*.txt

@@ -20,3 +20,27 @@ create or replace function auth.role() returns text language sql stable as $$
   select coalesce(nullif(auth.jwt() ->> 'role', ''), 'anon'); $$;
 
 grant usage on schema auth, public to anon, authenticated, service_role;
+
+-- Supabase baseline privileges.
+--
+-- A real Supabase project starts with broad grants to the three API roles and
+-- then narrows them: migrations 031/036 selectively `revoke insert, update,
+-- delete` on the workflow tables and hand all writes to SECURITY DEFINER RPCs.
+-- Without reproducing that baseline here the revokes have nothing to revoke,
+-- so `test_privileges.test_revoked_table_conformance` would pass even with
+-- migration 031 deleted, and no test could read a table directly as
+-- `authenticated` to exercise an RLS policy (every read died with 42501 before
+-- the policy was ever consulted).
+--
+-- The default-privileges clauses matter: migrations run after this file, so
+-- tables created by 001+ pick the grants up at CREATE TABLE time.
+grant all on all tables    in schema public to anon, authenticated, service_role;
+grant all on all sequences in schema public to anon, authenticated, service_role;
+grant all on all functions in schema public to anon, authenticated, service_role;
+
+alter default privileges for role postgres in schema public
+    grant all on tables    to anon, authenticated, service_role;
+alter default privileges for role postgres in schema public
+    grant all on sequences to anon, authenticated, service_role;
+alter default privileges for role postgres in schema public
+    grant all on functions to anon, authenticated, service_role;

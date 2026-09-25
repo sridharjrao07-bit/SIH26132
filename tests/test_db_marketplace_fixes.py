@@ -433,10 +433,16 @@ def test_payment_amount_trigger_enforces_offer_math(db):
 # ─── G: payments.user_id FK is RESTRICT ──────────────────────────────────────
 
 def test_payments_user_fk_is_restrict(db):
+    # ON DELETE RESTRICT raises 23001 restrict_violation, NOT 23503
+    # foreign_key_violation — psycopg2 maps those to sibling classes, so
+    # asserting ForeignKeyViolation here passed vacuously on NO ACTION and
+    # failed on the RESTRICT the migration actually installs.
     with db.cursor() as cur:
         lot_id, offer_id, payment = _accepted_offer_with_payment(cur)
-        with pytest.raises(psycopg2.errors.ForeignKeyViolation):
+        with pytest.raises(psycopg2.errors.RestrictViolation) as exc:
             cur.execute("delete from public.user_profiles where id=%s", (FARMER,))
+        assert exc.value.pgcode == "23001"
+        assert "payments_user_id_fkey" in str(exc.value)
 
 
 # ─── D: fpo_aggregate_lots ───────────────────────────────────────────────────

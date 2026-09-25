@@ -56,6 +56,7 @@ The API verifies that JWT itself. It does **not** forward it to PostgREST (hoste
 | DELETE | `/api/v1/alerts/{alert_id}` | Delete Alert |
 | PATCH | `/api/v1/alerts/{alert_id}` | Update Alert |
 | GET | `/api/v1/buyers/` | List Buyers |
+| GET | `/api/v1/buyers/me` | My Buyer Profile |
 | POST | `/api/v1/buyers/register` | Register Buyer |
 | GET | `/api/v1/buyers/{buyer_id}/supply` | Buyer Supply |
 | PATCH | `/api/v1/buyers/{buyer_id}/verify` | Verify Buyer |

@@ -50,10 +50,18 @@ def list_offers(
     user_id: str = Depends(get_current_user),
     supabase: Client = Depends(get_supabase_as_user),
 ):
+    """Offers visible to the caller.
+
+    Visibility is delegated entirely to the ``Owners read offers`` RLS policy
+    (migration 014), which admits a row when the caller is the lot owner
+    (``offers.user_id``) *or* the owner of the buyer profile that placed it
+    (``buyers.owner_user_id``).  Re-filtering on ``user_id`` here — as this
+    route used to — silently dropped the buyer side of that OR, so a buyer
+    could never list the bids they had made.
+    """
     res = (
         supabase.table("offers")
         .select("*")
-        .eq("user_id", user_id)
         .order("created_at", desc=True)
         .limit(100)
         .execute()

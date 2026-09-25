@@ -125,13 +125,14 @@ Decides your app shell: what works logged-out vs logged-in.
 | GET | `/api/v1/lots/{id}` · `/{id}/advice` · `/{id}/matches` · `/{id}/ledger` | **lot owner or its FPO only** |
 | PATCH | `/api/v1/lots/{id}/grade` · `/{id}/withdraw` | lot owner |
 | POST | `/api/v1/lots/aggregate` | role `fpo` |
-| POST · GET | `/api/v1/offers/` · PATCH `/offers/{id}` | participants |
+| POST · GET | `/api/v1/offers/` · PATCH `/offers/{id}` | `GET` returns **both sides**: offers on your lots *and* bids made by your buyer profile |
 | POST · GET | `/api/v1/payments/` · PATCH `/{id}/paid\|failed\|disputed` | participants |
 | POST · GET | `/api/v1/grievances/` | any user |
 | POST · GET | `/api/v1/logistics/bookings` · PATCH `/{id}` | booking owner |
 | POST · GET · PATCH | `/api/v1/storage/bookings` | booking owner |
 | POST · GET · PATCH · DELETE | `/api/v1/alerts/` | alert owner |
 | POST | `/api/v1/buyers/register` | any user |
+| GET | `/api/v1/buyers/me` | authenticated — **own** buyer profile, `404` if none |
 | GET | `/api/v1/buyers/{id}/supply` | authenticated |
 | — | `/api/v1/admin/*` | role `admin` |
 

@@ -51,6 +51,98 @@ def test_list_buyers_public(override_supabase, fake_supabase):
     assert "Unverified Desk" not in names
 
 
+BUYER_OWNER_ID = "44444444-4444-4444-4444-444444444444"
+
+
+def buyer_owner_headers():
+    return {"Authorization": f"Bearer {mint_jwt(BUYER_OWNER_ID)}"}
+
+
+def test_buyers_me_returns_own_profile(override_supabase, fake_supabase):
+    """G12: a buyer who cleared their browser recovers the profile from the JWT."""
+    fake_supabase.seed("buyers", [
+        {"id": "buyer-mine", "name": "My Desk", "type": "trader", "verified": False,
+         "owner_user_id": BUYER_OWNER_ID, "verification_state": "pending",
+         "district": "Nashik", "commodity_id": COMMODITY_ID_ONION},
+        {"id": "buyer-theirs", "name": "Someone Else", "type": "trader", "verified": True,
+         "owner_user_id": FARMER_USER_ID, "verification_state": "approved",
+         "district": "Nashik", "commodity_id": COMMODITY_ID_ONION},
+    ])
+
+    resp = client.get("/api/v1/buyers/me", headers=buyer_owner_headers())
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["id"] == "buyer-mine"
+    # The owner-only onboarding fields the public shape does not expose.
+    assert body["verification_state"] == "pending"
+    assert body["owner_user_id"] == BUYER_OWNER_ID
+
+
+def test_buyers_me_404_when_no_profile(override_supabase, fake_supabase):
+    """No profile is a 404, never a 403 — per the contract's owner-resource rule."""
+    fake_supabase.seed("buyers", [
+        {"id": "buyer-theirs", "name": "Someone Else", "type": "trader", "verified": True,
+         "owner_user_id": FARMER_USER_ID, "verification_state": "approved"},
+    ])
+    resp = client.get("/api/v1/buyers/me", headers=buyer_owner_headers())
+    assert resp.status_code == 404
+
+
+def test_buyers_me_requires_auth(override_supabase, fake_supabase):
+    assert client.get("/api/v1/buyers/me").status_code == 401
+
+
+def test_buyers_me_is_its_own_route_not_a_swallowed_path_param(override_supabase, fake_supabase):
+    """/buyers/me must resolve to my_buyer_profile, not a /buyers/{buyer_id} route.
+
+    A literal segment registered after a `{buyer_id}` param route would be
+    captured by it and return someone else's row (or a 404 for buyer_id="me").
+    """
+    from app.main import app as _app
+
+    paths = _app.openapi()["paths"]
+    assert "/api/v1/buyers/me" in paths, sorted(p for p in paths if "/buyers" in p)
+    op = paths["/api/v1/buyers/me"]["get"]
+    assert op["operationId"].startswith("my_buyer_profile_"), op["operationId"]
+
+
+def test_offers_list_does_not_hardcode_the_lot_owner_filter(override_supabase, fake_supabase):
+    """`GET /offers/` must leave row scoping to the `Owners read offers` policy.
+
+    The route used to add `.eq("user_id", caller)`, and offers.user_id is the
+    LOT OWNER (offer_create sets it to auth.uid()).  That silently dropped the
+    buyer branch of the 014 policy, so a buyer's own bids never came back.  The
+    row-level behaviour is proven against real Postgres in
+    tests/test_db_buyer_visibility.py.
+    """
+    fake_supabase.seed("offers", [{
+        "id": "off-1", "lot_id": "lot-1", "buyer_id": "buyer-1",
+        "user_id": FARMER_USER_ID, "status": "pending",
+        "price_per_qtl": 2000, "quantity_qtl": 10,
+        "created_at": "2026-01-01T00:00:00+00:00",
+    }])
+
+    resp = client.get("/api/v1/offers/", headers=farmer_headers())
+    assert resp.status_code == 200
+
+    selects = [
+        c for c in fake_supabase.calls
+        if c["table"] == "offers" and c["op"] is None
+    ]
+    assert selects, "expected the route to SELECT from offers"
+    for call in selects:
+        assert "user_id" not in (call["filters"] or {}), (
+            "offers SELECT re-applied a user_id filter; visibility must come "
+            f"from the RLS policy alone (filters={call['filters']})"
+        )
+
+
+def test_offers_list_requires_auth(override_supabase, fake_supabase):
+    """Delegating scoping to RLS must not make the route anonymous."""
+    fake_supabase.seed("offers", [])
+    assert client.get("/api/v1/offers/").status_code == 401
+
+
 def test_lot_requires_auth():
     resp = client.post("/api/v1/lots/", json={
         "commodity_id": COMMODITY_ID_ONION,
