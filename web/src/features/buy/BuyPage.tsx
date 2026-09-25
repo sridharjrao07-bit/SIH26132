@@ -36,13 +36,37 @@ export function BuyPage() {
 }
 
 function Buy({ me }: { me: Profile }) {
-  const buyerId = useMyBuyer((s) => s.byUser[me.id]);
+  const localBuyerId = useMyBuyer((s) => s.byUser[me.id]);
+  const save = useMyBuyer((s) => s.set);
+
+  // G12 fix: resolve buyer ID from the server (cross-device) first, then fall
+  // back to the localStorage cache. This prevents the "registration lock" where
+  // clearing browser storage re-shows the form but the backend already has a profile.
+  const serverProfile = useQuery({
+    queryKey: ['buyers', 'me'],
+    queryFn: ({ signal }) => marketplace.myBuyerProfile(signal),
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  const buyerId = serverProfile.data?.id ?? localBuyerId;
+
+  // Keep Zustand store in sync when the server resolves the profile.
+  if (serverProfile.data && serverProfile.data.id !== localBuyerId) {
+    save(me.id, serverProfile.data.id);
+  }
+
   const status = useQuery({
     queryKey: ['buyers', 'status', buyerId],
-    queryFn: ({ signal }) => marketplace.buyers(undefined, signal).then(async (verified) =>
-      verified.some((b) => b.id === buyerId) ? 'verified' as const : 'pending' as const),
+    queryFn: ({ signal }) =>
+      marketplace.buyers(undefined, signal).then(async (verified) =>
+        verified.some((b) => b.id === buyerId) ? 'verified' as const : 'pending' as const),
     enabled: !!buyerId, staleTime: 5 * 60_000,
   });
+
+  if (serverProfile.isPending) {
+    return <div className="p-4"><Block h={120} /></div>;
+  }
+
   return (
     <div className="mx-auto max-w-2xl">
       <div className="px-4 pt-4">
@@ -55,7 +79,12 @@ function Buy({ me }: { me: Profile }) {
             <p className="font-semibold"><Trans>Waiting for verification</Trans></p>
             <p className="mt-1 text-sm text-ink-2"><Trans>An admin checks every buyer before farmers can see them. You will be able to see produce and make offers after that.</Trans></p>
           </Section>
-        ) : <Supply buyerId={buyerId} />}
+        ) : (
+          <>
+            <Supply buyerId={buyerId} />
+            <MyOffers />
+          </>
+        )}
     </div>
   );
 }
@@ -109,6 +138,54 @@ function RegisterBuyer({ me }: { me: Profile }) {
         {!Object.keys((register.error as { fields?: object } | null)?.fields ?? {}).length && <ErrorNote error={register.error} />}
         <Button type="submit" className="w-full mt-4" disabled={register.isPending}><Trans>Register</Trans></Button>
       </form>
+    </Section>
+  );
+}
+
+function MyOffers() {
+  const { lang } = usePrefs();
+  const commodities = useQuery(commoditiesQuery());
+  const q = useQuery({
+    queryKey: ['offers', 'me'],
+    queryFn: ({ signal }) => marketplace.offers(signal)
+  });
+
+  if (q.isPending) return <div className="p-4"><Block h={120} /></div>;
+  if (q.isError) return <div className="p-4"><ErrorNote error={q.error} /></div>;
+  if (q.data.length === 0) return null;
+
+  return (
+    <Section title={<Trans>Your Submitted Offers</Trans>}>
+      <ul className="divide-y divide-rule border border-rule rounded-sm bg-paper mt-4">
+        {q.data.map((offer: any) => {
+          const cropId = offer.lot?.commodity_id;
+          const cropNameStr = cropId ? cropName(commodities.data?.find((c) => c.id === cropId), lang) : 'Produce';
+          
+          let badgeBg = 'var(--color-paper-2)';
+          let badgeColor = 'var(--color-ink-2)';
+          if (offer.status === 'pending') { badgeBg = 'var(--color-wait-tint)'; badgeColor = 'var(--color-wait)'; }
+          if (offer.status === 'accepted') { badgeBg = 'var(--color-sell-tint)'; badgeColor = 'var(--color-sell)'; }
+          
+          return (
+            <li key={offer.id} className="p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <p className="font-semibold text-lg">{cropNameStr}</p>
+                <p className="text-sm text-ink-2 mt-0.5"><Trans>{offer.quantity_qtl} qtl at {formatINR(offer.price_per_qtl)}/qtl</Trans></p>
+              </div>
+              <div className="flex flex-col items-start md:items-end gap-1.5">
+                <span className="px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wide" style={{ background: badgeBg, color: badgeColor }}>
+                  {offer.status}
+                </span>
+                {offer.status === 'pending' && offer.expires_at && (
+                  <p className="text-xs text-ink-2">
+                    <Trans>Expires {new Date(offer.expires_at).toLocaleDateString()}</Trans>
+                  </p>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </Section>
   );
 }
