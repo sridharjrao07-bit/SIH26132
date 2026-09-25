@@ -224,3 +224,253 @@ def test_backtest_report_format(mock_supabase):
     # Naive will have N/A (null) for interval_coverage even if it succeeds
     naive_agg = report.aggregate["naive"]
     assert naive_agg["interval_coverage"] is None
+
+
+# ─── Regression Fallback Tests for LightGBM ───────────────────────────────────
+
+def test_gbm_fallback_to_feature_ols_when_pretrained_none(monkeypatch):
+    """When FORECAST_MODEL=gbm and pretrained_model is None, falls back to feature_ols."""
+    from forecasting import engine as eng
+    from forecasting.engine import _make_forecast_rows
+    from forecasting.features import build_feature_matrix
+
+    class _Settings:
+        forecast_model = "gbm"
+
+    monkeypatch.setattr(eng, "get_settings", lambda: _Settings())
+
+    base = date(2026, 8, 1)
+    n = 80
+    history = [
+        {
+            "arrival_date": (base + timedelta(days=i)).isoformat(),
+            "modal_price": 2000.0 + i * 5.0,
+            "arrival_qty": 100.0 + (i % 7) * 10.0,
+        }
+        for i in range(n)
+    ]
+    series = [(base + timedelta(days=i), 2000.0 + i * 5.0) for i in range(n)]
+    features = build_feature_matrix(history)
+    registry = {"auto": "id-auto", "gbm": "id-gbm", "feature_ols": "id-fols"}
+
+    rows = _make_forecast_rows(
+        "m1", "c1", series, sanity=(100, 8000),
+        features=features, pretrained_model=None, model_registry=registry,
+        as_of=base + timedelta(days=n - 1)
+    )
+
+    assert len(rows) == 7
+    assert all(r["status"] == "ok" for r in rows)
+    assert all(r["method"] == "feature_ols" for r in rows)
+    assert all(r["model_id"] == "id-fols" for r in rows)
+    assert all(r["confidence"] == "high" for r in rows)
+    assert all("lag_1" in r["features_used"] for r in rows)
+
+
+def test_gbm_fallback_to_linear_regression_when_features_none(monkeypatch):
+    """When FORECAST_MODEL=gbm and features=None, falls back to ols."""
+    from forecasting import engine as eng
+    from forecasting.engine import _make_forecast_rows
+
+    class _Settings:
+        forecast_model = "gbm"
+
+    monkeypatch.setattr(eng, "get_settings", lambda: _Settings())
+
+    base = date(2026, 8, 1)
+    n = 30
+    series = [(base + timedelta(days=i), 2000.0 + i * 5.0) for i in range(n)]
+    registry = {"auto": "id-auto", "gbm": "id-gbm", "feature_ols": "id-fols"}
+
+    rows = _make_forecast_rows(
+        "m1", "c1", series, sanity=(100, 8000),
+        features=None, pretrained_model=None, model_registry=registry,
+        as_of=base + timedelta(days=n - 1)
+    )
+
+    assert len(rows) == 7
+    assert all(r["status"] == "ok" for r in rows)
+    assert all(r["method"] == "ols" for r in rows)
+    assert all(r["model_id"] == "id-auto" for r in rows)
+    assert all(r["confidence"] == "high" for r in rows)
+
+
+def test_gbm_fallback_to_linear_regression_when_feature_ols_insufficient_samples(monkeypatch):
+    """When feature_ols has insufficient samples (n-1 < 10*p), falls back to ols."""
+    from forecasting import engine as eng
+    from forecasting.engine import _make_forecast_rows
+    from forecasting.features import build_feature_matrix
+
+    class _Settings:
+        forecast_model = "gbm"
+
+    monkeypatch.setattr(eng, "get_settings", lambda: _Settings())
+
+    base = date(2026, 8, 1)
+    # 40 observations gives n-1=39 < 10*p (where p >= 4), triggering feature_ols fallback to ols
+    n = 40
+    history = [
+        {
+            "arrival_date": (base + timedelta(days=i)).isoformat(),
+            "modal_price": 2000.0 + i * 5.0,
+            "arrival_qty": 100.0 + (i % 7) * 10.0,
+        }
+        for i in range(n)
+    ]
+    series = [(base + timedelta(days=i), 2000.0 + i * 5.0) for i in range(n)]
+    features = build_feature_matrix(history)
+    registry = {"auto": "id-auto", "gbm": "id-gbm", "feature_ols": "id-fols"}
+
+    rows = _make_forecast_rows(
+        "m1", "c1", series, sanity=(100, 8000),
+        features=features, pretrained_model=None, model_registry=registry,
+        as_of=base + timedelta(days=n - 1)
+    )
+
+    assert len(rows) == 7
+    assert all(r["status"] == "ok" for r in rows)
+    assert all(r["method"] == "ols" for r in rows)
+    assert all(r["model_id"] == "id-auto" for r in rows)
+
+
+def test_gbm_fallback_when_gbm_fit_fails(monkeypatch):
+    """When GBM fit raises an exception, falls back gracefully to regression."""
+    from unittest.mock import MagicMock
+
+    from forecasting import engine as eng
+    from forecasting.engine import _make_forecast_rows
+    from forecasting.features import build_feature_matrix
+
+    class _Settings:
+        forecast_model = "gbm"
+
+    monkeypatch.setattr(eng, "get_settings", lambda: _Settings())
+
+    mock_gbm = MagicMock()
+    mock_gbm.fit.side_effect = RuntimeError("GBM fit failed")
+
+    base = date(2026, 8, 1)
+    n = 80
+    history = [
+        {
+            "arrival_date": (base + timedelta(days=i)).isoformat(),
+            "modal_price": 2000.0 + i * 5.0,
+            "arrival_qty": 100.0 + (i % 7) * 10.0,
+        }
+        for i in range(n)
+    ]
+    series = [(base + timedelta(days=i), 2000.0 + i * 5.0) for i in range(n)]
+    features = build_feature_matrix(history)
+    registry = {"auto": "id-auto", "gbm": "id-gbm", "feature_ols": "id-fols"}
+
+    rows = _make_forecast_rows(
+        "m1", "c1", series, sanity=(100, 8000),
+        features=features, pretrained_model=mock_gbm, model_registry=registry,
+        as_of=base + timedelta(days=n - 1)
+    )
+
+    assert len(rows) == 7
+    assert all(r["status"] == "ok" for r in rows)
+    assert all(r["method"] == "feature_ols" for r in rows)
+
+
+def test_gbm_fallback_when_gbm_predict_fails(monkeypatch):
+    """When GBM predict raises an exception, falls back gracefully to regression."""
+    from unittest.mock import MagicMock
+
+    from forecasting import engine as eng
+    from forecasting.engine import _make_forecast_rows
+    from forecasting.features import build_feature_matrix
+
+    class _Settings:
+        forecast_model = "gbm"
+
+    monkeypatch.setattr(eng, "get_settings", lambda: _Settings())
+
+    mock_gbm = MagicMock()
+    mock_gbm.fit.return_value = None
+    mock_gbm.predict.side_effect = RuntimeError("GBM predict failed")
+    mock_gbm.fallback = False
+
+    base = date(2026, 8, 1)
+    n = 80
+    history = [
+        {
+            "arrival_date": (base + timedelta(days=i)).isoformat(),
+            "modal_price": 2000.0 + i * 5.0,
+            "arrival_qty": 100.0 + (i % 7) * 10.0,
+        }
+        for i in range(n)
+    ]
+    series = [(base + timedelta(days=i), 2000.0 + i * 5.0) for i in range(n)]
+    features = build_feature_matrix(history)
+    registry = {"auto": "id-auto", "gbm": "id-gbm", "feature_ols": "id-fols"}
+
+    rows = _make_forecast_rows(
+        "m1", "c1", series, sanity=(100, 8000),
+        features=features, pretrained_model=mock_gbm, model_registry=registry,
+        as_of=base + timedelta(days=n - 1)
+    )
+
+    assert len(rows) == 7
+    assert all(r["status"] == "ok" for r in rows)
+    assert all(r["method"] == "feature_ols" for r in rows)
+
+
+def test_gbm_fallback_when_gbm_has_fallback_flag(monkeypatch):
+    """When GBM model instance has fallback=True, falls back to regression."""
+    from forecasting import engine as eng
+    from forecasting.engine import _make_forecast_rows
+    from forecasting.features import build_feature_matrix
+    from forecasting.gbm import GlobalGBM
+
+    class _Settings:
+        forecast_model = "gbm"
+
+    monkeypatch.setattr(eng, "get_settings", lambda: _Settings())
+
+    # model=None sets fallback=True
+    gbm_model = GlobalGBM(model=None, sigma=0.0, market_map={}, commodity_map={}, events=[], strict_pit=False)
+
+    base = date(2026, 8, 1)
+    n = 80
+    history = [
+        {
+            "arrival_date": (base + timedelta(days=i)).isoformat(),
+            "modal_price": 2000.0 + i * 5.0,
+            "arrival_qty": 100.0 + (i % 7) * 10.0,
+        }
+        for i in range(n)
+    ]
+    series = [(base + timedelta(days=i), 2000.0 + i * 5.0) for i in range(n)]
+    features = build_feature_matrix(history)
+    registry = {"auto": "id-auto", "gbm": "id-gbm", "feature_ols": "id-fols"}
+
+    rows = _make_forecast_rows(
+        "m1", "c1", series, sanity=(100, 8000),
+        features=features, pretrained_model=gbm_model, model_registry=registry,
+        as_of=base + timedelta(days=n - 1)
+    )
+
+    assert len(rows) == 7
+    assert all(r["status"] == "ok" for r in rows)
+    assert all(r["method"] == "feature_ols" for r in rows)
+
+
+def test_gbm_fallback_preserves_insufficient_data(monkeypatch):
+    """When n < 10, GBM fallback correctly emits insufficient_data."""
+    from forecasting import engine as eng
+    from forecasting.engine import _make_forecast_rows
+
+    class _Settings:
+        forecast_model = "gbm"
+
+    monkeypatch.setattr(eng, "get_settings", lambda: _Settings())
+
+    base = date(2026, 8, 1)
+    series = [(base + timedelta(days=i), 2000.0) for i in range(5)]
+    rows = _make_forecast_rows("m1", "c1", series, sanity=None, pretrained_model=None)
+    assert len(rows) == 1
+    assert rows[0]["status"] == "insufficient_data"
+    assert rows[0]["predicted_price"] is None
+

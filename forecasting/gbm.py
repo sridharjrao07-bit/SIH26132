@@ -27,6 +27,7 @@ class GlobalGBM:
         self.features = []
         self.market_id = ""
         self.commodity_id = ""
+        self.fallback = (model is None)
 
     def get_feature_importances(self) -> List[Dict[str, Any]]:
         if self.model is None:

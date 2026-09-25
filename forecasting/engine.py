@@ -333,9 +333,12 @@ def _make_forecast_rows(
     if requested_model != "auto" and (requested_model in MODELS or requested_model == "gbm"):
         model_cls = MODELS.get(requested_model)
         try:
-            if requested_model == "gbm" and pretrained_model is not None:
-                model_inst = pretrained_model
-                model_inst.fit(series, features, pair_id=(market_id, commodity_id))
+            if requested_model == "gbm":
+                if pretrained_model is not None:
+                    model_inst = pretrained_model
+                    model_inst.fit(series, features, pair_id=(market_id, commodity_id))
+                else:
+                    raise ValueError("GBM pretrained model is None")
             elif requested_model == "feature_ols":
                 if features is None:
                     raise ValueError("Features required for feature_ols")
@@ -352,6 +355,36 @@ def _make_forecast_rows(
                 confidence = "high" if n >= HIGH_CONFIDENCE_THRESHOLD else "medium"
         except Exception as e:
             logger.warning("forecast_model_failed", market_id=market_id, commodity_id=commodity_id, model=requested_model, error=str(e))
+
+    # Regression fallback for LightGBM when gbm fails or is unavailable
+    if preds is None and requested_model == "gbm":
+        logger.warning("gbm_fallback_to_regression", market_id=market_id, commodity_id=commodity_id)
+        # 1. Try Feature-engineered OLS regression (multivariate OLS on features)
+        if features is not None:
+            try:
+                reg_model = FeatureOLSModel(prices, features)
+                if not getattr(reg_model, "fallback", False):
+                    raw_preds = reg_model.predict(horizon=HORIZON_DAYS, forecast_origin=horizon_start)
+                    preds = apply_postprocessing(raw_preds, reg_model.sigma, sanity)
+                    method = "feature_ols"
+                    confidence = "high" if n >= HIGH_CONFIDENCE_THRESHOLD else "medium"
+                    model_inst = reg_model
+                    logger.info("gbm_fallback_succeeded", fallback_model="feature_ols", market_id=market_id, commodity_id=commodity_id)
+            except Exception as e:
+                logger.warning("gbm_feature_ols_fallback_failed", error=str(e), market_id=market_id, commodity_id=commodity_id)
+
+        # 2. Linear regression (univariate OLS on day index) if feature_ols unavailable or fell back
+        if preds is None and n >= BLEND_THRESHOLD:
+            try:
+                reg_model = LinearRegressionModel(prices)
+                raw_preds = reg_model.predict(horizon=HORIZON_DAYS, forecast_origin=horizon_start)
+                preds = apply_postprocessing(raw_preds, reg_model.sigma, sanity)
+                method = "ols"
+                confidence = "high" if n >= HIGH_CONFIDENCE_THRESHOLD else "medium"
+                model_inst = reg_model
+                logger.info("gbm_fallback_succeeded", fallback_model="ols", market_id=market_id, commodity_id=commodity_id)
+            except Exception as e:
+                logger.warning("gbm_linear_regression_fallback_failed", error=str(e), market_id=market_id, commodity_id=commodity_id)
             
     # Fallback / Auto Tier Logic
     if preds is None:
@@ -396,8 +429,10 @@ def _make_forecast_rows(
         # method=blend rows — the accuracy card then over-claimed).
         if method == requested_model:
             mapped_model = requested_model          # honoured as requested
+        elif method in (model_registry or {}):
+            mapped_model = method                   # valid registered model (e.g. feature_ols)
         else:
-            mapped_model = "auto"                   # fallback tier (blend / moving_avg)
+            mapped_model = "auto"                   # fallback tier (blend / moving_avg / ols)
 
         rows.append({
             "market_id":       market_id,
