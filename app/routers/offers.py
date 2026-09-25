@@ -50,14 +50,19 @@ def list_offers(
     user_id: str = Depends(get_current_user),
     supabase: Client = Depends(get_supabase_as_user),
 ):
-    res = (
-        supabase.table("offers")
-        .select("*, lot:lots(commodity_id)")
-        .eq("user_id", user_id)
-        .order("created_at", desc=True)
-        .limit(100)
-        .execute()
-    )
+    # Look up buyer profile for the calling user (if any)
+    buyer_res = supabase.table("buyers").select("id").eq("owner_user_id", user_id).execute()
+    buyer_ids = [b["id"] for b in (buyer_res.data or [])]
+    
+    query = supabase.table("offers").select("*, lot:lots(commodity_id)")
+    if buyer_ids:
+        # Caller is a buyer: show offers they created OR lots they own
+        query = query.or_(f"user_id.eq.{user_id},buyer_id.in.({','.join(buyer_ids)})")
+    else:
+        # Caller is a farmer: show offers on lots they own
+        query = query.eq("user_id", user_id)
+        
+    res = query.order("created_at", desc=True).limit(100).execute()
     return [with_expiry(row) for row in (res.data or [])]
 
 
