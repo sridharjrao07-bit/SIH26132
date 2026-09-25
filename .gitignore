@@ -66,3 +66,4 @@ curl_out*.txt
 scratch_*.py
 run_*.bat
 rewrite_*.sh
+.vercel

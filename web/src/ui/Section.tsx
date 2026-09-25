@@ -1,13 +1,27 @@
 import type { ReactNode } from 'react';
 
-/** Full-width band separated by a hairline. No cards, no shadows. */
-export function Section({ title, aside, children, className = '' }: { title?: ReactNode; aside?: ReactNode; children: ReactNode; className?: string }) {
+/** Premium section card — paper surface with accent heading. */
+export function Section({
+  title,
+  aside,
+  children,
+  className = '',
+}: {
+  title?: ReactNode;
+  aside?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <section className={`rule-b px-4 py-4 ${className}`}>
+    <section className={`py-6 border-b border-rule last:border-b-0 ${className}`}>
       {(title || aside) && (
-        <div className="mb-3 flex items-baseline justify-between gap-3">
-          {title && <h2 className="text-sm font-semibold text-ink-2">{title}</h2>}
-          {aside}
+        <div className="flex flex-col md:flex-row md:items-baseline justify-between gap-3 mb-5">
+          {title && (
+            <h2 className="text-lg font-semibold leading-snug text-ink">{title}</h2>
+          )}
+          {aside && (
+            <div className="flex items-center gap-1">{aside}</div>
+          )}
         </div>
       )}
       {children}

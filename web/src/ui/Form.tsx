@@ -8,17 +8,17 @@ export function Field({ label, hint, error, suffix, ...input }: InputHTMLAttribu
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-semibold">{label}</span>
+      <span className="text-sm font-semibold text-ink-2">{label}</span>
       <span className="mt-1 flex items-center gap-2">
         <input
           {...input}
           aria-invalid={error ? true : undefined}
-          className={`tap w-full min-w-0 rounded border bg-paper px-3 text-base ${error ? 'border-ink' : 'border-rule'} ${input.className ?? ''}`}
+          className={`tap w-full min-w-0 border-b-2 bg-paper-2 px-3 pt-2 pb-1 text-base rounded-t-sm focus:outline-none focus:border-ink transition-colors ${error ? 'border-sell text-sell' : 'border-rule'} ${input.className ?? ''}`}
         />
-        {suffix && <span className="shrink-0 text-sm text-ink-2">{suffix}</span>}
+        {suffix && <span className="shrink-0 text-sm text-ink-2 font-medium">{suffix}</span>}
       </span>
       {hint && !error && <span className="mt-1 block text-xs text-ink-2">{hint}</span>}
-      {error && <span role="alert" className="mt-1 block text-xs font-semibold">{error}</span>}
+      {error && <span role="alert" className="mt-1 block text-xs font-semibold text-sell">{error}</span>}
     </label>
   );
 }
@@ -26,9 +26,9 @@ export function Field({ label, hint, error, suffix, ...input }: InputHTMLAttribu
 export function NativeSelect({ label, value, onChange, children }: { label: ReactNode; value: string; onChange: (v: string) => void; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="text-sm font-semibold">{label}</span>
+      <span className="text-sm font-semibold text-ink-2">{label}</span>
       <select value={value} onChange={(e) => onChange(e.target.value)}
-        className="tap mt-1 w-full rounded border border-rule bg-paper px-3 text-base">
+        className="tap mt-1 w-full border-b-2 border-rule bg-paper-2 px-3 pt-2 pb-1 text-base rounded-t-sm focus:outline-none focus:border-ink transition-colors">
         {children}
       </select>
     </label>
@@ -44,8 +44,7 @@ export function Button({ children, variant = 'primary', className = '', ...b }: 
   );
 }
 
-/** One renderer for both FastAPI error shapes (G8). 404 reads as "not found", never "denied". */
-export function ErrorNote({ error }: { error: unknown }) {
+export function ErrorNote({ error, className = '' }: { error: unknown, className?: string }) {
   if (!error) return null;
   const e = error instanceof ApiError ? error : null;
   let msg: ReactNode;
@@ -59,7 +58,7 @@ export function ErrorNote({ error }: { error: unknown }) {
     case 'contract': msg = <Trans>The server sent something unexpected.</Trans>; break;
     default: msg = e?.message ?? (error instanceof Error ? error.message : String(error));  // 400/409/422: the server's own message
   }
-  return <p role="alert" className="rounded border border-ink px-3 py-2 text-sm">{msg}</p>;
+  return <p role="alert" className={`rounded border border-sell px-3 py-2 text-sm text-sell ${className}`}>{msg}</p>;
 }
 
 export const fieldError = (error: unknown, field: string) =>

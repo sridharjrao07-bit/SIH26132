@@ -57,6 +57,18 @@ def register_buyer(
     return _call_rpc(user_client, "buyer_register", params)
 
 
+@router.get("/me", response_model=BuyerResponse)
+def get_my_buyer_profile(
+    uid: str = Depends(get_current_user),
+    user_client: Client = Depends(get_supabase_as_user),
+):
+    """Return the currently authenticated user's buyer profile."""
+    res = user_client.table("buyers").select("*").eq("owner_user_id", uid).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Buyer profile not found for the current user.")
+    return res.data[0]
+
+
 @router.get("/", response_model=List[BuyerResponse])
 def list_buyers(
     district: Optional[str] = Query(None),

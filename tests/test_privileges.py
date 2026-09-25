@@ -78,7 +78,7 @@ def test_migration_coverage():
         assert re.match(r"^\d{3}[a-z]?_.*\.sql$", name), f"Invalid migration name: {name}"
 
     # Count ratchet — bump when a migration is intentionally added.
-    EXPECTED_MIGRATIONS = 37
+    EXPECTED_MIGRATIONS = 38
     assert len(sql_files) == EXPECTED_MIGRATIONS, (
         f"Expected {EXPECTED_MIGRATIONS} migrations, found {len(sql_files)}"
     )

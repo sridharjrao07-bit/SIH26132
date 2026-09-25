@@ -1,64 +1,270 @@
 @import "tailwindcss";
 
-/* Fonts: self-hosted by Vite from @fontsource (no Google Fonts request). */
+/* Fonts */
 @import "@fontsource/ibm-plex-sans/latin-400.css";
 @import "@fontsource/ibm-plex-sans/latin-600.css";
 @import "@fontsource/ibm-plex-sans-devanagari/devanagari-400.css";
 @import "@fontsource/ibm-plex-sans-devanagari/devanagari-600.css";
 
-/*
- * Design tokens (docs/frontend/04-design.md). The default Tailwind palette is switched off:
- * only these colours exist, so nobody can reach for blue-500 or a gradient.
- * Contrast on paper: ink 16.0, ink-2 6.98, sell 7.30, hold 7.24, wait 7.47.
- */
 @theme {
   --color-*: initial;
-  --color-paper: #F7F4EE;
-  --color-paper-2: #EFEAE0;
-  --color-ink: #1A1916;
-  --color-ink-2: #57534A;
-  --color-rule: #DDD6C8;
-  --color-sell: #1A5C32;
-  --color-hold: #6E4A03;
-  --color-wait: #475059;
-  --color-forecast: #2D5B88;   /* chart only, never text */
-  --color-arrivals: #CBBFA9;   /* chart only */
-  --color-white: #FFFFFF;
-  --color-transparent: transparent;
-  --color-current: currentColor;
 
+  /* ── SURFACES ─────────────────────────────────────────────────── */
+  --color-paper:      #F7F4EE;   /* page canvas */
+  --color-paper-2:    #EFEAE0;   /* secondary surface, table headers */
+  --color-ink-hero:   #0F0E0C;   /* dark hero panels */
+  --color-accent-tint:#EEF2FF;   /* indigo-tinted sections */
+
+  /* ── BRAND ACCENT (Deep Indigo) ───────────────────────────────── */
+  /* Must NEVER be mistaken for a verdict (sell/hold/wait). */
+  --color-accent:     #4338CA;   /* primary accent */
+  --color-accent-2:   #6366F1;   /* hover / interactive accent */
+  --color-accent-dark:#312E81;   /* pressed state */
+
+  /* ── SEMANTIC VERDICTS (locked — never repurpose) ─────────────── */
+  --color-sell:       #1A5C32;   /* SELL NOW  — forest green */
+  --color-hold:       #6E4A03;   /* HOLD      — deep amber */
+  --color-wait:       #475059;   /* WAIT      — blue-grey */
+  --color-forecast:   #2D5B88;   /* AI forecast line — steel blue */
+
+  /* ── VERDICT TINTS ────────────────────────────────────────────── */
+  --color-sell-tint:  #EBF5EE;
+  --color-hold-tint:  #FDF6E2;
+  --color-wait-tint:  #F1F3F5;
+
+  /* ── INK (text & icons) ───────────────────────────────────────── */
+  --color-ink:        #0F0E0C;   /* primary text */
+  --color-ink-2:      #57534A;   /* secondary text */
+  --color-rule:       #DDD6C8;   /* hairline dividers */
+  --color-arrivals:   #CBBFA9;
+
+  /* ── UTILITY ──────────────────────────────────────────────────── */
+  --color-white:       #FFFFFF;
+  --color-transparent: transparent;
+  --color-current:     currentColor;
+
+  /* ── TYPOGRAPHY ───────────────────────────────────────────────── */
   --font-sans: "IBM Plex Sans", "IBM Plex Sans Devanagari", system-ui, sans-serif;
 
-  --radius-*: initial;
-  --radius-sm: 2px;
-  --radius: 4px;
+  /* ── TYPE SCALE ───────────────────────────────────────────────── */
+  --text-*:    initial;
+  --text-xs:   14px;
+  --text-sm:   15px;
+  --text-base: 17px;
+  --text-lg:   20px;
+  --text-xl:   28px;
+  --text-price:40px;
 
-  --shadow-*: initial;
+  /* ── RADIUS ───────────────────────────────────────────────────── */
+  --radius-*:   initial;
+  --radius-sm:  2px;
+  --radius:     4px;
+  --radius-md:  6px;    /* chips */
+  --radius-lg:  8px;    /* inputs, buttons */
+  --radius-xl:  10px;
+  --radius-2xl: 12px;   /* cards, panels */
+  --radius-hero:0px;    /* dark hero — sharp edge, no radius */
+  --radius-full:9999px;
 
-  --text-xs: 0.875rem;   /* 14px floor: nothing smaller */
-  --text-xs--line-height: 1.45;
-  --text-sm: 0.9375rem;  /* 15 */
-  --text-sm--line-height: 1.5;
-  --text-base: 1.0625rem;/* 17: Devanagari needs the extra size */
-  --text-base--line-height: 1.55;
-  --text-lg: 1.25rem;
-  --text-lg--line-height: 1.4;
-  --text-xl: 1.75rem;    /* verdict */
-  --text-xl--line-height: 1.25;
-  --text-price: 2.5rem;  /* 40px headline price */
-  --text-price--line-height: 1.1;
+  /* ── ELEVATION (one token, raised cards & toasts only) ────────── */
+  --shadow-card: 0 1px 3px rgba(15,14,12,0.08), 0 4px 12px rgba(15,14,12,0.04);
+
+  /* ── SPACING ──────────────────────────────────────────────────── */
+  --spacing-*: initial;
+  --spacing-1:  4px;
+  --spacing-2:  8px;
+  --spacing-3:  12px;
+  --spacing-4:  16px;
+  --spacing-6:  24px;
+  --spacing-8:  32px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+
+  /* ── MOTION TOKENS ────────────────────────────────────────────── */
+  /* All: transform/opacity only · 90–320ms · decelerate easing */
+  --ease-out:          cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard:     cubic-bezier(0.4, 0, 0.2, 1);
+
+  --animate-rise:      rise 220ms cubic-bezier(0.16,1,0.3,1) both;
+  --animate-fade:      fade 220ms cubic-bezier(0.16,1,0.3,1) both;
+  --animate-band:      band 260ms cubic-bezier(0.16,1,0.3,1) both;
+  --animate-slide-down:slide-down 240ms cubic-bezier(0.4,0,0.2,1) both;
+  --animate-pulse-soft:pulse-soft 1.4s ease-in-out infinite;
+  --animate-aurora:    aurora 6s ease-in-out infinite;
+  --animate-count-up:  count-up 400ms cubic-bezier(0.16,1,0.3,1) both;
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(8px) }
+    to   { opacity: 1; transform: none }
+  }
+  @keyframes fade {
+    from { opacity: 0 }
+    to   { opacity: 1 }
+  }
+  /* verdict band: scaleX draw-in */
+  @keyframes band {
+    from { transform: scaleX(0); opacity: .6 }
+    to   { transform: scaleX(1); opacity: 1 }
+  }
+  @keyframes slide-down {
+    from { opacity: 0; transform: translateY(-8px) }
+    to   { opacity: 1; transform: none }
+  }
+  @keyframes pulse-soft {
+    0%,100% { opacity: 1 }
+    50%      { opacity: .45 }
+  }
+  /* Aurora — premium color-shifting background for forecasting state */
+  /* Indigo → teal → violet glows on dark base. Subtle, NOT neon.     */
+  @keyframes aurora {
+    0%   { background-position: 0%   50% }
+    33%  { background-position: 50%  0%  }
+    66%  { background-position: 100% 50% }
+    100% { background-position: 0%   50% }
+  }
+  @keyframes count-up {
+    from { opacity: 0; transform: translateY(6px) scale(0.97) }
+    to   { opacity: 1; transform: none scale(1) }
+  }
+  /* Row stagger: applied via --delay override */
+  @keyframes row-in {
+    from { opacity: 0; transform: translateY(8px) }
+    to   { opacity: 1; transform: none }
+  }
+  /* Nav indicator slide */
+  @keyframes nav-slide {
+    from { transform: scaleX(0) }
+    to   { transform: scaleX(1) }
+  }
+  /* Toast / offline banner */
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(-12px) }
+    to   { opacity: 1; transform: none }
+  }
 }
 
+/* ──────────────────────────────────────────────────────────────────
+   REDUCED MOTION — remove all animation/transition
+──────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration:       0.001ms !important;
+    animation-iteration-count:1       !important;
+    transition-duration:      0.001ms !important;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   BASE LAYER
+──────────────────────────────────────────────────────────────────── */
 @layer base {
-  html { background: var(--color-paper); color: var(--color-ink); -webkit-text-size-adjust: 100%; }
-  body { font-family: var(--font-sans); font-size: var(--text-base); line-height: 1.55; margin: 0; }
-  :lang(en) body, :lang(en) { line-height: 1.45; }
-  :focus-visible { outline: 3px solid var(--color-ink); outline-offset: 2px; }
+  html {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    font-family: var(--font-sans);
+    font-size:   var(--text-base);
+    line-height: 1.55;
+    margin: 0;
+  }
+  :lang(en) body,
+  :lang(en) { line-height: 1.45; }
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
   button, select, input { font: inherit; color: inherit; }
-  ::selection { background: var(--color-paper-2); }
+  ::selection { background: var(--color-accent-tint); color: var(--color-ink); }
 }
 
-@utility tabular { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+/* ──────────────────────────────────────────────────────────────────
+   UTILITIES
+──────────────────────────────────────────────────────────────────── */
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
+}
 @utility rule-b { border-bottom: 1px solid var(--color-rule); }
-@utility rule-t { border-top: 1px solid var(--color-rule); }
+@utility rule-t { border-top:    1px solid var(--color-rule); }
+
+/* 48px minimum tap target */
 @utility tap { min-height: 48px; }
+
+/* Card elevation */
+@utility card-shadow { box-shadow: var(--shadow-card); }
+
+/* ── HERO PANEL ─────────────────────────────────────────────────── */
+@utility ink-hero {
+  background: var(--color-ink-hero);
+  background-image: linear-gradient(135deg, #0F0E0C 0%, #1C1A17 50%, #0F0E0C 100%);
+  color: var(--color-white);
+  border-radius: var(--radius-hero);
+}
+
+/* ── AURORA (forecasting state) ─────────────────────────────────── */
+/* Used when we're waiting for an AI forecast — premium dark glow.   */
+@utility aurora-bg {
+  background: linear-gradient(
+    135deg,
+    #0F0E0C 0%,
+    #1e1b4b 15%,
+    #0f172a 25%,
+    #1e1b4b 35%,
+    #134e4a 50%,
+    #1e1b4b 65%,
+    #2e1065 75%,
+    #1e1b4b 85%,
+    #0F0E0C 100%
+  );
+  background-size: 400% 400%;
+  animation: var(--animate-aurora);
+}
+
+/* ── VERDICT BAND ───────────────────────────────────────────────── */
+/* The band animates with scaleX; text animates with rise.           */
+@utility verdict-band {
+  position: relative;
+  overflow: hidden;
+}
+@utility verdict-band-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left;
+  animation: var(--animate-band);
+}
+@utility verdict-band-content {
+  position: relative;
+  animation: var(--animate-rise);
+}
+
+/* ── ACCENT SURFACE ─────────────────────────────────────────────── */
+@utility accent-tint-surface {
+  background: var(--color-accent-tint);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 20%, transparent);
+}
+
+/* ── STAGGER ROW ANIMATIONS ─────────────────────────────────────── */
+@utility row-stagger-1 { animation: row-in 200ms var(--ease-out) both; }
+@utility row-stagger-2 { animation: row-in 200ms 40ms  var(--ease-out) both; }
+@utility row-stagger-3 { animation: row-in 200ms 80ms  var(--ease-out) both; }
+@utility row-stagger-4 { animation: row-in 200ms 120ms var(--ease-out) both; }
+
+/* ── NAV INDICATOR ──────────────────────────────────────────────── */
+@utility nav-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-accent);
+  transform-origin: left;
+  animation: nav-slide 200ms var(--ease-out) both;
+}
+
+/* ── CHIP PRESS FEEDBACK ────────────────────────────────────────── */
+/* Use scale(0.98) via onMouseDown/onTouchStart in components directly. */
+@utility chip-press {
+  transition: transform 90ms var(--ease-standard), background-color 90ms var(--ease-standard);
+}
