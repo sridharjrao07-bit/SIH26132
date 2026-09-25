@@ -32,6 +32,12 @@ msgstr "‹ मेरा माल"
 msgid "{0} qtl"
 msgstr "{0} क्विंटल"
 
+#. placeholder {0}: offer.quantity_qtl
+#. placeholder {1}: formatINR(offer.price_per_qtl)
+#: src/features/buy/BuyPage.tsx:173
+msgid "{0} qtl at {1}/qtl"
+msgstr "{0} क्विं. {1}/क्विं. के भाव पर"
+
 #: src/features/price-detail/PairView.tsx:81
 #: src/features/price-detail/PairView.tsx:82
 msgid "{abs} ({p}) from yesterday"
@@ -53,7 +59,7 @@ msgstr "{pendingOffers} नए"
 msgid "{price}/qtl × {qty} qtl = {total}"
 msgstr "{price}/क्विं. × {qty} क्विं. = {total}"
 
-#: src/features/buy/BuyPage.tsx:200
+#: src/features/buy/BuyPage.tsx:253
 msgid "{q} qtl"
 msgstr "{q} क्विंटल"
 
@@ -152,7 +158,7 @@ msgstr "एडमिन खाता"
 msgid "Advice for this lot"
 msgstr "इस माल के लिए सलाह"
 
-#: src/features/buy/BuyPage.tsx:115
+#: src/features/buy/BuyPage.tsx:120
 msgid "After you register, an admin verifies you. Only verified buyers are shown to farmers."
 msgstr "पंजीकरण के बाद एडमिन आपकी जाँच करता है। केवल सत्यापित खरीदार किसानों को दिखते हैं।"
 
@@ -172,7 +178,7 @@ msgstr "पहले से खाता है? लॉगिन करें"
 msgid "An admin checks every buyer before farmers can see them. You will be able to see produce and make offers after that."
 msgstr "किसानों को दिखने से पहले एडमिन हर खरीदार की जाँच करता है। उसके बाद आप माल देख सकेंगे और ऑफ़र दे सकेंगे।"
 
-#: src/features/buy/BuyPage.tsx:126
+#: src/features/buy/BuyPage.tsx:131
 msgid "Any crop"
 msgstr "कोई भी फसल"
 
@@ -190,7 +196,7 @@ msgstr "आवक"
 
 #. placeholder {0}: formatINR(l.asking_price)
 #. placeholder {0}: formatINR(lot.asking_price)
-#: src/features/buy/BuyPage.tsx:201
+#: src/features/buy/BuyPage.tsx:254
 #: src/features/sell/LotDetailPage.tsx:71
 msgid "asking {0}"
 msgstr "माँग {0}"
@@ -290,7 +296,7 @@ msgstr "बुकिंग पक्की"
 msgid "Booking requested"
 msgstr "बुकिंग का अनुरोध"
 
-#: src/features/buy/BuyPage.tsx:117
+#: src/features/buy/BuyPage.tsx:122
 msgid "Business name"
 msgstr "व्यवसाय का नाम"
 
@@ -316,7 +322,7 @@ msgstr "इस माल के खरीदार"
 msgid "Buyers need an account so farmers know who is making the offer."
 msgstr "ऑफ़र कौन दे रहा है यह किसान जान सकें, इसलिए खरीदारों को खाता चाहिए।"
 
-#: src/features/buy/BuyPage.tsx:216
+#: src/features/buy/BuyPage.tsx:269
 #: src/features/sell/LotDetailPage.tsx:350
 #: src/features/sell/LotDetailPage.tsx:394
 msgid "Cancel"
@@ -396,7 +402,7 @@ msgstr "खाता बनाएँ"
 msgid "Crop"
 msgstr "फसल"
 
-#: src/features/buy/BuyPage.tsx:125
+#: src/features/buy/BuyPage.tsx:130
 msgid "Crop you buy"
 msgstr "आप जो फसल खरीदते हैं"
 
@@ -439,7 +445,7 @@ msgid "Disputed"
 msgstr "विवादित"
 
 #: src/features/account/AccountPage.tsx:127
-#: src/features/buy/BuyPage.tsx:122
+#: src/features/buy/BuyPage.tsx:127
 msgid "District"
 msgstr "ज़िला"
 
@@ -455,6 +461,11 @@ msgstr "अनुमान बड़ा करके देखें ›"
 #: src/features/sell/labels.ts:27
 msgid "Expired"
 msgstr "समय समाप्त"
+
+#. placeholder {0}: new Date(offer.expires_at).toLocaleDateString()
+#: src/features/buy/BuyPage.tsx:181
+msgid "Expires {0}"
+msgstr "समाप्ति तिथि {0}"
 
 #: src/features/sell/LotDetailPage.tsx:231
 msgid "expires in {h} h"
@@ -527,7 +538,7 @@ msgstr "ग्रेड"
 
 #. placeholder {0}: l.grade
 #. placeholder {0}: lot.grade
-#: src/features/buy/BuyPage.tsx:189
+#: src/features/buy/BuyPage.tsx:242
 #: src/features/sell/LotDetailPage.tsx:70
 msgid "Grade {0}"
 msgstr "ग्रेड {0}"
@@ -552,7 +563,7 @@ msgstr "ज़्यादा"
 msgid "high confidence"
 msgstr "ज़्यादा भरोसा"
 
-#: src/features/buy/BuyPage.tsx:131
+#: src/features/buy/BuyPage.tsx:136
 msgid "Highest price"
 msgstr "अधिकतम भाव"
 
@@ -650,7 +661,7 @@ msgstr "कम भरोसा"
 msgid "Low price"
 msgstr "कम भाव"
 
-#: src/features/buy/BuyPage.tsx:221
+#: src/features/buy/BuyPage.tsx:274
 msgid "Make offer"
 msgstr "ऑफ़र दें"
 
@@ -679,7 +690,7 @@ msgid "min"
 msgstr "न्यूनतम"
 
 #: src/features/account/AccountPage.tsx:117
-#: src/features/buy/BuyPage.tsx:123
+#: src/features/buy/BuyPage.tsx:128
 msgid "Mobile number"
 msgstr "मोबाइल नंबर"
 
@@ -763,7 +774,7 @@ msgstr "अनुमान नहीं"
 msgid "No mandi price for the last {0} days (dotted line)."
 msgstr "पिछले {0} दिन मंडी भाव नहीं (बिंदुओं वाली रेखा)।"
 
-#: src/features/buy/BuyPage.tsx:150
+#: src/features/buy/BuyPage.tsx:203
 msgid "No open lots match right now."
 msgstr "अभी कोई मेल खाता माल नहीं।"
 
@@ -857,7 +868,7 @@ msgstr "ऑफ़र मिला"
 msgid "Offer rejected"
 msgstr "ऑफ़र अस्वीकार"
 
-#: src/features/buy/BuyPage.tsx:208
+#: src/features/buy/BuyPage.tsx:261
 msgid "Offer sent. The farmer has 48 hours to reply."
 msgstr "ऑफ़र भेजा गया। किसान के पास जवाब के लिए 48 घंटे हैं।"
 
@@ -978,7 +989,7 @@ msgstr "{0} माल एक साथ करें ({totalLabel} क्वि�
 msgid "Pool lots (FPO)"
 msgstr "माल एक साथ करें (FPO)"
 
-#: src/features/buy/BuyPage.tsx:211
+#: src/features/buy/BuyPage.tsx:264
 #: src/features/sell/LotDetailPage.tsx:343
 msgid "Price"
 msgstr "भाव"
@@ -1051,7 +1062,7 @@ msgstr "शिकायतें"
 msgid "Processor"
 msgstr "प्रोसेसर"
 
-#: src/features/buy/BuyPage.tsx:149
+#: src/features/buy/BuyPage.tsx:202
 msgid "Produce that fits what you buy"
 msgstr "आपकी खरीद से मेल खाता माल"
 
@@ -1064,8 +1075,8 @@ msgid "Provisional: tested on a few mandis only."
 msgstr "अस्थायी: केवल कुछ मंडियों पर जाँचा गया।"
 
 #: src/charts/PriceForecastChart.tsx:49
-#: src/features/buy/BuyPage.tsx:130
-#: src/features/buy/BuyPage.tsx:212
+#: src/features/buy/BuyPage.tsx:135
+#: src/features/buy/BuyPage.tsx:265
 #: src/features/sell/LotDetailPage.tsx:344
 msgid "qtl"
 msgstr "क्विं."
@@ -1078,13 +1089,13 @@ msgstr "गुणवत्ता"
 msgid "Quality notes (optional)"
 msgstr "गुणवत्ता के बारे में (वैकल्पिक)"
 
-#: src/features/buy/BuyPage.tsx:212
+#: src/features/buy/BuyPage.tsx:265
 #: src/features/sell/LotDetailPage.tsx:344
 #: src/features/sell/NewLotPage.tsx:68
 msgid "Quantity"
 msgstr "मात्रा"
 
-#: src/features/buy/BuyPage.tsx:130
+#: src/features/buy/BuyPage.tsx:135
 msgid "Quantity needed"
 msgstr "ज़रूरी मात्रा"
 
@@ -1112,11 +1123,11 @@ msgstr "इस माल का रिकॉर्ड"
 msgid "Record payment of {amount}"
 msgstr "{amount} का भुगतान दर्ज करें"
 
-#: src/features/buy/BuyPage.tsx:134
+#: src/features/buy/BuyPage.tsx:139
 msgid "Register"
 msgstr "पंजीकरण करें"
 
-#: src/features/buy/BuyPage.tsx:114
+#: src/features/buy/BuyPage.tsx:119
 msgid "Register as a buyer"
 msgstr "खरीदार के रूप में पंजीकरण करें"
 
@@ -1190,7 +1201,7 @@ msgstr "खरीदारों के ऑफ़र आप तक पहुँ�
 msgid "Send"
 msgstr "भेजें"
 
-#: src/features/buy/BuyPage.tsx:215
+#: src/features/buy/BuyPage.tsx:268
 #: src/features/sell/LotDetailPage.tsx:349
 msgid "Send offer"
 msgstr "ऑफ़र भेजें"
@@ -1376,7 +1387,7 @@ msgstr "परिवहन"
 msgid "Trend with arrivals and weather"
 msgstr "आवक और मौसम सहित रुझान"
 
-#: src/features/buy/BuyPage.tsx:118
+#: src/features/buy/BuyPage.tsx:123
 msgid "Type"
 msgstr "प्रकार"
 
@@ -1489,13 +1500,17 @@ msgstr "आपके खाते में SMS अलर्ट के लिए
 msgid "Your Alerts"
 msgstr "आपकी सूचनाएँ"
 
-#: src/features/buy/BuyPage.tsx:146
+#: src/features/buy/BuyPage.tsx:199
 msgid "Your buyer profile is not verified yet."
 msgstr "आपकी खरीदार प्रोफ़ाइल अभी सत्यापित नहीं है।"
 
 #: src/features/account/AccountPage.tsx:107
 msgid "Your details"
 msgstr "आपकी जानकारी"
+
+#: src/features/buy/BuyPage.tsx:158
+msgid "Your Submitted Offers"
+msgstr "आपके द्वारा दिए गए ऑफ़र"
 
 #: src/app/AppShell.tsx:187
 msgid "कृषी बाजार"
