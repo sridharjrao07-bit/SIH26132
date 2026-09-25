@@ -230,7 +230,7 @@ export function PairView({ pair, range, onPairChange, onRangeChange }: Props) {
               <>
                 {/* 1. VERDICT BAND */}
                 {sale.data && (
-                  <div aria-live="polite" className="verdict-band mb-5 -mx-4 lg:-mx-6 overflow-hidden">
+                  <div id="verdict" aria-live="polite" className="verdict-band mb-5 -mx-4 lg:-mx-6 overflow-hidden">
                     <div
                       aria-hidden
                       className={`verdict-band-fill ${VERDICT_BG[sale.data.action]}`}
@@ -252,7 +252,7 @@ export function PairView({ pair, range, onPairChange, onRangeChange }: Props) {
                 <div className="mb-4" style={{ animation: 'count-up 400ms cubic-bezier(0.16,1,0.3,1) both' }}>
                   <p className="tabular text-white leading-none" style={{ fontSize: '48px', fontWeight: 700 }}>
                     {formatINR(last.modal)}
-                    <span className="text-lg font-normal text-white/60 ml-1">/qtl</span>
+                    <span className="text-lg font-normal text-white/60 ml-1"><Trans>/quintal</Trans></span>
                   </p>
                   {prev && <div className="mt-2"><Delta now={last.modal} before={prev.modal} /></div>}
                 </div>
