@@ -19,6 +19,10 @@ mock_lgb.LGBMRegressor.return_value.predict.side_effect = _mock_predict
 # Ensure that we only mock lightgbm during the specific mock tests
 @patch.dict(sys.modules, {"lightgbm": mock_lgb})
 def test_train_global_gbm_isolation_and_sigma():
+    # numpy is an optional ML dep (only the delisted GBM model uses it). Skip in
+    # base CI exactly like test_train_global_gbm_real skips on lightgbm; the real
+    # run happens in the test-ml job where numpy is installed.
+    pytest.importorskip("numpy")
     from forecasting.gbm import train_global_gbm
 
     # 1. Deterministic Synthetic Dataset
