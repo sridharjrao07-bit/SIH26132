@@ -407,8 +407,11 @@ class FakeSupabase:
     def _rpc_lot_withdraw(self, params: dict) -> dict:
         from fastapi import HTTPException
         lot_id = params.get("p_lot_id")
+        uid = params.get("_test_user_id")
         for lot in self._data.get("lots", []):
             if lot.get("id") == lot_id:
+                if uid and lot.get("user_id") != uid and lot.get("fpo_id") != uid:
+                    raise HTTPException(404, "lot not found or access denied")
                 if lot.get("status") in ("sold", "withdrawn", "matched"):
                     raise HTTPException(409, f"cannot withdraw a {lot['status']} lot")
                 lot["status"] = "withdrawn"
@@ -418,8 +421,11 @@ class FakeSupabase:
     def _rpc_lot_grade_update(self, params: dict) -> dict:
         from fastapi import HTTPException
         lot_id = params.get("p_lot_id")
+        uid = params.get("_test_user_id")
         for lot in self._data.get("lots", []):
             if lot.get("id") == lot_id:
+                if uid and lot.get("user_id") != uid and lot.get("fpo_id") != uid:
+                    raise HTTPException(404, "lot not found or access denied")
                 if lot.get("status") in ("sold", "withdrawn"):
                     raise HTTPException(409, f"cannot regrade a {lot['status']} lot")
                 lot["grade"] = params.get("p_grade", lot["grade"])
@@ -524,9 +530,12 @@ class FakeSupabase:
         from fastapi import HTTPException
         offer_id = params.get("p_offer_id")
         decision = params.get("p_decision")
+        uid = params.get("_test_user_id")
         offer = next((o for o in self._data.get("offers", []) if o.get("id") == offer_id), None)
         if not offer:
             raise HTTPException(404, "offer not found")
+        if uid and offer.get("user_id") != uid:
+            raise HTTPException(404, "offer not found or not owned by caller")
         if offer.get("status") != "pending":
             raise HTTPException(409, f"cannot decide on a {offer.get('status')} offer")
         # 036 B2: pending offers expire after OFFER_TTL_HOURS (48h)

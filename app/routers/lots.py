@@ -130,6 +130,9 @@ def grade_lot(
     supabase: Client = Depends(get_supabase_as_user),
 ):
     """Grade a lot via the lot_grade_update RPC."""
+    lot = supabase.table("lots").select("user_id, fpo_id, status").eq("id", lot_id).execute().data
+    if not lot or (lot[0].get("user_id") != user_id and lot[0].get("fpo_id") != user_id):
+        raise HTTPException(404, "lot not found")
     params = {
         "p_lot_id": lot_id,
         "p_grade": body.grade,
@@ -145,4 +148,7 @@ def withdraw_lot(
     supabase: Client = Depends(get_supabase_as_user),
 ):
     """Withdraw a lot via the lot_withdraw RPC."""
+    lot = supabase.table("lots").select("user_id, fpo_id, status").eq("id", lot_id).execute().data
+    if not lot or (lot[0].get("user_id") != user_id and lot[0].get("fpo_id") != user_id):
+        raise HTTPException(404, "lot not found")
     return _call_rpc(supabase, "lot_withdraw", {"p_lot_id": lot_id})

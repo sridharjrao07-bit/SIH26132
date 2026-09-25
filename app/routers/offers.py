@@ -85,6 +85,11 @@ def update_offer(
     if body.status not in ("accepted", "rejected"):
         raise HTTPException(422, f"status must be accepted or rejected, got {body.status!r}")
 
+    # Defence-in-depth: caller must own the lot the offer was made on
+    offer = supabase.table("offers").select("user_id").eq("id", offer_id).execute().data
+    if not offer or offer[0].get("user_id") != user_id:
+        raise HTTPException(404, "offer not found")
+
     data = _call_rpc(supabase, "offer_decide", {
         "p_offer_id": offer_id,
         "p_decision": body.status,
