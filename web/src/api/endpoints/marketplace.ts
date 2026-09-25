@@ -69,6 +69,7 @@ export function marketplaceApi(api: ApiClient) {
     buyers: (commodityId?: string, signal?: AbortSignal) =>
       api.get('/api/v1/buyers/', { schema: v.array(BuyerSchema), query: { commodity_id: commodityId }, signal }),
     registerBuyer: (body: BuyerRegister) => api.post('/api/v1/buyers/register', { ...A, schema: BuyerSchema, body }),
+    myBuyerProfile: (signal?: AbortSignal) => api.get('/api/v1/buyers/me', { ...A, schema: BuyerSchema, signal }),
     supply: (buyerId: string, signal?: AbortSignal) => api.get(`/api/v1/buyers/${buyerId}/supply`, { ...A, schema: SupplySchema, signal }),
   };
 }

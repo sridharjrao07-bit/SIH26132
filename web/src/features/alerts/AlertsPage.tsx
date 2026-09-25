@@ -106,25 +106,27 @@ function NewAlert() {
               onChange={(e) => setMarket(e.target.value)}
             >
               <option value="">{t`nearest mandi`}</option>
-              {(markets.data ?? []).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+              {markets.data?.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
             </select>
             {' '}goes{' '}
             {/* Condition toggle pills */}
             <span className="inline-flex rounded-md border border-rule overflow-hidden">
-              {(['gte', 'lte'] as const).map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setCondition(c)}
-                  className="px-2 py-1 text-sm font-semibold transition-colors"
-                  style={{
-                    background: condition === c ? 'var(--color-accent)' : 'var(--color-paper)',
-                    color: condition === c ? 'white' : 'var(--color-ink-2)',
-                  }}
-                >
-                  {c === 'gte' ? t`above` : t`below`}
-                </button>
-              ))}
+              <button
+                type="button"
+                onClick={() => setCondition('gte')}
+                className="px-2 py-1 text-sm font-semibold transition-colors"
+                style={{ background: condition === 'gte' ? 'var(--color-accent)' : 'var(--color-paper)', color: condition === 'gte' ? 'white' : 'var(--color-ink-2)' }}
+              >
+                {t`above`}
+              </button>
+              <button
+                type="button"
+                onClick={() => setCondition('lte')}
+                className="px-2 py-1 text-sm font-semibold transition-colors"
+                style={{ background: condition === 'lte' ? 'var(--color-accent)' : 'var(--color-paper)', color: condition === 'lte' ? 'white' : 'var(--color-ink-2)' }}
+              >
+                {t`below`}
+              </button>
             </span>
             {' '}
             <input
@@ -142,7 +144,7 @@ function NewAlert() {
               value={cropId}
               onChange={(e) => setCrop(e.target.value)}
             >
-              {(commodities.data ?? []).map((c) => <option key={c.id} value={c.id}>{cropName(c, lang)}</option>)}
+              {commodities.data?.map((c) => <option key={c.id} value={c.id}>{cropName(c, lang)}</option>)}
             </select>.
           </Trans>
         </p>
@@ -269,9 +271,7 @@ function AlertRow({ alert: a }: { alert: Alert }) {
         <p className="text-sm leading-snug font-medium text-ink">
           <Trans>
             SMS me when <strong>{mandi ?? t`nearest mandi`}</strong> goes{' '}
-            {a.condition === 'gte'
-              ? <strong><Trans>above</Trans></strong>
-              : <strong><Trans>below</Trans></strong>}{' '}
+            <strong>{a.condition === 'gte' ? t`above` : t`below`}</strong>{' '}
             <strong>{price}</strong> for {crop}.
           </Trans>
         </p>
