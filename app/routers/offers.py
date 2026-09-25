@@ -53,7 +53,6 @@ def list_offers(
     res = (
         supabase.table("offers")
         .select("*")
-        .eq("user_id", user_id)
         .order("created_at", desc=True)
         .limit(100)
         .execute()
