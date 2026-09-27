@@ -39,11 +39,9 @@ import re
 import sys
 from pathlib import Path
 
-try:
-    import psycopg2
-except ImportError:
-    print("ERROR: psycopg2 is not installed.  Run: pip install psycopg2-binary", file=sys.stderr)
-    sys.exit(1)
+import pg8000.dbapi
+import urllib.parse
+import ssl
 
 MIGRATIONS_DIR = Path(__file__).parent.parent / "db" / "migrations"
 MIGRATION_PATTERN = re.compile(r"^(\d{3})([a-z]?)_.*\.sql$")
@@ -71,7 +69,21 @@ def get_migration_files() -> list[tuple[int, str, Path]]:
 
 
 def apply_migrations(db_url: str, dry_run: bool = False, from_version: int = 0) -> None:
-    conn = psycopg2.connect(db_url)
+    url = urllib.parse.urlparse(db_url)
+    if url.query and 'sslmode=require' in url.query:
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+    else:
+        ssl_context = None
+    conn = pg8000.dbapi.connect(
+        user=url.username,
+        password=url.password,
+        host=url.hostname,
+        port=url.port,
+        database=url.path[1:],
+        ssl_context=ssl_context
+    )
     conn.autocommit = False
 
     try:
@@ -83,18 +95,26 @@ def apply_migrations(db_url: str, dry_run: bool = False, from_version: int = 0) 
             # transaction".)  Read the ledger if present; a missing ledger
             # simply means nothing is applied yet.
             try:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT filename FROM schema_migrations")
-                    applied_files = {row[0] for row in cur.fetchall()}
-            except psycopg2.errors.UndefinedTable:
-                applied_files = set()
+                cur = conn.cursor()
+                cur.execute("SELECT filename FROM schema_migrations")
+                applied_files = {row[0] for row in cur.fetchall()}
+                cur.close()
+            except pg8000.dbapi.ProgrammingError as e:
+                # e.args[0] is typically a dict for Postgres errors in pg8000
+                if e.args and isinstance(e.args[0], dict) and e.args[0].get('C') == '42P01':
+                    applied_files = set()
+                elif "relation \"schema_migrations\" does not exist" in str(e):
+                    applied_files = set()
+                else:
+                    raise
             finally:
                 conn.rollback()
         else:
-            with conn.cursor() as cur:
-                cur.execute(CREATE_LEDGER_SQL)
-                cur.execute("SELECT filename FROM schema_migrations")
-                applied_files = {row[0] for row in cur.fetchall()}
+            cur = conn.cursor()
+            cur.execute(CREATE_LEDGER_SQL)
+            cur.execute("SELECT filename FROM schema_migrations")
+            applied_files = {row[0] for row in cur.fetchall()}
+            cur.close()
             conn.commit()
 
         migrations = get_migration_files()
@@ -113,12 +133,13 @@ def apply_migrations(db_url: str, dry_run: bool = False, from_version: int = 0) 
                 continue
 
             print(f"Applying: {path.name} ... ", end="", flush=True)
-            with conn.cursor() as cur:
-                cur.execute(sql)
-                cur.execute(
-                    "INSERT INTO schema_migrations (version, filename) VALUES (%s, %s)",
-                    (version, path.name),
-                )
+            cur = conn.cursor()
+            cur.execute(sql)
+            cur.execute(
+                "INSERT INTO schema_migrations (version, filename) VALUES (%s, %s)",
+                (version, path.name),
+            )
+            cur.close()
             conn.commit()
             print("OK")
 
