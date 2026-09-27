@@ -21,9 +21,11 @@ exactly the rate ``-m``.
 
 from __future__ import annotations
 
+import json
 import math
 
 import pytest
+from direct.fair_price import leakage_report
 from direct.surplus import (
     bargaining_bounds,
     max_surplus_per_farm_qtl,
@@ -31,6 +33,7 @@ from direct.surplus import (
     nash_objective,
     split_surplus,
 )
+from direct.value_chain import Stage, ValueChain, default_traditional_chain
 
 # A representative Nashik onion lane.
 R = 4000.0  # retail, ₹ per quintal delivered to the consumer
@@ -343,3 +346,77 @@ def test_with_no_platform_fee_the_symmetric_split_is_exactly_even():
     assert s.farmer_gain_per_farm_qtl == pytest.approx(
         s.consumer_saving_per_farm_qtl, abs=1e-6
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Leakage report — the honesty guards
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_leakage_splits_the_spread_into_margin_and_work():
+    """Avoidable + unavoidable must exhaust the spread, with neither at zero.
+
+    Regression guard.  The first cut summed the take of stages flagged
+    `essential = False`, and since every stage of the reference chain is
+    non-essential in that sense, it reported 100% of the spread as avoidable —
+    an overclaim that would not survive a judge asking "so you can also stop
+    paying for transport?".  Avoidable is the margin; unavoidable is the work.
+    """
+    report = leakage_report(
+        default_traditional_chain("vegetable"), 2200.0, 4000.0, commodity="onion"
+    )
+    absorption = report.chain.absorption
+    assert report.avoidable_per_farm_qtl + report.unavoidable_per_farm_qtl == pytest.approx(
+        absorption, abs=1e-6
+    )
+    assert report.avoidable_per_farm_qtl > 0
+    assert report.unavoidable_per_farm_qtl > 0
+    # The margin is the avoidable part, and the work is the rest.
+    assert report.avoidable_per_farm_qtl == pytest.approx(
+        report.chain.margin_absorption, abs=1e-6
+    )
+    assert report.unavoidable_per_farm_qtl == pytest.approx(
+        report.chain.cost_absorption, abs=1e-6
+    )
+    # Sanity: most of a vegetable spread is margin, but nowhere near all of it.
+    share = report.avoidable_per_farm_qtl / absorption
+    assert 0.5 < share < 0.9, share
+
+
+def test_verdict_flags_a_chain_that_is_mostly_margin():
+    """A chain losing 14% of the crop to 70% margin is not 'healthy'.
+
+    Regression guard.  The verdict used to key off the farmer's share alone, so
+    a 64% share produced "healthy share; limited headroom" for a chain the
+    engine then improved by +35% for the farmer and -20% for the consumer.
+    Headroom is the margin share, not the current split.
+    """
+    report = leakage_report(
+        default_traditional_chain("vegetable"), 2200.0, 4000.0, commodity="onion"
+    )
+    assert "limited headroom" not in report.verdict.lower()
+    assert "heavy intermediary absorption" in report.verdict.lower()
+    assert report.chain.margin_share_pct > 65
+
+
+def test_verdict_calls_a_thin_spread_thin():
+    """A chain that only charges for real work leaves nothing to recover."""
+    thin = ValueChain(
+        name="thin",
+        stages=(
+            Stage(key="mover", label_en="Mover", margin_pct=0.0,
+                  cost_per_qtl=300.0, loss_pct=0.02, essential=True, kind="logistics"),
+        ),
+    )
+    report = leakage_report(thin, 2200.0, 2600.0, commodity="onion")
+    assert report.avoidable_per_farm_qtl == pytest.approx(0.0, abs=1e-6)
+    assert "thin" in report.verdict.lower() or "little to recover" in report.verdict.lower()
+
+
+def test_leakage_is_serialisable_and_finite():
+    report = leakage_report(
+        default_traditional_chain("vegetable"), 2200.0, 4000.0, commodity="onion"
+    )
+    payload = json.dumps(report.to_dict())
+    assert "NaN" not in payload and "Infinity" not in payload
+    assert json.loads(payload)["avoidable_per_farm_qtl"] > 0
