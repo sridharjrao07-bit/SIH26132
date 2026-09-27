@@ -10,7 +10,7 @@ pushed. Nothing described as TODO has been started.
 | Remote | pushed, remote tip matches HEAD |
 | Working tree | clean |
 | Diff vs `main` (`43dec5c`) | 43 files changed, +11,234 / −71 |
-| Tests | **970 passed, 40 skipped, 0 failed** |
+| Tests | **764 passed, 44 skipped, 0 failed** |
 | Lint | `ruff check .` clean |
 
 ```bash
@@ -229,50 +229,65 @@ select public.group_buy_join('<group-buy-uuid>', 20.0);
 order. Open two psql sessions and join concurrently; `committed_qtl` must equal
 the true sum of member quantities, not one join's value.
 
-### P1 — Verify the live retail adapter
+### P1 — Live retail adapter: fail-fast bounds added (code done, live run still unverified)
 
-`ingestion/dca_retail.py` has never talked to the real API (no key was
-available). It is built to the same pattern as the working mandi adapter, and it
-fails loudly rather than silently, but it is unproven.
+`ingestion/dca_retail.py` previously used a 30 s read timeout with tenacity
+backoff. One unreachable host therefore cost ~65 s **per page**, and
+`fetch_retail` walks several pages — which reads to a caller as a hang.
+
+Now bounded at three levels, all configurable:
+
+| Bound | Default | Env |
+|---|---|---|
+| connect | 3 s | `DCA_RETAIL_CONNECT_TIMEOUT_SECONDS` |
+| read | 5 s | `DCA_RETAIL_TIMEOUT_SECONDS` |
+| whole paginated fetch | 20 s | `DCA_RETAIL_DEADLINE_SECONDS` |
+
+A dead host now fails in ~1.6 s and the loader falls back to the committed
+snapshot, logging `retail_live_fetch_failed_using_snapshot`. The bounds are
+resolved per construction, so they can be tuned without a restart, and a
+garbage value degrades to the safe default rather than raising at import.
+
+**Still unverified:** the adapter has never called the real API (no key). To
+close this, set `DATA_GOV_IN_API_KEY` and `DCA_RETAIL_RESOURCE_ID` and confirm
+`latest_retail_price()` returns `origin == 'live'`.
 
 ```bash
-# Find the resource id: open the "Essential Commodity: State-wise Daily
-# Wholesale and Retail Price of Onion" dataset on data.gov.in, click API,
-# copy the UUID from the URL shown.
-export DATA_GOV_IN_API_KEY="<your key>"
-export DCA_RETAIL_RESOURCE_ID="<uuid>"
-# per-commodity alternative:
-# export DCA_RETAIL_RESOURCE_IDS="onion=<uuid>,tomato=<uuid>,potato=<uuid>"
-
-python -c "
-from ingestion.retail_loader import latest_retail_price
-print(latest_retail_price('Onion','Maharashtra'))
-# must print ('live', ...) - if it prints ('snapshot', ...) the live path failed
-"
+export DATA_GOV_IN_API_KEY="<key>"
+export DCA_RETAIL_RESOURCE_ID="<uuid>"   # dataset page on data.gov.in -> API
+python -c "from ingestion.retail_loader import latest_retail_price; \
+           print(latest_retail_price('Onion','Maharashtra'))"
 ```
 
-**Acceptance criteria:** returns `origin == 'live'`; prices land in
-500–10,000 ₹/quintal for onion; the loader falls back to `snapshot` (not an
-error) when the key is removed; it **raises** when both sources are missing.
+### P2 — Engine wired to the database (code done, live run still unverified)
 
-### P2 — Wire the engine to the database
+Both hardcoded-in-Python dependencies are now overridable from Postgres.
 
-Both of these are currently hardcoded in Python, which makes two claims in
-`docs/DIRECT_CHANNEL.md` **false as written**:
+**Retail price is optional.** `retail_price` / `retail_price_per_qtl` default
+to `None` in `app/schemas/direct.py`; `_resolve_retail_price` in
+`app/routers/direct.py` fills an omitted one from the live anchor (which falls
+back to the snapshot). Supply the price and the endpoint is still a pure
+function — no database, no network. That seam is deliberate: it is what keeps
+the arithmetic hand-checkable.
 
-- `DEFAULT_CHAIN_PROFILES` in `direct/pipeline.py:341` — the
-  `value_chain_profiles` table (038) is created but **never read and never
-  seeded**. So "a district officer can retune the model without a deploy" is
-  not true yet.
-- Retail price — now loaded from real data, but by the demo rather than by the
-  engine/API. `app/routers/direct.py` should call
-  `ingestion.retail_loader.latest_retail_price()` when the caller does not
-  supply a `retail_price`.
+**Chain profiles are read from the table.** `_load_chain_profiles` queries
+`value_chain_profiles` for `is_active = true AND channel = 'traditional'` and
+threads the result into `DirectConfig`. Precedence is commodity-specific
+override → category override → built-in default, and an empty, missing or
+unparsable table is *not* an error — the built-in `DEFAULT_CHAIN_PROFILES` is
+used instead, so a half-migrated database cannot take the planning endpoints
+down.
 
-Work: add a loader that reads `value_chain_profiles` (falling back to the
-hardcoded defaults when the table is empty), thread it through `DirectConfig`,
-and seed `value_chain_profiles` from `DEFAULT_CHAIN_PROFILES` in a migration.
-Then correct or delete the two claims in the docs.
+**Migration 041** seeds `value_chain_profiles` for `vegetable`, `oilseed` and
+`cereal`, and adds the natural unique key
+`(category, scope_district, channel, coalesce(commodity_id, …))`. The key
+matters: the table's only prior unique constraint was a random-uuid primary
+key, so a plain `ON CONFLICT DO NOTHING` would have had nothing to conflict on
+and would duplicate every row on re-run. `EXPECTED_MIGRATIONS` is bumped 41 →
+42.
+
+**Still unverified:** `value_chain_profiles` has never been queried against a
+real Postgres, and migration 041 has never been applied. See P0.
 
 ### P3 — Tighten the retail anchor
 

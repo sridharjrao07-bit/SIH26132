@@ -36,12 +36,10 @@ from __future__ import annotations
 import argparse
 import os
 import re
-import sys
-from pathlib import Path
-
-import pg8000.dbapi
-import urllib.parse
 import ssl
+import sys
+import urllib.parse
+from pathlib import Path
 
 MIGRATIONS_DIR = Path(__file__).parent.parent / "db" / "migrations"
 MIGRATION_PATTERN = re.compile(r"^(\d{3})([a-z]?)_.*\.sql$")
@@ -68,22 +66,54 @@ def get_migration_files() -> list[tuple[int, str, Path]]:
     return files
 
 
-def apply_migrations(db_url: str, dry_run: bool = False, from_version: int = 0) -> None:
+def _connect(db_url: str):
+    """Open a Postgres connection.
+
+    Prefers ``pg8000`` (pure Python, no libpq needed) and falls back to
+    ``psycopg2``. The driver is imported *here*, not at module scope: several
+    tests import this script to enumerate migrations, and a module-level
+    ``import pg8000.dbapi`` turns a missing optional driver into an import
+    error that fails the whole test file.
+    """
     url = urllib.parse.urlparse(db_url)
-    if url.query and 'sslmode=require' in url.query:
+    ssl_context = None
+    if "sslmode=require" in (url.query or ""):
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
-    else:
-        ssl_context = None
-    conn = pg8000.dbapi.connect(
+
+    try:
+        import pg8000.dbapi as dbapi
+    except ImportError:
+        try:
+            import psycopg2 as dbapi  # type: ignore[no-redef]
+        except ImportError as exc:  # pragma: no cover - environment issue
+            raise SystemExit(
+                "ERROR: no Postgres driver available. Install pg8000 or "
+                "psycopg2-binary."
+            ) from exc
+        return dbapi.connect(db_url)
+
+    return dbapi.connect(
         user=url.username,
         password=url.password,
         host=url.hostname,
         port=url.port,
         database=url.path[1:],
-        ssl_context=ssl_context
+        ssl_context=ssl_context,
     )
+
+
+def _relation_missing(exc: BaseException) -> bool:
+    """True when the error means 'the ledger table is not there yet'."""
+    args = getattr(exc, "args", None) or []
+    if args and isinstance(args[0], dict) and args[0].get("C") == "42P01":
+        return True
+    return 'schema_migrations" does not exist' in str(exc)
+
+
+def apply_migrations(db_url: str, dry_run: bool = False, from_version: int = 0) -> None:
+    conn = _connect(db_url)
     conn.autocommit = False
 
     try:
@@ -99,11 +129,8 @@ def apply_migrations(db_url: str, dry_run: bool = False, from_version: int = 0) 
                 cur.execute("SELECT filename FROM schema_migrations")
                 applied_files = {row[0] for row in cur.fetchall()}
                 cur.close()
-            except pg8000.dbapi.ProgrammingError as e:
-                # e.args[0] is typically a dict for Postgres errors in pg8000
-                if e.args and isinstance(e.args[0], dict) and e.args[0].get('C') == '42P01':
-                    applied_files = set()
-                elif "relation \"schema_migrations\" does not exist" in str(e):
+            except Exception as e:  # noqa: BLE001 - driver-specific error class
+                if _relation_missing(e):
                     applied_files = set()
                 else:
                     raise

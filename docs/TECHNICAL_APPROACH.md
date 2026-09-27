@@ -97,9 +97,11 @@ consequences, all of which matter:
   silently change a price.
 - **They are testable without infrastructure.** 345 of the 970 tests exercise
   the engine with no database at all.
-- **A evaluator can call them with their own numbers and check the arithmetic.**
-  This is the single most important property for credibility — the
-  `/api/v1/direct/rupee` and `/fair-price` endpoints are open books.
+- **An evaluator can call them with their own numbers and check the
+  arithmetic.** This is the single most important property for credibility —
+  the `/api/v1/direct/rupee` and `/fair-price` endpoints are open books. Pass
+  both prices and no database or network is involved at all; the optional
+  retail-price default is resolved only when the caller omits it.
 
 Only `POST /plans/commit` writes, and it **re-runs the engine server-side**
 from the submitted inputs. A client cannot supply an impact figure and have it
@@ -497,6 +499,7 @@ RUN_SCHEDULER=0 RATE_LIMIT_ENABLED=0 python -m pytest tests/ -q
 uvicorn app.main:app --reload             # then open /docs
 ```
 
-Try `POST /api/v1/direct/rupee` with your own farm and retail prices. The
-endpoint is a pure function with no database behind it — you can check the
-arithmetic yourself, which is the point.
+Try `POST /api/v1/direct/rupee` with your own farm and retail prices. Supply
+both prices and the endpoint touches neither a database nor the network — it is
+a pure function, so you can check the arithmetic yourself, which is the point.
+Omit the retail price and it resolves the live government anchor for you.
