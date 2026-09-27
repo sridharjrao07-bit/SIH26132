@@ -237,7 +237,7 @@ select public.group_buy_join('<group-buy-uuid>', 20.0);
 order. Open two psql sessions and join concurrently; `committed_qtl` must equal
 the true sum of member quantities, not one join's value.
 
-### P1 — Live retail adapter: fail-fast bounds added (code done, live run still unverified)
+### P1 — Live retail adapter: fail-fast bounds added (code done, **offline fallback verified**, live run still unverified)
 
 `ingestion/dca_retail.py` previously used a 30 s read timeout with tenacity
 backoff. One unreachable host therefore cost ~65 s **per page**, and
@@ -256,6 +256,12 @@ snapshot, logging `retail_live_fetch_failed_using_snapshot`. The bounds are
 resolved per construction, so they can be tuned without a restart, and a
 garbage value degrades to the safe default rather than raising at import.
 
+**Verified offline:** with no network and a placeholder key,
+`latest_retail_price()` completes in ~1.6 s and falls back to the committed
+snapshot, so the demo can never hang. `tests/test_retail_anchor.py` covers the
+kg→quintal conversion, the 500–10,000 plausibility band, and that the loader
+raises rather than guessing when nothing is available.
+
 **Still unverified:** the adapter has never called the real API (no key). To
 close this, set `DATA_GOV_IN_API_KEY` and `DCA_RETAIL_RESOURCE_ID` and confirm
 `latest_retail_price()` returns `origin == 'live'`.
@@ -267,7 +273,7 @@ python -c "from ingestion.retail_loader import latest_retail_price; \
            print(latest_retail_price('Onion','Maharashtra'))"
 ```
 
-### P2 — Engine wired to the database (code done, live run still unverified)
+### P2 — Engine wired to the database (code done, **API boot verified**, live run still unverified)
 
 Both hardcoded-in-Python dependencies are now overridable from Postgres.
 
@@ -286,6 +292,18 @@ unparsable table is *not* an error — the built-in `DEFAULT_CHAIN_PROFILES` is
 used instead, so a half-migrated database cannot take the planning endpoints
 down.
 
+**Boot verified with a placeholder backend.** `uvicorn app.main:app` starts
+cleanly with `SUPABASE_URL=https://placeholder.supabase.co` and a JWT-shaped
+dummy anon key; `/health` returns `ok` and `/openapi.json` serves 24 paths.
+`/api/v1/direct/rupee` and `/api/v1/direct/config` are pure engine and return
+the audited numbers (`farmer_share_pct` 48.1155, `avoidable_per_farm_qtl`
+2032.2147, λ 1.382475). Database-backed routes return a clean `503` rather than
+a crash, and a missing required field is a `422`, not a 500.
+
+Note that **`DATA_GOV_IN_API_KEY` has no default** — the app fails closed at
+startup without it, even locally. That is documented in
+`docs/DEMO_RUNBOOK_DIRECTLINK.md` §1 and §4.
+
 **Migration 041** seeds `value_chain_profiles` for `vegetable`, `oilseed` and
 `cereal`, and adds the natural unique key
 `(category, scope_district, channel, coalesce(commodity_id, …))`. The key
@@ -297,7 +315,7 @@ and would duplicate every row on re-run. `EXPECTED_MIGRATIONS` is bumped 41 →
 **Still unverified:** `value_chain_profiles` has never been queried against a
 real Postgres, and migration 041 has never been applied. See P0.
 
-### P3 — Tighten the retail anchor
+### P3 — Tighten the retail anchor (audit now guards the anchors)
 
 The Maharashtra retail row is the **All-India average** (₹53.92/kg, reported
 16 Sep 2026), not a Nashik bazaar survey. The row's `note` column says so and
