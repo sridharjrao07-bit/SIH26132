@@ -14,7 +14,6 @@ Contract under test:
   - unexpected response shape (no 'records' key) → raises SourceFetchError
   - source_name returns 'data_gov_in' (no dot)
 """
-
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -26,7 +25,6 @@ ADAPTER = DataGovInAdapter(api_key="test-key")
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-
 def _api_response(records, total=None):
     """Build a mock API JSON response."""
     return {
@@ -36,17 +34,9 @@ def _api_response(records, total=None):
     }
 
 
-def _price_record(
-    market="Lasalgaon",
-    commodity="Onion",
-    date_str="01/09/2024",
-    modal="2000",
-    min_p="1500",
-    max_p="2500",
-    variety="General",
-    grade="FAQ",
-    arrivals="125.5",
-):
+def _price_record(market="Lasalgaon", commodity="Onion", date_str="01/09/2024",
+                  modal="2000", min_p="1500", max_p="2500",
+                  variety="General", grade="FAQ", arrivals="125.5"):
     return {
         "market": market,
         "commodity": commodity,
@@ -67,7 +57,6 @@ def _make_mock_client(response_body: dict, status_code: int = 200):
     mock_resp.json.return_value = response_body
     if status_code >= 400:
         import httpx
-
         mock_resp.raise_for_status.side_effect = httpx.HTTPStatusError(
             "error", request=MagicMock(), response=mock_resp
         )
@@ -76,13 +65,12 @@ def _make_mock_client(response_body: dict, status_code: int = 200):
 
     mock_client = AsyncMock()
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-    mock_client.__aexit__ = AsyncMock(return_value=False)
-    mock_client.get = AsyncMock(return_value=mock_resp)
+    mock_client.__aexit__  = AsyncMock(return_value=False)
+    mock_client.get        = AsyncMock(return_value=mock_resp)
     return mock_client
 
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
-
 
 def test_source_name_no_dot():
     """source_name must be 'data_gov_in' (underscore) to match DB alias column."""
@@ -106,15 +94,15 @@ async def test_filter_params_plain(monkeypatch):
 
     mock_client = AsyncMock()
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-    mock_client.__aexit__ = AsyncMock(return_value=False)
-    mock_client.get = mock_get
+    mock_client.__aexit__  = AsyncMock(return_value=False)
+    mock_client.get        = mock_get
 
     with patch("ingestion.data_gov_in.httpx.AsyncClient", return_value=mock_client):
         await ADAPTER.fetch_prices(district="Nashik", commodity="Onion")
 
-    assert "filters[district]" in captured_params, "plain filters[district] missing"
+    assert "filters[district]"  in captured_params, "plain filters[district] missing"
     assert "filters[district.keyword]" not in captured_params, ".keyword must NOT be used"
-    assert "filters[state]" in captured_params
+    assert "filters[state]"    in captured_params
     assert "filters[commodity]" in captured_params
 
 
@@ -142,23 +130,23 @@ async def test_nashik_nasik_fallback(monkeypatch):
 
     mock_client = AsyncMock()
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-    mock_client.__aexit__ = AsyncMock(return_value=False)
-    mock_client.get = mock_get
+    mock_client.__aexit__  = AsyncMock(return_value=False)
+    mock_client.get        = mock_get
 
     with patch("ingestion.data_gov_in.httpx.AsyncClient", return_value=mock_client):
         records = await ADAPTER.fetch_prices(district="Nashik", commodity="Onion")
 
     assert "Nashik" in spellings_tried
-    assert "Nasik" in spellings_tried
+    assert "Nasik"  in spellings_tried
     assert len(records) == 1
 
 
 async def test_date_formats():
     """Adapter must parse DD/MM/YYYY, YYYY-MM-DD, and DD-MM-YYYY date formats."""
     items = [
-        _price_record(date_str="01/09/2024"),  # DD/MM/YYYY
-        _price_record(date_str="2024-09-02"),  # YYYY-MM-DD
-        _price_record(date_str="03-09-2024"),  # DD-MM-YYYY
+        _price_record(date_str="01/09/2024"),   # DD/MM/YYYY
+        _price_record(date_str="2024-09-02"),   # YYYY-MM-DD
+        _price_record(date_str="03-09-2024"),   # DD-MM-YYYY
     ]
 
     mock_client = _make_mock_client(_api_response(items))
@@ -189,8 +177,8 @@ async def test_zero_or_empty_prices_are_null():
 async def test_zero_modal_skipped():
     """Records with modal_price=0 must be silently skipped (not ingested)."""
     items = [
-        _price_record(modal="0"),  # should be dropped
-        _price_record(modal="2000"),  # should be kept
+        _price_record(modal="0"),          # should be dropped
+        _price_record(modal="2000"),       # should be kept
     ]
     mock_client = _make_mock_client(_api_response(items))
     with patch("ingestion.data_gov_in.httpx.AsyncClient", return_value=mock_client):
@@ -206,7 +194,7 @@ async def test_pagination_collects_until_total():
     offset >= total.  All records from all pages must be returned.
     """
     page1 = [_price_record(market=f"M{i}") for i in range(100)]
-    page2 = [_price_record(market=f"M{i + 100}") for i in range(50)]
+    page2 = [_price_record(market=f"M{i+100}") for i in range(50)]
 
     call_count = 0
 
@@ -226,14 +214,14 @@ async def test_pagination_collects_until_total():
 
     mock_client = AsyncMock()
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-    mock_client.__aexit__ = AsyncMock(return_value=False)
-    mock_client.get = mock_get
+    mock_client.__aexit__  = AsyncMock(return_value=False)
+    mock_client.get        = mock_get
 
     with patch("ingestion.data_gov_in.httpx.AsyncClient", return_value=mock_client):
         records = await ADAPTER.fetch_prices(district="Nashik", commodity="Onion")
 
     assert len(records) == 150
-    assert call_count >= 2  # at least 2 HTTP requests made
+    assert call_count >= 2   # at least 2 HTTP requests made
 
 
 async def test_http_error_raises():
@@ -251,8 +239,8 @@ async def test_http_error_raises():
 
     mock_client = AsyncMock()
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-    mock_client.__aexit__ = AsyncMock(return_value=False)
-    mock_client.get = AsyncMock(return_value=mock_resp)
+    mock_client.__aexit__  = AsyncMock(return_value=False)
+    mock_client.get        = AsyncMock(return_value=mock_resp)
 
     with patch("ingestion.data_gov_in.httpx.AsyncClient", return_value=mock_client):
         with pytest.raises(SourceFetchError) as exc_info:
@@ -297,7 +285,5 @@ async def test_unexpected_shape_raises():
         with pytest.raises(SourceFetchError) as exc_info:
             await ADAPTER.fetch_prices(district="Nashik", commodity="Onion")
 
-    assert (
-        "unexpected response shape" in str(exc_info.value).lower()
+    assert "unexpected response shape" in str(exc_info.value).lower() \
         or "records" in str(exc_info.value).lower()
-    )

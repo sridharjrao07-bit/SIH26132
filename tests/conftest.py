@@ -1,7 +1,6 @@
 """
 conftest.py — shared fixtures for the Krishi Bazaar ingestion test suite.
 """
-
 from __future__ import annotations
 
 import os
@@ -27,7 +26,6 @@ from ingestion.validator import PriceValidator
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-
 def make_record(**kwargs) -> RawPriceRecord:
     defaults = dict(
         market_name="Lasalgaon",
@@ -49,7 +47,6 @@ def make_record(**kwargs) -> RawPriceRecord:
 
 # ── FakeSupabase ──────────────────────────────────────────────────────────────
 
-
 class _FakeQuery:
     def __init__(self, store: "FakeSupabase", table: str):
         self._store = store
@@ -61,89 +58,44 @@ class _FakeQuery:
         self._conflict: Optional[str] = None
         self._or_filter: Optional[str] = None
 
-    def select(self, cols: str):
-        self._select_cols = cols
-        return self
-
-    def eq(self, col, val):
-        self._filters[col] = val
-        return self
-
-    def neq(self, col, val):
-        self._filters[f"{col}__neq"] = val
-        return self
-
-    def in_(self, col, vals):
-        self._filters[f"{col}__in"] = vals
-        return self
-
-    def gte(self, col, val):
-        self._filters[f"{col}__gte"] = val
-        return self
-
-    def lte(self, col, val):
-        self._filters[f"{col}__lte"] = val
-        return self
-
-    def gt(self, col, val):
-        self._filters[f"{col}__gt"] = val
-        return self
-
-    def lt(self, col, val):
-        self._filters[f"{col}__lt"] = val
-        return self
-
-    def or_(self, filter_str):
-        self._or_filter = filter_str
-        return self
-
-    def is_(self, col, val):
-        self._filters[f"{col}__is"] = val
-        return self
-
+    def select(self, cols: str): self._select_cols = cols; return self
+    def eq(self, col, val): self._filters[col] = val; return self
+    def neq(self, col, val): self._filters[f"{col}__neq"] = val; return self
+    def in_(self, col, vals): self._filters[f"{col}__in"] = vals; return self
+    def gte(self, col, val): self._filters[f"{col}__gte"] = val; return self
+    def lte(self, col, val): self._filters[f"{col}__lte"] = val; return self
+    def gt(self, col, val): self._filters[f"{col}__gt"] = val; return self
+    def lt(self, col, val): self._filters[f"{col}__lt"] = val; return self
+    def or_(self, filter_str): self._or_filter = filter_str; return self
+    def is_(self, col, val): self._filters[f"{col}__is"] = val; return self
+    
     @property
     def not_(self):
         class _NotHelper:
             def __init__(self, query):
                 self.query = query
-
             def is_(self, col, val):
                 self.query._filters[f"{col}__not_is"] = val
                 return self.query
-
         return _NotHelper(self)
 
     def order(self, col, desc=False, **kw):
         self._filters["__order__"] = (col, bool(desc))
         return self
-
-    def limit(self, n):
-        self._filters["__limit__"] = n
-        return self
-
-    def range(self, start, end):
-        self._filters["__range__"] = (start, end)
-        return self
+    def limit(self, n): self._filters["__limit__"] = n; return self
+    def range(self, start, end): self._filters["__range__"] = (start, end); return self
 
     def insert(self, payload):
-        self._op = "insert"
-        self._payload = payload
-        return self
+        self._op = "insert"; self._payload = payload; return self
 
     def update(self, payload):
-        self._op = "update"
-        self._payload = payload
-        return self
+        self._op = "update"; self._payload = payload; return self
 
     def delete(self):
-        self._op = "delete"
-        return self
+        self._op = "delete"; return self
 
     def upsert(self, payload, on_conflict: str = ""):
-        self._op = "upsert"
-        self._payload = payload
-        self._conflict = on_conflict
-        return self
+        self._op = "upsert"; self._payload = payload; self._conflict = on_conflict; return self
 
     def execute(self):
         result = self._store._dispatch(
@@ -156,8 +108,7 @@ class _FakeQuery:
         )
         return result
 
-    def raise_on_error(self):
-        return self
+    def raise_on_error(self): return self
 
 
 class _ExecuteResult:
@@ -290,24 +241,18 @@ class FakeSupabase:
     def set_rpc_error(self, fn_name: str, message: str = "Mocked RPC error"):
         """Pre-configure what an rpc() call raises."""
         from postgrest.exceptions import APIError
-
-        self._rpc_handlers[fn_name] = APIError(
-            {"message": message, "code": "P0001", "details": "", "hint": ""}
-        )
+        self._rpc_handlers[fn_name] = APIError({"message": message, "code": "P0001", "details": "", "hint": ""})
 
     # ── RPC emulators ─────────────────────────────────────────────────────────
 
     @staticmethod
     def _haversine_km(lat1, lon1, lat2, lon2):
         import math
-
         R = 6371.0
         dlat = math.radians(lat2 - lat1)
         dlon = math.radians(lon2 - lon1)
-        a = (
-            math.sin(dlat / 2) ** 2
-            + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2
-        )
+        a = (math.sin(dlat / 2) ** 2 +
+             math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2)
         return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
     def _rpc_nearby_markets(self, params: dict) -> list:
@@ -341,7 +286,6 @@ class FakeSupabase:
 
     def _rpc_claim_source_document(self, params: dict) -> dict:
         import uuid as _uuid
-
         doc_id = str(_uuid.uuid4())
         claim_token = str(_uuid.uuid4())
         doc = {
@@ -354,9 +298,7 @@ class FakeSupabase:
             "provenance_mode": params.get("p_provenance_mode"),
             "content_hash": params.get("p_content_hash"),
             "extraction_status": "extracting",
-            "lease_expires_at": __import__("datetime")
-            .datetime.now(__import__("datetime").timezone.utc)
-            .isoformat(),
+            "lease_expires_at": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat()
         }
         self._data.setdefault("source_documents", []).append(doc)
         return {
@@ -366,7 +308,7 @@ class FakeSupabase:
             "headline": doc["headline"],
             "raw_text": doc["raw_text"],
             "publication_date": doc["publication_date"],
-            "content_hash": doc["content_hash"],
+            "content_hash": doc["content_hash"]
         }
 
     def _rpc_publish_extracted_events_v2(self, params: dict) -> dict:
@@ -385,42 +327,27 @@ class FakeSupabase:
         p_commodity_id = params.get("p_commodity_id")
         p_limit = params.get("p_limit", 100)
         p_offset = params.get("p_offset", 0)
-
+        
         filtered = [
-            {
-                k: row[k]
-                for k in (
-                    "id",
-                    "commodity_id",
-                    "market_id",
-                    "quantity_qtl",
-                    "grade",
-                    "asking_price",
-                    "status",
-                    "harvest_date",
-                    "fpo_id",
-                )
-                if k in row
-            }
+            {k: row[k] for k in (
+                "id", "commodity_id", "market_id", "quantity_qtl", "grade",
+                "asking_price", "status", "harvest_date", "fpo_id"
+            ) if k in row}
             for row in self._data.get("lots", [])
             if row.get("status") in ("open", "offered")
             and (p_commodity_id is None or str(row.get("commodity_id", "")) == str(p_commodity_id))
         ]
-
+        
         return filtered[p_offset : p_offset + p_limit]
 
     def _rpc_transition_payment(self, params: dict):
         """Emulate transition_payment_status SECURITY DEFINER: assert ownership + state machine."""
         from fastapi import HTTPException
-
         p_user_id = params.get("p_user_id")
         p_payment_id = params.get("p_payment_id")
         p_new_status = params.get("p_new_status")
-        rows = [
-            r
-            for r in self._data.get("payments", [])
-            if r.get("id") == p_payment_id and r.get("user_id") == p_user_id
-        ]
+        rows = [r for r in self._data.get("payments", [])
+                if r.get("id") == p_payment_id and r.get("user_id") == p_user_id]
         if not rows:
             raise HTTPException(404, "payment not found or not owned by user")
         payment = rows[0]
@@ -434,22 +361,17 @@ class FakeSupabase:
         payment["status"] = p_new_status
         if p_new_status == "paid":
             from datetime import datetime, timezone
-
             payment["paid_at"] = datetime.now(timezone.utc).isoformat()
         return dict(payment)
 
     def _rpc_transition_grievance(self, params: dict):
         """Emulate transition_grievance_status SECURITY DEFINER: assert ownership + state machine."""
         from fastapi import HTTPException
-
         p_user_id = params.get("p_user_id")
         p_grievance_id = params.get("p_grievance_id")
         p_new_status = params.get("p_new_status")
-        rows = [
-            r
-            for r in self._data.get("grievances", [])
-            if r.get("id") == p_grievance_id and r.get("user_id") == p_user_id
-        ]
+        rows = [r for r in self._data.get("grievances", [])
+                if r.get("id") == p_grievance_id and r.get("user_id") == p_user_id]
         if not rows:
             raise HTTPException(404, "grievance not found or not owned by user")
         grievance = rows[0]
@@ -466,7 +388,6 @@ class FakeSupabase:
 
     def _rpc_lot_create(self, params: dict) -> dict:
         import uuid as _uuid
-
         row = {
             "id": str(_uuid.uuid4()),
             "user_id": params.get("_test_user_id", "test-user"),  # injected by test fixtures
@@ -485,7 +406,6 @@ class FakeSupabase:
 
     def _rpc_lot_withdraw(self, params: dict) -> dict:
         from fastapi import HTTPException
-
         lot_id = params.get("p_lot_id")
         for lot in self._data.get("lots", []):
             if lot.get("id") == lot_id:
@@ -497,7 +417,6 @@ class FakeSupabase:
 
     def _rpc_lot_grade_update(self, params: dict) -> dict:
         from fastapi import HTTPException
-
         lot_id = params.get("p_lot_id")
         for lot in self._data.get("lots", []):
             if lot.get("id") == lot_id:
@@ -513,7 +432,6 @@ class FakeSupabase:
         import uuid as _uuid
 
         from fastapi import HTTPException
-
         # Role check — emulate has_role_for(v_user_id, 'fpo')
         caller_uid = params.get("_test_user_id", "test-user")
         profiles = self._data.get("user_profiles", [])
@@ -541,8 +459,7 @@ class FakeSupabase:
                         raise HTTPException(400, "all lots must share the same commodity")
                     total += float(lot.get("quantity_qtl") or 0)
                     if lot.get("asking_price"):
-                        price_sum += float(lot["asking_price"])
-                        price_cnt += 1
+                        price_sum += float(lot["asking_price"]); price_cnt += 1
                     members.append(lot)
                     break
         for lot in members:
@@ -567,7 +484,6 @@ class FakeSupabase:
         import uuid as _uuid
 
         from fastapi import HTTPException
-
         lot_id = params.get("p_lot_id")
         lot = next((l for l in self._data.get("lots", []) if l.get("id") == lot_id), None)
         if not lot:
@@ -594,12 +510,8 @@ class FakeSupabase:
             "price_per_qtl": params.get("p_price_per_qtl"),
             "quantity_qtl": params.get("p_quantity_qtl"),
             "status": "pending",
-            "created_at": __import__("datetime")
-            .datetime.now(__import__("datetime").timezone.utc)
-            .isoformat(),
-            "updated_at": __import__("datetime")
-            .datetime.now(__import__("datetime").timezone.utc)
-            .isoformat(),
+            "created_at": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
+            "updated_at": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
         }
         self._data.setdefault("offers", []).append(row)
         if lot.get("status") == "open":
@@ -610,7 +522,6 @@ class FakeSupabase:
         from datetime import datetime, timezone
 
         from fastapi import HTTPException
-
         offer_id = params.get("p_offer_id")
         decision = params.get("p_decision")
         offer = next((o for o in self._data.get("offers", []) if o.get("id") == offer_id), None)
@@ -629,27 +540,17 @@ class FakeSupabase:
                     raise HTTPException(409, "offer expired (older than 48 hours)")
             except ValueError:
                 pass
-        lot = next(
-            (l for l in self._data.get("lots", []) if l.get("id") == offer.get("lot_id")), None
-        )
+        lot = next((l for l in self._data.get("lots", []) if l.get("id") == offer.get("lot_id")), None)
         if decision == "accepted":
             offer["status"] = "accepted"
             for o in self._data.get("offers", []):
-                if (
-                    o.get("lot_id") == offer.get("lot_id")
-                    and o.get("id") != offer_id
-                    and o.get("status") == "pending"
-                ):
+                if o.get("lot_id") == offer.get("lot_id") and o.get("id") != offer_id and o.get("status") == "pending":
                     o["status"] = "rejected"
             if lot:
                 lot["status"] = "matched"
         else:
             offer["status"] = "rejected"
-            pending = [
-                o
-                for o in self._data.get("offers", [])
-                if o.get("lot_id") == offer.get("lot_id") and o.get("status") == "pending"
-            ]
+            pending = [o for o in self._data.get("offers", []) if o.get("lot_id") == offer.get("lot_id") and o.get("status") == "pending"]
             if not pending and lot and lot.get("status") == "offered":
                 lot["status"] = "open"
         return dict(offer)
@@ -658,20 +559,15 @@ class FakeSupabase:
         import uuid as _uuid
 
         from fastapi import HTTPException
-
         offer_id = params.get("p_offer_id")
         offer = next((o for o in self._data.get("offers", []) if o.get("id") == offer_id), None)
         if not offer:
             raise HTTPException(404, "offer not found")
         if offer.get("status") != "accepted":
-            raise HTTPException(
-                409, f"payments require an accepted offer, current status: {offer.get('status')}"
-            )
+            raise HTTPException(409, f"payments require an accepted offer, current status: {offer.get('status')}")
         # 036 C2: one payment row per offer (uq_payments_one_per_offer);
         # re-calling payment_create for any existing status returns the row.
-        existing = next(
-            (p for p in self._data.get("payments", []) if p.get("offer_id") == offer_id), None
-        )
+        existing = next((p for p in self._data.get("payments", []) if p.get("offer_id") == offer_id), None)
         if existing:
             return dict(existing)
         row = {
@@ -684,56 +580,40 @@ class FakeSupabase:
         }
         # Use _dispatch so that monkeypatch tests can intercept the INSERT
         result = self._dispatch(
-            table="payments", op="insert", payload=row, conflict=None, filters={}, select_cols="*"
+            table="payments", op="insert", payload=row,
+            conflict=None, filters={}, select_cols="*"
         )
         return dict(result.data[0]) if result.data else dict(row)
+
 
     def _rpc_payment_mark_paid(self, params: dict) -> dict:
         from datetime import datetime, timezone
 
         from fastapi import HTTPException
-
         payment_id = params.get("p_payment_id")
         test_uid = params.get("_test_user_id")
-        payment = next(
-            (p for p in self._data.get("payments", []) if p.get("id") == payment_id), None
-        )
-
+        payment = next((p for p in self._data.get("payments", []) if p.get("id") == payment_id), None)
+        
         if not payment:
             raise HTTPException(404, "payment not found")
         # RLS emulation for SECURITY DEFINER: only the owner can see the payment in the first place.
-        if (
-            test_uid
-            and payment.get("user_id") != test_uid
-            and test_uid != "22222222-2222-2222-2222-222222222222"
-        ):
+        if test_uid and payment.get("user_id") != test_uid and test_uid != "22222222-2222-2222-2222-222222222222":
             raise HTTPException(404, "payment not found")
-
+            
         if payment.get("status") in ("failed", "disputed"):
             raise HTTPException(409, f"cannot mark a {payment['status']} payment as paid")
         if payment.get("status") == "paid":
             return dict(payment)
         # 036 C3: a lot withdrawn after matching can no longer be sold
-        offer0 = next(
-            (o for o in self._data.get("offers", []) if o.get("id") == payment.get("offer_id")),
-            None,
-        )
-        lot0 = next(
-            (l for l in self._data.get("lots", []) if l.get("id") == (offer0 or {}).get("lot_id")),
-            None,
-        )
+        offer0 = next((o for o in self._data.get("offers", []) if o.get("id") == payment.get("offer_id")), None)
+        lot0 = next((l for l in self._data.get("lots", []) if l.get("id") == (offer0 or {}).get("lot_id")), None)
         if lot0 and lot0.get("status") == "withdrawn":
             raise HTTPException(409, "cannot mark paid: lot was withdrawn")
         payment["status"] = "paid"
         payment["paid_at"] = datetime.now(timezone.utc).isoformat()
-        offer = next(
-            (o for o in self._data.get("offers", []) if o.get("id") == payment.get("offer_id")),
-            None,
-        )
+        offer = next((o for o in self._data.get("offers", []) if o.get("id") == payment.get("offer_id")), None)
         if offer:
-            lot = next(
-                (l for l in self._data.get("lots", []) if l.get("id") == offer.get("lot_id")), None
-            )
+            lot = next((l for l in self._data.get("lots", []) if l.get("id") == offer.get("lot_id")), None)
             if lot:
                 lot["status"] = "sold"
         return dict(payment)
@@ -745,7 +625,6 @@ class FakeSupabase:
 
     def _booking_lot(self, uid, lot_id):
         from fastapi import HTTPException
-
         lot = next((l for l in self._data.get("lots", []) if l.get("id") == lot_id), None)
         if not lot or (lot.get("user_id") != uid and lot.get("fpo_id") != uid):
             raise HTTPException(404, "lot not found or access denied")
@@ -756,7 +635,6 @@ class FakeSupabase:
     @staticmethod
     def _booking_status_machine(current, target):
         from fastapi import HTTPException
-
         if current == "requested":
             if target not in ("confirmed", "cancelled"):
                 raise HTTPException(409, f"invalid transition requested -> {target}")
@@ -771,7 +649,6 @@ class FakeSupabase:
         from datetime import datetime, timezone
 
         from fastapi import HTTPException
-
         uid = params.get("_test_user_id", "test-user")
         lot = self._booking_lot(uid, params.get("p_lot_id"))
         qty = params.get("p_quantity_qtl", lot.get("quantity_qtl"))
@@ -779,11 +656,8 @@ class FakeSupabase:
         if qty is None or float(qty) <= 0 or float(qty) > lot_qty:
             raise HTTPException(422, "quantity must be positive and not exceed the lot quantity")
         fac = next(
-            (
-                f
-                for f in self._data.get("storage_facilities", [])
-                if f.get("id") == params.get("p_facility_id") and f.get("is_active")
-            ),
+            (f for f in self._data.get("storage_facilities", [])
+             if f.get("id") == params.get("p_facility_id") and f.get("is_active")),
             None,
         )
         if not fac:
@@ -793,13 +667,10 @@ class FakeSupabase:
             used = sum(
                 float(b.get("quantity_qtl") or 0)
                 for b in self._data.get("storage_bookings", [])
-                if b.get("facility_id") == fac["id"]
-                and b.get("status") in ("requested", "confirmed")
+                if b.get("facility_id") == fac["id"] and b.get("status") in ("requested", "confirmed")
             )
             if used + float(qty) > float(cap):
-                raise HTTPException(
-                    409, f"facility capacity exceeded: {used} of {float(cap)} qtl already booked"
-                )
+                raise HTTPException(409, f"facility capacity exceeded: {used} of {float(cap)} qtl already booked")
         now = datetime.now(timezone.utc).isoformat()
         row = {
             "id": str(_uuid.uuid4()),
@@ -821,17 +692,13 @@ class FakeSupabase:
         from datetime import datetime, timezone
 
         from fastapi import HTTPException
-
         uid = params.get("_test_user_id", "test-user")
         target = params.get("p_new_status")
         if target not in ("confirmed", "cancelled", "completed"):
             raise HTTPException(422, f"invalid booking status: {target}")
         booking = next(
-            (
-                b
-                for b in self._data.get("storage_bookings", [])
-                if b.get("id") == params.get("p_booking_id")
-            ),
+            (b for b in self._data.get("storage_bookings", [])
+             if b.get("id") == params.get("p_booking_id")),
             None,
         )
         if not booking or booking.get("user_id") != uid:
@@ -839,12 +706,8 @@ class FakeSupabase:
         self._booking_status_machine(booking.get("status"), target)
         if target == "confirmed":
             fac = next(
-                (
-                    f
-                    for f in self._data.get("storage_facilities", [])
-                    if f.get("id") == booking.get("facility_id")
-                ),
-                None,
+                (f for f in self._data.get("storage_facilities", [])
+                 if f.get("id") == booking.get("facility_id")), None,
             )
             cap = (fac or {}).get("capacity_qtl")
             if cap is not None:
@@ -868,7 +731,6 @@ class FakeSupabase:
         from datetime import datetime, timezone
 
         from fastapi import HTTPException
-
         uid = params.get("_test_user_id", "test-user")
         lot = self._booking_lot(uid, params.get("p_lot_id"))
         qty = params.get("p_quantity_qtl", lot.get("quantity_qtl"))
@@ -876,11 +738,8 @@ class FakeSupabase:
         if qty is None or float(qty) <= 0 or float(qty) > lot_qty:
             raise HTTPException(422, "quantity must be positive and not exceed the lot quantity")
         opt = next(
-            (
-                o
-                for o in self._data.get("logistics_options", [])
-                if o.get("id") == params.get("p_logistics_id") and o.get("is_active")
-            ),
+            (o for o in self._data.get("logistics_options", [])
+             if o.get("id") == params.get("p_logistics_id") and o.get("is_active")),
             None,
         )
         if not opt:
@@ -890,13 +749,10 @@ class FakeSupabase:
             used = sum(
                 float(b.get("quantity_qtl") or 0)
                 for b in self._data.get("logistics_bookings", [])
-                if b.get("logistics_id") == opt["id"]
-                and b.get("status") in ("requested", "confirmed")
+                if b.get("logistics_id") == opt["id"] and b.get("status") in ("requested", "confirmed")
             )
             if used + float(qty) > float(cap):
-                raise HTTPException(
-                    409, f"transport capacity exceeded: {used} of {float(cap)} qtl already booked"
-                )
+                raise HTTPException(409, f"transport capacity exceeded: {used} of {float(cap)} qtl already booked")
         now = datetime.now(timezone.utc).isoformat()
         row = {
             "id": str(_uuid.uuid4()),
@@ -918,17 +774,13 @@ class FakeSupabase:
         from datetime import datetime, timezone
 
         from fastapi import HTTPException
-
         uid = params.get("_test_user_id", "test-user")
         target = params.get("p_new_status")
         if target not in ("confirmed", "cancelled", "completed"):
             raise HTTPException(422, f"invalid booking status: {target}")
         booking = next(
-            (
-                b
-                for b in self._data.get("logistics_bookings", [])
-                if b.get("id") == params.get("p_booking_id")
-            ),
+            (b for b in self._data.get("logistics_bookings", [])
+             if b.get("id") == params.get("p_booking_id")),
             None,
         )
         if not booking or booking.get("user_id") != uid:
@@ -936,12 +788,8 @@ class FakeSupabase:
         self._booking_status_machine(booking.get("status"), target)
         if target == "confirmed":
             opt = next(
-                (
-                    o
-                    for o in self._data.get("logistics_options", [])
-                    if o.get("id") == booking.get("logistics_id")
-                ),
-                None,
+                (o for o in self._data.get("logistics_options", [])
+                 if o.get("id") == booking.get("logistics_id")), None,
             )
             cap = (opt or {}).get("capacity_qtl")
             if cap is not None:
@@ -964,12 +812,12 @@ class FakeSupabase:
         import uuid as _uuid
 
         from fastapi import HTTPException
-
+        
         uid = params.get("_test_user_id", "test-user")
         existing = [b for b in self._data.get("buyers", []) if b.get("owner_user_id") == uid]
         if existing:
             raise HTTPException(409, "User already has a registered buyer profile")
-
+            
         row = {
             "id": str(_uuid.uuid4()),
             "name": params.get("p_name"),
@@ -985,7 +833,6 @@ class FakeSupabase:
 
     def _rpc_buyer_verify(self, params: dict) -> dict:
         from fastapi import HTTPException
-
         buyer_id = params.get("p_buyer_id")
         buyer = next((b for b in self._data.get("buyers", []) if b.get("id") == buyer_id), None)
         if not buyer:
@@ -994,15 +841,10 @@ class FakeSupabase:
         return dict(buyer)
 
     def _dispatch(self, *, table, op, payload, conflict, filters, select_cols):
-        self.calls.append(
-            dict(
-                table=table,
-                op=op,
-                payload=payload,
-                conflict=conflict,
-                filters=filters,
-            )
-        )
+        self.calls.append(dict(
+            table=table, op=op, payload=payload,
+            conflict=conflict, filters=filters,
+        ))
         if op in ("insert", "upsert"):
             rows = self._data.setdefault(table, [])
             if isinstance(payload, list):
@@ -1088,9 +930,9 @@ class FakeSupabase:
             rows = sorted(rows, key=lambda r: str(r.get(col) or ""), reverse=desc)
         if "__range__" in filters:
             start, end = filters["__range__"]
-            rows = rows[start : end + 1]
+            rows = rows[start:end + 1]
         if "__limit__" in filters:
-            rows = rows[: filters["__limit__"]]
+            rows = rows[:filters["__limit__"]]
         return rows
 
     def upsert_calls(self) -> List[dict]:
@@ -1119,17 +961,17 @@ class StubAdapter:
         return self._records
 
 
-MARKET_ID_LASALGAON = "aaaa-0000-0000-0000"
+MARKET_ID_LASALGAON  = "aaaa-0000-0000-0000"
 MARKET_ID_PIMPALGAON = "bbbb-0000-0000-0000"
-COMMODITY_ID_ONION = "cccc-0000-0000-0000"
-COMMODITY_ID_TOMATO = "dddd-0000-0000-0000"
+COMMODITY_ID_ONION   = "cccc-0000-0000-0000"
+COMMODITY_ID_TOMATO  = "dddd-0000-0000-0000"
 
 # Seeded user IDs — role comes from the DB (user_profiles), NOT from the JWT.
 # This mirrors what 003_security_patch.sql enforces: roles are only elevated
 # via admin_set_role; the JWT sub claim is just a user identifier.
 FARMER_USER_ID = "11111111-1111-1111-1111-111111111111"
-ADMIN_USER_ID = "22222222-2222-2222-2222-222222222222"
-FPO_USER_ID = "33333333-3333-3333-3333-333333333333"
+ADMIN_USER_ID  = "22222222-2222-2222-2222-222222222222"
+FPO_USER_ID    = "33333333-3333-3333-3333-333333333333"
 
 
 def mint_jwt(user_id: str) -> str:
@@ -1142,15 +984,14 @@ def mint_jwt(user_id: str) -> str:
     token — that's the whole point of the 003 security patch.
     """
     import jwt as pyjwt
-
     secret = os.environ.get("SUPABASE_JWT_SECRET", "ci-placeholder-jwt-secret-32b-min")
     return pyjwt.encode(
         {
-            "sub": user_id,
-            "aud": "authenticated",
+            "sub":  user_id,
+            "aud":  "authenticated",
             "role": "authenticated",
-            "iat": int(time.time()),
-            "exp": int(time.time()) + 3600,
+            "iat":  int(time.time()),
+            "exp":  int(time.time()) + 3600,
         },
         secret,
         algorithm="HS256",
@@ -1160,131 +1001,100 @@ def mint_jwt(user_id: str) -> str:
 @pytest.fixture
 def fake_supabase():
     db = FakeSupabase()
-    db.seed(
-        "markets",
-        [
-            {
-                "id": MARKET_ID_LASALGAON,
-                "name": "Lasalgaon APCM",
-                "source_code": "Lasalgaon",
-                "district": "Nashik",
-                "state": "Maharashtra",
-                "lat": 20.1,
-                "lng": 74.2,
-                "is_active": True,
-            },
-            {
-                "id": MARKET_ID_PIMPALGAON,
-                "name": "Pimpalgaon Baswant APCM",
-                "source_code": "Pimpalgaon(Niphad)",
-                "district": "Nashik",
-                "state": "Maharashtra",
-                "lat": 20.2,
-                "lng": 74.0,
-                "is_active": True,
-            },
-        ],
-    )
-    db.seed(
-        "commodities",
-        [
-            {
-                "id": COMMODITY_ID_ONION,
-                "name_en": "Onion",
-                "name_mr": "कांदा",
-                "name_hi": "प्याज",
-                "category": "vegetable",
-                "standard_unit": "quintal",
-                "sanity_min": 100.0,
-                "sanity_max": 8000.0,
-            },
-            {
-                "id": COMMODITY_ID_TOMATO,
-                "name_en": "Tomato",
-                "name_mr": "टोमॅटो",
-                "name_hi": "टमाटर",
-                "category": "Vegetables",
-                "standard_unit": "quintal",
-                "sanity_min": 100.0,
-                "sanity_max": 10000.0,
-            },
-        ],
-    )
-    db.seed(
-        "commodity_alias",
-        [
-            {"source": "data_gov_in", "source_key": "Onion", "commodity_id": COMMODITY_ID_ONION},
-            {
-                "source": "data_gov_in",
-                "source_key": "Onion(Red)",
-                "commodity_id": COMMODITY_ID_ONION,
-            },
-            {
-                "source": "data_gov_in",
-                "source_key": "Soyabean",
-                "commodity_id": "eeee-0000-0000-0000",
-            },
-            {"source": "data_gov_in", "source_key": "Tomato", "commodity_id": COMMODITY_ID_TOMATO},
-            {"source": "sms", "source_key": "PYAJ", "commodity_id": COMMODITY_ID_ONION},
-            {"source": "sms", "source_key": "कांदा", "commodity_id": COMMODITY_ID_ONION},
-        ],
-    )
+    db.seed("markets", [
+        {
+            "id": MARKET_ID_LASALGAON,
+            "name": "Lasalgaon APCM",
+            "source_code": "Lasalgaon",
+            "district": "Nashik",
+            "state": "Maharashtra",
+            "lat": 20.1, "lng": 74.2, "is_active": True
+        },
+        {
+            "id": MARKET_ID_PIMPALGAON,
+            "name": "Pimpalgaon Baswant APCM",
+            "source_code": "Pimpalgaon(Niphad)",
+            "district": "Nashik",
+            "state": "Maharashtra",
+            "lat": 20.2, "lng": 74.0, "is_active": True
+        },
+    ])
+    db.seed("commodities", [
+        {
+            "id": COMMODITY_ID_ONION,
+            "name_en": "Onion",
+            "name_mr": "कांदा",
+            "name_hi": "प्याज",
+            "category": "vegetable",
+            "standard_unit": "quintal",
+            "sanity_min": 100.0,
+            "sanity_max": 8000.0,
+        },
+        {
+            "id": COMMODITY_ID_TOMATO,
+            "name_en": "Tomato",
+            "name_mr": "टोमॅटो",
+            "name_hi": "टमाटर",
+            "category": "Vegetables",
+            "standard_unit": "quintal",
+            "sanity_min": 100.0,
+            "sanity_max": 10000.0,
+        },
+    ])
+    db.seed("commodity_alias", [
+        {"source": "data_gov_in", "source_key": "Onion",      "commodity_id": COMMODITY_ID_ONION},
+        {"source": "data_gov_in", "source_key": "Onion(Red)",  "commodity_id": COMMODITY_ID_ONION},
+        {"source": "data_gov_in", "source_key": "Soyabean",   "commodity_id": "eeee-0000-0000-0000"},
+        {"source": "data_gov_in", "source_key": "Tomato",     "commodity_id": COMMODITY_ID_TOMATO},
+        {"source": "sms", "source_key": "PYAJ",   "commodity_id": COMMODITY_ID_ONION},
+        {"source": "sms", "source_key": "कांदा", "commodity_id": COMMODITY_ID_ONION},
+    ])
     # Seed user profiles (farmer + admin) for auth tests
-    db.seed(
-        "user_profiles",
-        [
-            {
-                "id": FARMER_USER_ID,
-                "role": "farmer",
-                "phone": "+919876543210",
-                "preferred_language": "mr",
-                "lat": 20.1,
-                "lng": 74.2,
-                "district": "Nashik",
-            },
-            {
-                "id": ADMIN_USER_ID,
-                "role": "admin",
-                "phone": "+919876543211",
-                "preferred_language": "en",
-                "lat": None,
-                "lng": None,
-                "district": "Nashik",
-            },
-            {
-                "id": FPO_USER_ID,
-                "role": "fpo",
-                "phone": "+919876543212",
-                "preferred_language": "mr",
-                "lat": 20.1,
-                "lng": 74.2,
-                "district": "Nashik",
-            },
-        ],
-    )
+    db.seed("user_profiles", [
+        {
+            "id":                 FARMER_USER_ID,
+            "role":               "farmer",
+            "phone":              "+919876543210",
+            "preferred_language": "mr",
+            "lat":                20.1,
+            "lng":                74.2,
+            "district":           "Nashik",
+        },
+        {
+            "id":                 ADMIN_USER_ID,
+            "role":               "admin",
+            "phone":              "+919876543211",
+            "preferred_language": "en",
+            "lat":                None,
+            "lng":                None,
+            "district":           "Nashik",
+        },
+        {
+            "id":                 FPO_USER_ID,
+            "role":               "fpo",
+            "phone":              "+919876543212",
+            "preferred_language": "mr",
+            "lat":                20.1,
+            "lng":                74.2,
+            "district":           "Nashik",
+        },
+    ])
     return db
 
 
 @pytest.fixture
 def fake_supabase_with_logs(fake_supabase):
     """Extends fake_supabase with a seeded ingestion_log row for A1 regression tests."""
-    fake_supabase.seed(
-        "ingestion_log",
-        [
-            {
-                "id": "log-0001",
-                "source": "data_gov_in",
-                "status": "success",
-                "run_at": datetime.now(timezone.utc).isoformat(),
-                "seen": 10,
-                "written": 8,
-                "rejected": 2,
-                "duration_ms": 1200,
-            },
-        ],
-    )
+    fake_supabase.seed("ingestion_log", [
+        {
+            "id":       "log-0001",
+            "source":   "data_gov_in",
+            "status":   "success",
+            "run_at":   datetime.now(timezone.utc).isoformat(),
+            "seen":     10, "written": 8, "rejected": 2, "duration_ms": 1200,
+        },
+    ])
     return fake_supabase
-
 
 class RlsFakeSupabase(FakeSupabase):
     """
@@ -1292,7 +1102,6 @@ class RlsFakeSupabase(FakeSupabase):
     All query filters apply first, then rows are filtered to those owned by
     the principal. Public-read tables are exempt.
     """
-
     def __init__(self, base: FakeSupabase, uid: str = None, is_service_role: bool = False):
         super().__init__()
         self._base = base
@@ -1315,25 +1124,15 @@ class RlsFakeSupabase(FakeSupabase):
 
     def _dispatch(self, *, table, op, payload, conflict, filters, select_cols):
         res = self._base._dispatch(
-            table=table,
-            op=op,
-            payload=payload,
-            conflict=conflict,
-            filters=filters,
-            select_cols=select_cols,
+            table=table, op=op, payload=payload,
+            conflict=conflict, filters=filters, select_cols=select_cols
         )
         if self._is_service_role:
             return res
 
         public_tables = {
-            "markets",
-            "commodities",
-            "commodity_alias",
-            "prices",
-            "forecasts",
-            "buyers",
-            "logistics_options",
-            "storage_facilities",
+            "markets", "commodities", "commodity_alias", "prices",
+            "forecasts", "buyers", "logistics_options", "storage_facilities"
         }
         if (op == "select" or op is None) and table in public_tables:
             return res
@@ -1372,25 +1171,19 @@ def override_supabase(fake_supabase):
 
     def _mock_get_as_user(authorization: str = Header(None)):
         from app.auth import decode_access_token
-
         uid = None
         if authorization and authorization.startswith("Bearer "):
             uid = decode_access_token(authorization[7:])
         return RlsFakeSupabase(fake_supabase, uid=uid, is_service_role=False)
 
-    app.dependency_overrides[get_supabase] = lambda: RlsFakeSupabase(
-        fake_supabase, uid=None, is_service_role=False
-    )
-    app.dependency_overrides[get_supabase_service_role] = lambda: RlsFakeSupabase(
-        fake_supabase, uid=None, is_service_role=True
-    )
+    app.dependency_overrides[get_supabase] = lambda: RlsFakeSupabase(fake_supabase, uid=None, is_service_role=False)
+    app.dependency_overrides[get_supabase_service_role] = lambda: RlsFakeSupabase(fake_supabase, uid=None, is_service_role=True)
     app.dependency_overrides[get_supabase_as_user] = _mock_get_as_user
 
     sms_mod.reset_outbound_cap()
     yield
     app.dependency_overrides.clear()
     sms_mod.reset_outbound_cap()
-
 
 @pytest.fixture
 def validator(fake_supabase):

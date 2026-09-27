@@ -38,9 +38,7 @@ def trigger_forecast(supabase: Client = Depends(get_supabase_service_role)):
         raise HTTPException(503, "forecast job failed")
     finally:
         try:
-            supabase.rpc(
-                "release_job_lock", {"p_job_key": "forecast", "p_holder": "admin_trigger"}
-            ).execute()
+            supabase.rpc("release_job_lock", {"p_job_key": "forecast", "p_holder": "admin_trigger"}).execute()
         except Exception:
             logger.warning("forecast_lock_release_failed")
 
@@ -70,12 +68,12 @@ def trigger_forecast_backtest(
     if unknown:
         raise HTTPException(
             422,
-            f"Unknown model name(s): {unknown}. Available: {sorted(MODEL_REGISTRY.keys())}",
+            f"Unknown model name(s): {unknown}. "
+            f"Available: {sorted(MODEL_REGISTRY.keys())}",
         )
 
     # Resolve all active pairs from the last history_days window
     from datetime import timedelta
-
     cutoff = (get_ist_today() - timedelta(days=body.history_days)).isoformat()
     try:
         raw_pairs = []
@@ -133,9 +131,7 @@ def trigger_alert_check(supabase: Client = Depends(get_supabase_service_role)):
         raise HTTPException(503, "alert check failed")
     finally:
         try:
-            supabase.rpc(
-                "release_job_lock", {"p_job_key": "alert_check", "p_holder": "admin_trigger"}
-            ).execute()
+            supabase.rpc("release_job_lock", {"p_job_key": "alert_check", "p_holder": "admin_trigger"}).execute()
         except Exception:
             logger.warning("alert_lock_release_failed")
 
@@ -175,11 +171,11 @@ def admin_verify_buyer(
 ):
     payload = {
         "verification_state": body.verification_state,
-        "verified": body.verification_state == "approved",
+        "verified": body.verification_state == "approved"
     }
     if body.review_notes:
         payload["review_notes"] = body.review_notes
-
+        
     res = supabase.table("buyers").update(payload).eq("id", buyer_id).execute()
     if not res.data:
         raise HTTPException(404, "buyer not found")
@@ -189,7 +185,11 @@ def admin_verify_buyer(
 @router.get("/grievances", dependencies=[Depends(require_role("admin"))])
 def admin_list_grievances(supabase: Client = Depends(get_supabase_service_role)):
     res = (
-        supabase.table("grievances").select("*").order("created_at", desc=True).limit(200).execute()
+        supabase.table("grievances")
+        .select("*")
+        .order("created_at", desc=True)
+        .limit(200)
+        .execute()
     )
     return res.data or []
 
@@ -210,10 +210,7 @@ def admin_update_grievance(
         raise HTTPException(404, "grievance not found")
     row = res.data[0]
     if row.get("category") == "payment" and row.get("offer_id"):
-        offers = (
-            supabase.table("offers").select("buyer_id").eq("id", row["offer_id"]).execute().data
-            or []
-        )
+        offers = supabase.table("offers").select("buyer_id").eq("id", row["offer_id"]).execute().data or []
         if offers and offers[0].get("buyer_id"):
             recompute_buyer_reliability(supabase, offers[0]["buyer_id"])
     return row
@@ -242,7 +239,6 @@ def admin_events_ingest(supabase: Client = Depends(get_supabase_service_role)):
     import asyncio
 
     from events.runner import run as run_events
-
     try:
         report = asyncio.run(run_events(supabase, since_days=2))
         return {"status": "success", "report": report}

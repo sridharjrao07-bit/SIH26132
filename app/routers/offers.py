@@ -4,7 +4,6 @@ CREATE  → offer_create  (locks lot, validates qty, marks lot='offered')
 DECIDE  → offer_decide  (accept/reject atomically, handles sibling offers + lot status)
 LIST    → direct SELECT (no write; RLS enforces visibility)
 """
-
 from app.auth import get_current_user
 from app.deps import get_supabase_as_user
 from app.errors import json_for_api_error
@@ -37,10 +36,10 @@ def create_offer(
     and atomically marks the lot as 'offered' if it was still 'open'.
     """
     params = {
-        "p_lot_id": body.lot_id,
-        "p_buyer_id": body.buyer_id,
+        "p_lot_id":        body.lot_id,
+        "p_buyer_id":      body.buyer_id,
         "p_price_per_qtl": body.price_per_qtl,
-        "p_quantity_qtl": body.quantity_qtl,
+        "p_quantity_qtl":  body.quantity_qtl,
     }
     data = _call_rpc(supabase, "offer_create", params)
     return with_expiry(data) if isinstance(data, dict) else data
@@ -51,19 +50,14 @@ def list_offers(
     user_id: str = Depends(get_current_user),
     supabase: Client = Depends(get_supabase_as_user),
 ):
-    # Look up buyer profile for the calling user (if any)
-    buyer_res = supabase.table("buyers").select("id").eq("owner_user_id", user_id).execute()
-    buyer_ids = [b["id"] for b in (buyer_res.data or [])]
-
-    query = supabase.table("offers").select("*, lot:lots(commodity_id)")
-    if buyer_ids:
-        # Caller is a buyer: show offers they created OR lots they own
-        query = query.or_(f"user_id.eq.{user_id},buyer_id.in.({','.join(buyer_ids)})")
-    else:
-        # Caller is a farmer: show offers on lots they own
-        query = query.eq("user_id", user_id)
-
-    res = query.order("created_at", desc=True).limit(100).execute()
+    res = (
+        supabase.table("offers")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .limit(100)
+        .execute()
+    )
     return [with_expiry(row) for row in (res.data or [])]
 
 
@@ -86,12 +80,8 @@ def update_offer(
     if body.status not in ("accepted", "rejected"):
         raise HTTPException(422, f"status must be accepted or rejected, got {body.status!r}")
 
-    data = _call_rpc(
-        supabase,
-        "offer_decide",
-        {
-            "p_offer_id": offer_id,
-            "p_decision": body.status,
-        },
-    )
+    data = _call_rpc(supabase, "offer_decide", {
+        "p_offer_id": offer_id,
+        "p_decision": body.status,
+    })
     return with_expiry(data) if isinstance(data, dict) else data

@@ -8,7 +8,6 @@ CREATE  → storage_booking_create  (ownership + lot state + capacity under lock
 UPDATE  → storage_booking_update  (owner-only state machine, notes persisted)
 LIST    → direct SELECT (no write; RLS enforces visibility)
 """
-
 from typing import List, Optional
 
 from app.auth import get_current_user
@@ -63,9 +62,7 @@ def book_storage(
         "p_lot_id": req.lot_id,
         "p_facility_id": req.facility_id,
         "p_quantity_qtl": req.quantity_qtl,
-        "p_storage_start_date": req.storage_start_date.isoformat()
-        if req.storage_start_date
-        else None,
+        "p_storage_start_date": req.storage_start_date.isoformat() if req.storage_start_date else None,
         "p_storage_end_date": req.storage_end_date.isoformat() if req.storage_end_date else None,
         "p_notes": req.notes,
     }

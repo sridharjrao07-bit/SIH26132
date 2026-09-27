@@ -18,7 +18,7 @@ never executed.
 This module closes that gap: it enumerates the real route table and issues a
 request to each one, asserting the app never returns an unhandled 5xx.
 
-Division of labour: this module catches crash-class bugs (unhandled exceptions).
+Division of labour: this module catches crash-class bugs (unhandled exceptions). 
 Field-drop-class bugs are caught by test_rpc_parity.py, because no status code can reveal them.
 
 DESIGN NOTES
@@ -37,7 +37,6 @@ DESIGN NOTES
   an unsigned request returns 403 *before* the handler body executes, so it
   would not have caught bug (1).
 """
-
 from __future__ import annotations
 
 import hashlib
@@ -54,13 +53,11 @@ from tests.conftest import ADMIN_USER_ID, mint_jwt
 
 client = TestClient(app, raise_server_exceptions=False)
 
-
 def _resolve_schema(schema: dict, components: dict) -> dict:
     if "$ref" in schema:
         ref_path = schema["$ref"].split("/")[-1]
         return components.get(ref_path, {})
     return schema
-
 
 def _generate_dummy_value(schema: dict, components: dict):
     schema = _resolve_schema(schema, components)
@@ -107,13 +104,11 @@ def _generate_dummy_value(schema: dict, components: dict):
         return payload
     return "test"
 
-
 def _generate_dummy_payload(schema: dict, components: dict) -> dict:
     schema = _resolve_schema(schema, components)
     if schema.get("type") == "object":
         return _generate_dummy_value(schema, components)
     return {}
-
 
 # A syntactically valid UUID for {path_param} substitution.
 FAKE_UUID = "00000000-0000-4000-8000-000000000000"
@@ -166,7 +161,9 @@ def test_skipped_routes_still_exist():
     """A skipped route that no longer exists means a stale SKIP entry is hiding coverage."""
     spec = app.openapi()
     known = {
-        (method.lower(), path) for path, ops in spec.get("paths", {}).items() for method in ops
+        (method.lower(), path)
+        for path, ops in spec.get("paths", {}).items()
+        for method in ops
     }
     stale = SKIP - known
     assert not stale, f"SKIP contains routes that no longer exist: {sorted(stale)}"
@@ -184,7 +181,7 @@ def test_route_never_returns_unhandled_5xx(method: str, path: str, override_supa
         openapi_schema = app.openapi()
         components = openapi_schema.get("components", {}).get("schemas", {})
         paths = openapi_schema.get("paths", {})
-
+        
         # A safer way to find the actual operation in OpenAPI schema, avoiding FAKE_UUID string replacements if possible
         # We can just look up the original raw path. But the test parameter is the concrete path.
         # Let's iterate paths to find one that matches.
@@ -228,7 +225,6 @@ def test_route_never_returns_unhandled_5xx(method: str, path: str, override_supa
 # the thread offload and return its result? A missing `import asyncio` raises
 # NameError while *evaluating* `asyncio.to_thread(...)`, i.e. before the spy is
 # ever called, which surfaces as a 500 and fails this test.
-
 
 def test_sms_webhook_signed_request_reaches_the_thread_offload(monkeypatch, override_supabase):
     """A correctly signed webhook executes `asyncio.to_thread` and returns 200.
@@ -335,9 +331,7 @@ def test_asyncio_is_imported_in_the_sms_router():
     import ast
     from pathlib import Path
 
-    source = (Path(__file__).resolve().parent.parent / "app" / "routers" / "sms.py").read_text(
-        encoding="utf-8"
-    )
+    source = (Path(__file__).resolve().parent.parent / "app" / "routers" / "sms.py").read_text(encoding="utf-8")
     tree = ast.parse(source)
 
     imported: set[str] = set()

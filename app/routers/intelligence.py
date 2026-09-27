@@ -1,5 +1,4 @@
 """Sale-window recommendation — localised hold/sell advice (SIH26132)."""
-
 from typing import Literal, Optional
 
 from app.deps import get_supabase

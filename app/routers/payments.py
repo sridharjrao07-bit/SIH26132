@@ -6,7 +6,6 @@ FAILED  → transition_payment_status (existing RPC from migration 013)
 DISPUTED→ transition_payment_status (existing RPC from migration 013)
 LIST    → direct SELECT (no write; RLS enforces visibility)
 """
-
 from app.auth import get_current_user
 from app.deps import get_supabase_as_user, get_supabase_service_role
 from app.errors import json_for_api_error
@@ -49,15 +48,11 @@ def create_payment(
     trg_check_payment_amount (migration 031) validates amount at the boundary.
     """
     try:
-        return _call_rpc(
-            supabase,
-            "payment_create",
-            {
-                "p_offer_id": body.offer_id,
-                "p_amount": body.amount,
-                "p_reference": body.reference,
-            },
-        )
+        return _call_rpc(supabase, "payment_create", {
+            "p_offer_id":  body.offer_id,
+            "p_amount":    body.amount,
+            "p_reference": body.reference,
+        })
     except HTTPException:
         raise
     except Exception:
@@ -106,15 +101,11 @@ def mark_failed(
     supabase: Client = Depends(get_supabase_as_user),
     service: Client = Depends(get_supabase_service_role),
 ):
-    payment = _call_rpc(
-        supabase,
-        "transition_payment_status",
-        {
-            "p_user_id": user_id,
-            "p_payment_id": payment_id,
-            "p_new_status": "failed",
-        },
-    )
+    payment = _call_rpc(supabase, "transition_payment_status", {
+        "p_user_id":    user_id,
+        "p_payment_id": payment_id,
+        "p_new_status": "failed",
+    })
     if isinstance(payment, dict):
         _rescore_offer_buyer(supabase, service, payment.get("offer_id", ""))
     return payment
@@ -127,15 +118,11 @@ def mark_disputed(
     supabase: Client = Depends(get_supabase_as_user),
     service: Client = Depends(get_supabase_service_role),
 ):
-    payment = _call_rpc(
-        supabase,
-        "transition_payment_status",
-        {
-            "p_user_id": user_id,
-            "p_payment_id": payment_id,
-            "p_new_status": "disputed",
-        },
-    )
+    payment = _call_rpc(supabase, "transition_payment_status", {
+        "p_user_id":    user_id,
+        "p_payment_id": payment_id,
+        "p_new_status": "disputed",
+    })
     if isinstance(payment, dict):
         _rescore_offer_buyer(supabase, service, payment.get("offer_id", ""))
     return payment

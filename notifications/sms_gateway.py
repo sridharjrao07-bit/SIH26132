@@ -9,7 +9,6 @@ Gateway return type: Tuple[str, bool] → (status_string, success_bool)
   status_string is written directly to notification_log.status.
   The DB CHECK constraint accepts: 'pending', 'sent', 'failed', 'mock'.
 """
-
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple
 
@@ -69,9 +68,7 @@ class MockSMSGateway(SMSGateway):
     ) -> Tuple[str, bool]:
         masked = redact_msisdn(recipient)
         with open(self.log_file, "a", encoding="utf-8") as f:
-            f.write(
-                f"TO: {masked} | TEMPLATE: {template_id} | VARS: {vars}\nMSG: {message}\n{'-' * 40}\n"
-            )
+            f.write(f"TO: {masked} | TEMPLATE: {template_id} | VARS: {vars}\nMSG: {message}\n{'-'*40}\n")
         logger.info("mock_sms_sent", recipient=masked, template_id=template_id)
         return ("mock", True)
 
@@ -87,11 +84,10 @@ class MSG91Gateway(SMSGateway):
 
     API reference: https://docs.msg91.com/reference/send-sms-api
     """
-
     FLOW_API_URL = "https://api.msg91.com/api/v5/flow/"
 
     def __init__(self, auth_key: str, sender_id: str = "KRBAZR"):
-        self.auth_key = auth_key
+        self.auth_key  = auth_key
         self.sender_id = sender_id
         self.last_provider_ref = None
 
@@ -113,14 +109,12 @@ class MSG91Gateway(SMSGateway):
         # MSG91 Flow API payload — variable mappings replace DLT template placeholders
         payload = {
             "template_id": template_id,
-            "short_url": "0",
+            "short_url":   "0",
             "realTimeResponse": "1",
-            "recipients": [
-                {
-                    "mobiles": recipient.lstrip("+"),
-                    **vars,  # e.g. commodity="Onion", price="2000", threshold="1800"
-                }
-            ],
+            "recipients": [{
+                "mobiles": recipient.lstrip("+"),
+                **vars,  # e.g. commodity="Onion", price="2000", threshold="1800"
+            }],
         }
 
         try:
@@ -139,9 +133,7 @@ class MSG91Gateway(SMSGateway):
                 except Exception:
                     ref = None
                 self.last_provider_ref = ref
-                logger.info(
-                    "msg91_sms_sent", recipient=redact_msisdn(recipient), template_id=template_id
-                )
+                logger.info("msg91_sms_sent", recipient=redact_msisdn(recipient), template_id=template_id)
                 return ("sent", True)
             else:
                 logger.error(
@@ -163,7 +155,6 @@ def get_sms_gateway(settings=None) -> SMSGateway:
     """
     if settings is None:
         from app.config import get_settings
-
         settings = get_settings()
 
     if settings.sms_gateway == "msg91":
@@ -184,7 +175,6 @@ def resolve_template(language: str, settings=None) -> Optional[str]:
     """Returns the exact MSG91 DLT template ID for the requested language."""
     if settings is None:
         from app.config import get_settings
-
         settings = get_settings()
 
     if language == "mr":

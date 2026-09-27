@@ -1,5 +1,4 @@
 """OpenAPI must list the frontend contract paths (development only)."""
-
 from app.main import app
 from fastapi.testclient import TestClient
 

@@ -94,10 +94,7 @@ def test_recompute_buyer_reliability_chunks_its_reads(fake_supabase, in_spy):
     fake_supabase.seed(
         "payments",
         [{"id": str(uuid.uuid4()), "offer_id": o["id"], "status": "paid"} for o in offers[:100]]
-        + [
-            {"id": str(uuid.uuid4()), "offer_id": o["id"], "status": "disputed"}
-            for o in offers[100:]
-        ],
+        + [{"id": str(uuid.uuid4()), "offer_id": o["id"], "status": "disputed"} for o in offers[100:]],
     )
     fake_supabase.seed("grievances", [])
     fake_supabase.seed("buyers", [{"id": "buyer-busy", "payment_reliability": "high"}])

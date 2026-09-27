@@ -10,9 +10,8 @@ Covers:
   - SMS cap: max 3 per user per run
   - Gateway: mock logs correctly, msg91 fails loudly on missing template
 """
-
 import os
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 
 from tests.conftest import COMMODITY_ID_ONION, MARKET_ID_LASALGAON
 
@@ -22,73 +21,41 @@ ALERT_1 = "alert-1-0000-0000-0000"
 ALERT_2 = "alert-2-0000-0000-0000"
 ALERT_3 = "alert-3-0000-0000-0000"
 
-
 def now_iso():
-    return datetime.now(timezone.utc).isoformat()
-
+    return datetime.utcnow().isoformat()
 
 def days_ago_iso(n):
-    return (datetime.now(timezone.utc) - timedelta(days=n)).isoformat()
-
+    return (datetime.utcnow() - timedelta(days=n)).isoformat()
 
 def date_ago(n):
     return (date.today() - timedelta(days=n)).isoformat()
 
-
-def make_profile(
-    uid=USER_A, phone="+911234567890", lang="en", district="Nashik", lat=None, lng=None
-):
+def make_profile(uid=USER_A, phone="+911234567890", lang="en", district="Nashik", lat=None, lng=None):
     return {
-        "id": uid,
-        "phone": phone,
-        "preferred_language": lang,
-        "district": district,
-        "lat": lat,
-        "lng": lng,
-        "role": "farmer",
+        "id": uid, "phone": phone, "preferred_language": lang,
+        "district": district, "lat": lat, "lng": lng, "role": "farmer"
     }
 
-
-def make_alert(
-    aid=ALERT_1,
-    uid=USER_A,
-    commodity_id=COMMODITY_ID_ONION,
-    market_id=MARKET_ID_LASALGAON,
-    threshold=2200.0,
-    condition="gte",
-    active=True,
-    expires_at=None,
-    last_notified_at=None,
-    notified_count=0,
-):
+def make_alert(aid=ALERT_1, uid=USER_A, commodity_id=COMMODITY_ID_ONION,
+               market_id=MARKET_ID_LASALGAON, threshold=2200.0, condition="gte",
+               active=True, expires_at=None, last_notified_at=None, notified_count=0):
     return {
-        "id": aid,
-        "user_id": uid,
-        "commodity_id": commodity_id,
-        "market_id": market_id,
-        "threshold_price": threshold,
-        "condition": condition,
-        "active": active,
-        "expires_at": expires_at,
-        "last_notified_at": last_notified_at,
-        "notified_count": notified_count,
+        "id": aid, "user_id": uid, "commodity_id": commodity_id,
+        "market_id": market_id, "threshold_price": threshold,
+        "condition": condition, "active": active,
+        "expires_at": expires_at, "last_notified_at": last_notified_at,
+        "notified_count": notified_count
     }
-
 
 def make_prices(market_id, commodity_id, prices_by_day, source="data_gov_in"):
     """prices_by_day: dict[int days_ago -> price]"""
     rows = []
     for days_ago, price in prices_by_day.items():
-        rows.append(
-            {
-                "market_id": market_id,
-                "commodity_id": commodity_id,
-                "arrival_date": date_ago(days_ago),
-                "modal_price": price,
-                "source": source,
-                "variety": "General",
-            }
-        )
+        rows.append({
+            "market_id": market_id, "commodity_id": commodity_id,
+            "arrival_date": date_ago(days_ago),
+            "modal_price": price, "source": source, "variety": "General"
+        })
     return rows
 
 
@@ -98,7 +65,6 @@ NULL_SMS_LOG = os.devnull  # /dev/null on Unix, nul on Windows
 def make_checker(db):
     from notifications.alert_checker import AlertChecker
     from notifications.sms_gateway import MockSMSGateway
-
     checker = AlertChecker(db)
     checker.gateway = MockSMSGateway(log_file=NULL_SMS_LOG)
     return checker
@@ -106,14 +72,11 @@ def make_checker(db):
 
 # ─── Crossing Detection ───────────────────────────────────────────────────────
 
-
 def test_gte_crossing_detected(fake_supabase):
     """prev=2100 < threshold=2200 <= latest=2300 → fires"""
     fake_supabase.seed("user_profiles", [make_profile()])
     fake_supabase.seed("alerts", [make_alert()])
-    fake_supabase.seed(
-        "prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300})
-    )
+    fake_supabase.seed("prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300}))
 
     checker = make_checker(fake_supabase)
     result = checker.run()
@@ -124,9 +87,7 @@ def test_gte_no_crossing_when_already_above(fake_supabase):
     """Both prev and latest above threshold with last_notified_at recent → cooldown, no re-fire"""
     fake_supabase.seed("user_profiles", [make_profile()])
     fake_supabase.seed("alerts", [make_alert(last_notified_at=days_ago_iso(0))])
-    fake_supabase.seed(
-        "prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2300, 1: 2400})
-    )
+    fake_supabase.seed("prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2300, 1: 2400}))
 
     checker = make_checker(fake_supabase)
     result = checker.run()
@@ -137,9 +98,7 @@ def test_lte_crossing_detected(fake_supabase):
     """prev=1800 > threshold=1500 >= latest=1400 → fires"""
     fake_supabase.seed("user_profiles", [make_profile()])
     fake_supabase.seed("alerts", [make_alert(threshold=1500.0, condition="lte")])
-    fake_supabase.seed(
-        "prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 1800, 1: 1400})
-    )
+    fake_supabase.seed("prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 1800, 1: 1400}))
 
     checker = make_checker(fake_supabase)
     result = checker.run()
@@ -150,9 +109,7 @@ def test_no_crossing_stays_below(fake_supabase):
     """prev=1800, latest=1900, threshold=2200 (gte) → no crossing"""
     fake_supabase.seed("user_profiles", [make_profile()])
     fake_supabase.seed("alerts", [make_alert()])
-    fake_supabase.seed(
-        "prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 1800, 1: 1900})
-    )
+    fake_supabase.seed("prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 1800, 1: 1900}))
 
     checker = make_checker(fake_supabase)
     result = checker.run()
@@ -172,14 +129,11 @@ def test_insufficient_series_no_crossing(fake_supabase):
 
 # ─── Cooldown ─────────────────────────────────────────────────────────────────
 
-
 def test_cooldown_24h_not_expired(fake_supabase):
     """Notified 12 hours ago → cooldown active → no fire"""
     fake_supabase.seed("user_profiles", [make_profile()])
     fake_supabase.seed("alerts", [make_alert(last_notified_at=days_ago_iso(0))])
-    fake_supabase.seed(
-        "prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300})
-    )
+    fake_supabase.seed("prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300}))
 
     checker = make_checker(fake_supabase)
     result = checker.run()
@@ -188,12 +142,10 @@ def test_cooldown_24h_not_expired(fake_supabase):
 
 def test_cooldown_25h_expired(fake_supabase):
     """Notified 25 hours ago → cooldown expired → fires"""
-    notified_25h_ago = (datetime.now(timezone.utc) - timedelta(hours=25)).isoformat()
+    notified_25h_ago = (datetime.utcnow() - timedelta(hours=25)).isoformat()
     fake_supabase.seed("user_profiles", [make_profile()])
     fake_supabase.seed("alerts", [make_alert(last_notified_at=notified_25h_ago)])
-    fake_supabase.seed(
-        "prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300})
-    )
+    fake_supabase.seed("prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300}))
 
     checker = make_checker(fake_supabase)
     result = checker.run()
@@ -202,15 +154,12 @@ def test_cooldown_25h_expired(fake_supabase):
 
 # ─── Expiry ────────────────────────────────────────────────────────────────────
 
-
 def test_expired_alert_deactivated(fake_supabase):
     """expires_at in past → alert deactivated, no SMS"""
     past_iso = days_ago_iso(1)
     fake_supabase.seed("user_profiles", [make_profile()])
     fake_supabase.seed("alerts", [make_alert(expires_at=past_iso)])
-    fake_supabase.seed(
-        "prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300})
-    )
+    fake_supabase.seed("prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300}))
 
     checker = make_checker(fake_supabase)
     result = checker.run()
@@ -222,14 +171,11 @@ def test_expired_alert_deactivated(fake_supabase):
 
 # ─── Location Resolution ──────────────────────────────────────────────────────
 
-
 def test_direct_market_resolution(fake_supabase):
     """market_id set directly → uses it"""
     fake_supabase.seed("user_profiles", [make_profile()])
     fake_supabase.seed("alerts", [make_alert(market_id=MARKET_ID_LASALGAON)])
-    fake_supabase.seed(
-        "prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300})
-    )
+    fake_supabase.seed("prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300}))
 
     checker = make_checker(fake_supabase)
     result = checker.run()
@@ -241,9 +187,7 @@ def test_no_market_no_coords_district_fallback(fake_supabase):
     fake_supabase.seed("user_profiles", [make_profile(lat=None, lng=None)])
     fake_supabase.seed("alerts", [make_alert(market_id=None)])
     # Seed prices for Lasalgaon (in Nashik)
-    fake_supabase.seed(
-        "prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300})
-    )
+    fake_supabase.seed("prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300}))
 
     checker = make_checker(fake_supabase)
     result = checker.run()
@@ -264,7 +208,6 @@ def test_no_market_no_prices_skips_gracefully(fake_supabase):
 
 # ─── SMS Cap ──────────────────────────────────────────────────────────────────
 
-
 def test_max_3_sms_per_user(fake_supabase):
     """4 alerts due for same user → only 3 SMS sent"""
     alert_ids = [f"alert-{i}-0000" for i in range(4)]
@@ -272,17 +215,15 @@ def test_max_3_sms_per_user(fake_supabase):
         make_alert(
             aid=alert_ids[i],
             threshold=2200.0 - i * 10,  # Different thresholds
-            condition="gte",
+            condition="gte"
         )
         for i in range(4)
     ]
-
+    
     fake_supabase.seed("user_profiles", [make_profile()])
     fake_supabase.seed("alerts", alerts)
     # Price crosses all 4 thresholds
-    fake_supabase.seed(
-        "prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2230})
-    )
+    fake_supabase.seed("prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2230}))
 
     checker = make_checker(fake_supabase)
     result = checker.run()
@@ -291,13 +232,10 @@ def test_max_3_sms_per_user(fake_supabase):
 
 # ─── No Active Alerts ─────────────────────────────────────────────────────────
 
-
 def test_no_active_alerts_returns_zero(fake_supabase):
     fake_supabase.seed("user_profiles", [make_profile()])
     fake_supabase.seed("alerts", [])
-    fake_supabase.seed(
-        "prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300})
-    )
+    fake_supabase.seed("prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300}))
 
     checker = make_checker(fake_supabase)
     result = checker.run()
@@ -306,10 +244,8 @@ def test_no_active_alerts_returns_zero(fake_supabase):
 
 # ─── SMS Gateway ──────────────────────────────────────────────────────────────
 
-
 def test_mock_gateway_logs_file(tmp_path):
     from notifications.sms_gateway import MockSMSGateway
-
     log_file = str(tmp_path / "sms.log")
     gw = MockSMSGateway(log_file=log_file)
     gw.send_sms("+911234567890", "Test Message", "tmpl_123")
@@ -323,7 +259,6 @@ def test_mock_gateway_logs_file(tmp_path):
 def test_msg91_fails_loudly_on_missing_template(monkeypatch):
     """MSG91Gateway returns (failed, False) and logs error when template_id is None"""
     from notifications.sms_gateway import MSG91Gateway
-
     gw = MSG91Gateway(auth_key="test-key")  # auth_key is now a required arg
     status, result = gw.send_sms("+91123456", "Test", template_id=None)
     assert result is False
@@ -336,7 +271,6 @@ def test_resolve_template_returns_correct_lang(monkeypatch):
     from types import SimpleNamespace
 
     from notifications.sms_gateway import resolve_template
-
     test_settings = SimpleNamespace(
         msg91_dlt_te_id_mr="tmpl_mr",
         msg91_dlt_te_id_hi="tmpl_hi",
@@ -351,40 +285,33 @@ def test_marathi_message_fits_in_70_chars(fake_supabase):
     """Marathi SMS template must stay within 70 Devanagari char limit"""
     from notifications.alert_checker import AlertChecker
     from notifications.sms_gateway import MockSMSGateway
-
+    
     sent_messages = []
-
     class CapturingGateway(MockSMSGateway):
         def send_sms(self, recipient, message, template_id=None, **kwargs):
             sent_messages.append(message)
             return ("mock", True)
-
+    
     fake_supabase.seed("user_profiles", [make_profile(lang="mr")])
     fake_supabase.seed("alerts", [make_alert()])
-    fake_supabase.seed(
-        "prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300})
-    )
-
+    fake_supabase.seed("prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300}))
+    
     checker = AlertChecker(fake_supabase)
     checker.gateway = CapturingGateway(log_file="/dev/null")
     checker.run()
-
+    
     for msg in sent_messages:
         assert len(msg) <= 70, f"Marathi SMS exceeds 70 chars: {len(msg)} chars"
 
-
 def test_failed_resend_restores_previous_timestamp(fake_supabase):
-    old_ts = (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=30)).isoformat()
+    old_ts = (datetime.utcnow().replace(tzinfo=None) - timedelta(hours=30)).isoformat()
     fake_supabase.seed("user_profiles", [make_profile()])
     fake_supabase.seed("alerts", [make_alert("a1", last_notified_at=old_ts, notified_count=2)])
-    fake_supabase.seed(
-        "prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300})
-    )
-
+    fake_supabase.seed("prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300}))
+    
     from notifications.alert_checker import AlertChecker
-
     checker = AlertChecker(fake_supabase)
-
+    
     class FailingGateway:
         def send_sms(self, phone, msg, template_id=None, **kwargs):
             raise Exception("Gateway down")
@@ -396,25 +323,16 @@ def test_failed_resend_restores_previous_timestamp(fake_supabase):
     assert alert["last_notified_at"] == old_ts, "must restore old_ts, not NULL"
     assert alert["notified_count"] == 2
 
-
 def test_failed_send_rolls_back_claim(fake_supabase):
-    fake_supabase.seed(
-        "markets",
-        [{"id": MARKET_ID_LASALGAON, "name": "Lasalgaon", "state": "MH", "district": "Nashik"}],
-    )
-    fake_supabase.seed(
-        "commodities", [{"id": COMMODITY_ID_ONION, "name": "Onion", "category": "Veg"}]
-    )
+    fake_supabase.seed("markets", [{"id": MARKET_ID_LASALGAON, "name": "Lasalgaon", "state": "MH", "district": "Nashik"}])
+    fake_supabase.seed("commodities", [{"id": COMMODITY_ID_ONION, "name": "Onion", "category": "Veg"}])
     fake_supabase.seed("user_profiles", [make_profile()])
     fake_supabase.seed("alerts", [make_alert("a1", last_notified_at=None, notified_count=0)])
-    fake_supabase.seed(
-        "prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300})
-    )
-
+    fake_supabase.seed("prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300}))
+    
     from notifications.alert_checker import AlertChecker
-
     checker = AlertChecker(fake_supabase)
-
+    
     class FailingGateway:
         def send_sms(self, phone, msg, template_id=None, **kwargs):
             raise Exception("Gateway down")
@@ -426,44 +344,34 @@ def test_failed_send_rolls_back_claim(fake_supabase):
     assert alert["last_notified_at"] is None, "must restore NULL timestamp"
     assert alert["notified_count"] == 0, "must restore 0 count"
 
-
 def test_retry_after_failed_send(fake_supabase):
-    fake_supabase.seed(
-        "markets",
-        [{"id": MARKET_ID_LASALGAON, "name": "Lasalgaon", "state": "MH", "district": "Nashik"}],
-    )
-    fake_supabase.seed(
-        "commodities", [{"id": COMMODITY_ID_ONION, "name": "Onion", "category": "Veg"}]
-    )
+    fake_supabase.seed("markets", [{"id": MARKET_ID_LASALGAON, "name": "Lasalgaon", "state": "MH", "district": "Nashik"}])
+    fake_supabase.seed("commodities", [{"id": COMMODITY_ID_ONION, "name": "Onion", "category": "Veg"}])
     fake_supabase.seed("user_profiles", [make_profile()])
     fake_supabase.seed("alerts", [make_alert("a1", last_notified_at=None, notified_count=0)])
-    fake_supabase.seed(
-        "prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300})
-    )
-
+    fake_supabase.seed("prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300}))
+    
     from notifications.alert_checker import AlertChecker
-
     checker = AlertChecker(fake_supabase)
-
+    
     class FailingGateway:
         def send_sms(self, phone, msg, template_id=None, **kwargs):
             raise Exception("Gateway down")
 
     checker.gateway = FailingGateway()
     checker.run()
-
+    
     alert = fake_supabase._data["alerts"][0]
     assert alert["last_notified_at"] is None
-
+    
     # Second run with a working gateway
     import os
 
     from notifications.sms_gateway import MockSMSGateway
-
     checker.gateway = MockSMSGateway(log_file=os.devnull)
-
+    
     assert checker.run()["fired"] == 1
-
+    
     alert = fake_supabase._data["alerts"][0]
     assert alert["last_notified_at"] is not None
     assert alert["notified_count"] == 1

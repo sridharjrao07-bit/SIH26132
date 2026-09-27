@@ -5,7 +5,6 @@ from current market supply (arrivals) and nearby storage. Forecast is a
 tie-breaker: holding through a glut only makes sense if prices are expected
 to recover *and* a godown exists.
 """
-
 from datetime import timedelta
 from statistics import median
 from typing import Optional
@@ -27,9 +26,7 @@ def _f(value) -> Optional[float]:
         return None
 
 
-def _supply_pressure(
-    arrivals_f: Optional[float], recent_arrivals: list, district_arrivals: Optional[float]
-) -> str:
+def _supply_pressure(arrivals_f: Optional[float], recent_arrivals: list, district_arrivals: Optional[float]) -> str:
     if arrivals_f is not None and arrivals_f > HIGH_ARRIVAL_QTL:
         return "high"
     if district_arrivals is not None and district_arrivals > HIGH_DISTRICT_ARRIVAL_QTL:
@@ -55,7 +52,7 @@ def compute_sale_window(
     origin_lat=None,
     origin_lng=None,
     recent_events: Optional[list] = None,
-    **kwargs,
+    **kwargs
 ) -> Optional[dict]:
     """
     Return a sell / hold / wait recommendation from supply + nearby storage.
@@ -92,9 +89,7 @@ def compute_sale_window(
 
     price_q = (
         supabase.table("prices")
-        .select(
-            "modal_price, arrival_qty, arrival_date, market_id, markets(name, district, lat, lng)"
-        )
+        .select("modal_price, arrival_qty, arrival_date, market_id, markets(name, district, lat, lng)")
         .eq("commodity_id", commodity_id)
         .gte("arrival_date", cutoff)
         .order("arrival_date", desc=True)
@@ -170,7 +165,9 @@ def compute_sale_window(
         cur = latest_by_date.get(fdate)
         if cur is None or gen > str(cur.get("generated_at") or ""):
             latest_by_date[fdate] = row
-    forecasts = sorted(latest_by_date.values(), key=lambda r: str(r.get("forecast_date") or ""))[:7]
+    forecasts = sorted(
+        latest_by_date.values(), key=lambda r: str(r.get("forecast_date") or "")
+    )[:7]
     day1 = (
         float(forecasts[0]["predicted_price"])
         if forecasts and forecasts[0].get("predicted_price") is not None
@@ -211,13 +208,11 @@ def compute_sale_window(
         if mid in seen or (market_id and mid == market_id):
             continue
         seen.add(mid)
-        nearby.append(
-            {
-                "market": (row.get("markets") or {}).get("name"),
-                "modal_price": row["modal_price"],
-                "arrival_qty": row.get("arrival_qty"),
-            }
-        )
+        nearby.append({
+            "market": (row.get("markets") or {}).get("name"),
+            "modal_price": row["modal_price"],
+            "arrival_qty": row.get("arrival_qty"),
+        })
         if len(nearby) >= 4:
             break
 
@@ -308,7 +303,8 @@ def compute_sale_window(
             }
     if better_market and recommendation == "sell" and better_market.get("market"):
         reason = (
-            reason + f" Nearby {better_market['market']} is ₹{better_market['modal_price']:.0f} "
+            reason
+            + f" Nearby {better_market['market']} is ₹{better_market['modal_price']:.0f} "
             f"(₹{better_market['premium_rs']:.0f} above here)."
         )
 
@@ -321,7 +317,7 @@ def compute_sale_window(
             relevant_events.append(e)
             if len(relevant_events) >= 2:
                 break
-
+    
     for e in relevant_events:
         reason += f" Recent events: {e['headline']} ({e['event_date']})."
 
@@ -383,13 +379,15 @@ def apply_sale_language(window: dict, lang: str) -> dict:
             "wait": "आवक सामान्य; घाई नको.",
             "hold": (
                 f"अंदाज ₹{d1} आज ₹{p} पेक्षा जास्त. जवळचे गोदाम: {godown}. थोडे थांबा."
-                if d1 is not None
-                else f"जवळचे गोदाम: {godown}. थोडे थांबा."
+                if d1 is not None else f"जवळचे गोदाम: {godown}. थोडे थांबा."
             ),
             "sell_forecast": (
-                f"अंदाज ₹{d1} आज ₹{p} पेक्षा कमी; आज विका." if d1 is not None else "आज विका."
+                f"अंदाज ₹{d1} आज ₹{p} पेक्षा कमी; आज विका."
+                if d1 is not None else "आज विका."
             ),
-            "sell_arrivals": (f"आवक जास्त ({aq} क्विंटल); आज विका." if aq is not None else "आज विका."),
+            "sell_arrivals": (
+                f"आवक जास्त ({aq} क्विंटल); आज विका." if aq is not None else "आज विका."
+            ),
             "sell_no_storage": "आवक/अंदाज जास्त पण जवळ गोदाम नाही; आज विका.",
         }
         out["reason"] = reasons.get(code) or reasons.get(rec) or reasons["wait"]
@@ -398,11 +396,15 @@ def apply_sale_language(window: dict, lang: str) -> dict:
         "wait": "आवक सामान्य; जल्दबाजी न करें.",
         "hold": (
             f"अनुमान ₹{d1} आज ₹{p} से ऊपर. नज़दीकी गोदाम: {godown}. थोड़ा रुकें."
-            if d1 is not None
-            else f"नज़दीकी गोदाम: {godown}. थोड़ा रुकें."
+            if d1 is not None else f"नज़दीकी गोदाम: {godown}. थोड़ा रुकें."
         ),
-        "sell_forecast": (f"अनुमान ₹{d1} आज ₹{p} से कम; आज बेचें." if d1 is not None else "आज बेचें."),
-        "sell_arrivals": (f"आवक ज्यादा ({aq} क्विंटल); आज बेचें." if aq is not None else "आज बेचें."),
+        "sell_forecast": (
+            f"अनुमान ₹{d1} आज ₹{p} से कम; आज बेचें."
+            if d1 is not None else "आज बेचें."
+        ),
+        "sell_arrivals": (
+            f"आवक ज्यादा ({aq} क्विंटल); आज बेचें." if aq is not None else "आज बेचें."
+        ),
         "sell_no_storage": "आवक/अनुमान ऊँचा है पर नज़दीकी गोदाम नहीं; आज बेचें.",
     }
     out["reason"] = reasons.get(code) or reasons.get(rec) or reasons["wait"]
