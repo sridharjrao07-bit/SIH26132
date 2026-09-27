@@ -339,10 +339,25 @@ exist.
 
 Nine routes under `/api/v1/direct`.
 
-The economics endpoints — `/rupee`, `/fair-price`, `/config`, `/plan`, `/group-buy` —
-compute direct trade math dynamically. They read from the database for model
-configuration (`value_chain_profiles`) and default anchors, ensuring the latest
-district officer tunings apply without deploying new code.
+The economics endpoints — `/rupee`, `/fair-price`, `/config`, `/plan`,
+`/group-buy` — **never write anything**, so a caller can price a hypothetical
+trade without touching the database. They do read, but only when a caller omits
+an input they could have supplied:
+
+* `retail_price` / `retail_price_per_qtl` are optional. Supply them and the
+  endpoint needs neither a database nor a network — that path is a pure
+  function, which is what makes the arithmetic checkable by hand. Omit them and
+  the live retail anchor is resolved instead
+  (`ingestion/retail_loader.py`, which itself falls back to the committed
+  government snapshot).
+* `/plan` reads traditional chain shapes from `value_chain_profiles` when that
+  table is populated, so a district officer can retune the model without a
+  deploy. An empty or missing table is not an error: the engine falls back to
+  its built-in `DEFAULT_CHAIN_PROFILES`, which is correct but less tunable.
+
+Only `POST /plans/commit` writes, and it **re-runs the engine server-side**
+from the submitted inputs. A client cannot supply an impact figure and have it
+stored; the numbers in the database are always the engine's own.
 
 Only `POST /plans/commit` writes, and it **re-runs the engine server-side**
 from the submitted inputs. A client cannot supply an impact figure and have it

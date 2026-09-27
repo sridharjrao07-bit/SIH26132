@@ -157,6 +157,11 @@ class DirectConfig:
     calibrate: bool = True
     freight: FreightConfig = field(default_factory=FreightConfig)
     traditional_chains: Optional[Dict[str, ValueChain]] = None  # by commodity_id
+    # District/category-level overrides, used when no commodity-specific chain
+    # matches. Lets an operator retune the whole vegetable model from the
+    # database without touching code or redeploying, which is the point of
+    # public.value_chain_profiles. Absent by default, so behaviour is unchanged.
+    category_chains: Optional[Dict[str, ValueChain]] = None  # by category
     enforce_grade: bool = False
 
     def __post_init__(self) -> None:
@@ -179,8 +184,18 @@ class DirectConfig:
         return FreightConfig(**{**self.freight.to_dict(), "circuity": self.circuity})
 
     def traditional_chain_for(self, commodity_id: str, category: str) -> ValueChain:
+        """Resolve the traditional chain for a lane.
+
+        Precedence: commodity-specific override, then category/district
+        override, then the built-in default. The first two exist so a
+        retuned model stored in ``value_chain_profiles`` takes effect without a
+        deploy; the last is the always-available fallback, which is what keeps
+        the engine runnable with no database at all.
+        """
         if self.traditional_chains and commodity_id in self.traditional_chains:
             return self.traditional_chains[commodity_id]
+        if self.category_chains and category in self.category_chains:
+            return self.category_chains[category]
         return default_traditional_chain(category)
 
 

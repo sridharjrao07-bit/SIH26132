@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from datetime import date, datetime
 from typing import Dict, List, Optional
 
@@ -66,6 +67,35 @@ RETRY_LOGGER = logging.getLogger("tenacity.retry")
 API_BASE = "https://api.data.gov.in/resource"
 PAGE_SIZE = 100
 MAX_RECORDS = 5000  # safety cap; one commodity/state is far below this
+
+# Fail fast, then fall back to the snapshot. A slow or unreachable data.gov.in
+# must never hold up planning: the retail anchor is the right-hand side of every
+# consumer-rupee figure, but the engine can run on the committed snapshot while
+# the live feed is down. The old 30 s read timeout combined with tenacity's
+# backoff meant one unreachable host cost ~65 s per page, and the pagination
+# loop below runs several pages -- which reads to a caller as a hang. Both
+# bounds are configurable, because a government API on a bad day is slower than
+# a private one.
+def _env_float(name: str, default: float) -> float:
+    """Read a positive float from the environment, falling back on garbage.
+
+    Resolved per call rather than at import so an operator can tune the bound
+    without restarting the process, and so a bad value degrades to the safe
+    default instead of raising at import time and taking the app down.
+    """
+    raw = (os.getenv(name) or "").strip()
+    if not raw:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+DEFAULT_TIMEOUT_SECONDS = 5.0
+DEFAULT_CONNECT_TIMEOUT_SECONDS = 3.0
+MAX_RETRY_WAIT_SECONDS = 10.0
 
 # The DCA dataset spells the market column exactly this way.
 MARKET_RETAIL = "Retail"
@@ -151,16 +181,32 @@ class DcaRetailAdapter:
     arrival_qty and market_name values that do not exist in the source.
     """
 
-    def __init__(self, api_key: str, timeout: float = 30.0):
+    def __init__(
+        self,
+        api_key: str,
+        timeout: Optional[float] = None,
+        connect_timeout: Optional[float] = None,
+    ):
+        timeout = _env_float("DCA_RETAIL_TIMEOUT_SECONDS", DEFAULT_TIMEOUT_SECONDS) \
+            if timeout is None else timeout
+        connect_timeout = _env_float(
+            "DCA_RETAIL_CONNECT_TIMEOUT_SECONDS", DEFAULT_CONNECT_TIMEOUT_SECONDS
+        ) if connect_timeout is None else connect_timeout
         self.api_key = api_key
-        self.timeout = timeout
+        # Separate connect/read bounds: an unreachable host fails on connect in
+        # a couple of seconds, while a reachable-but-slow API is allowed the
+        # full read budget. Using one number for both meant a dead host burned
+        # the whole read timeout instead of failing fast.
+        self.timeout = httpx.Timeout(timeout, connect=connect_timeout)
 
     @property
     def source_name(self) -> str:
         return "data_gov_in"
 
     @retry(stop=stop_after_attempt(2),
-           wait=wait_exponential(multiplier=5, min=5, max=45),
+           wait=wait_exponential(multiplier=1, min=1,
+                                 max=_env_float("DCA_RETAIL_MAX_RETRY_WAIT_SECONDS",
+                                                MAX_RETRY_WAIT_SECONDS)),
            retry=retry_if_exception(_is_transient), reraise=True,
            before_sleep=before_sleep_log(RETRY_LOGGER, logging.INFO))
     async def _get_json(self, client: httpx.AsyncClient, resource_id: str, params: dict):
@@ -174,8 +220,15 @@ class DcaRetailAdapter:
         commodity: str = "Onion",
         state: str = "Maharashtra",
         since: Optional[date] = None,
+        deadline_seconds: Optional[float] = None,
     ) -> List[RetailPriceRecord]:
         """Return retail observations, newest first.
+
+        ``deadline_seconds`` bounds the *whole* paginated fetch, not just one
+        request. Per-request timeouts alone are not enough: the loop below walks
+        several pages, so three slow pages can still cost a minute. When the
+        deadline passes the fetch stops and raises, and the caller falls back to
+        the committed snapshot.
 
         Raises ``SourceFetchError`` on any failure — including a missing
         resource id or missing API key — so the caller can distinguish 'source
@@ -193,6 +246,10 @@ class DcaRetailAdapter:
         if not self.api_key:
             raise SourceFetchError("DATA_GOV_IN_API_KEY is not configured")
 
+        if deadline_seconds is None:
+            deadline_seconds = _env_float("DCA_RETAIL_DEADLINE_SECONDS", 20.0)
+        started = time.monotonic()
+
         params = {
             "api-key": self.api_key,
             "format": "json",
@@ -205,6 +262,11 @@ class DcaRetailAdapter:
         rows: List[dict] = []
         async with httpx.AsyncClient() as client:
             while len(rows) < MAX_RECORDS:
+                if time.monotonic() - started > deadline_seconds:
+                    raise SourceFetchError(
+                        f"DCA retail fetch exceeded {deadline_seconds:.0f}s budget "
+                        f"after {len(rows)} rows; falling back to the snapshot"
+                    )
                 params["offset"] = len(rows)
                 try:
                     payload = await self._get_json(client, resource_id, params)

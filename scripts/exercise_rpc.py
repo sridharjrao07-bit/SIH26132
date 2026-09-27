@@ -1,4 +1,8 @@
-import pg8000.dbapi, urllib.parse, ssl, os
+import os
+import ssl
+import urllib.parse
+
+import pg8000.dbapi
 
 db_url = os.environ.get('SUPABASE_DB_URL')
 url = urllib.parse.urlparse(db_url)

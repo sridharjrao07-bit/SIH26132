@@ -95,6 +95,10 @@ def load_retail_prices(
         try:
             from ingestion.dca_retail import DcaRetailAdapter
 
+            # Strict, explicit timeout. The adapter's own default is already
+            # fail-fast, but pass it here too so the bound is visible at the
+            # call site: the loader is what decides "live is not worth waiting
+            # for", and that decision belongs next to the fallback.
             rows = asyncio.run(
                 DcaRetailAdapter(api_key, timeout=5.0).fetch_retail(
                     commodity=commodity, state=state, since=since

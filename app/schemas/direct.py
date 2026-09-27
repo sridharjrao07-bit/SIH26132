@@ -1,10 +1,18 @@
 """Request/response models for the direct-channel (disintermediation) API.
 
 Kept separate from ``app/schemas/marketplace.py`` because the direct channel has
-a different trust model: the *planning* endpoints are pure computation and take
-their inputs inline, so a caller can price a hypothetical trade without writing
-anything to the database.  Persistence is a separate, explicit
-``POST /plans/{plan_id}/commit`` step.
+a different trust model: the *planning* endpoints never write anything, so a
+caller can price a hypothetical trade without touching the database.
+Persistence is a separate, explicit ``POST /plans/{plan_id}/commit`` step.
+
+Note on "never writes": the planning endpoints still *read* when a caller
+omits an input they could have supplied. ``retail_price`` /
+``retail_price_per_qtl`` are optional precisely so a caller who knows the
+number can pass it and get a self-contained, database-free answer; when it is
+omitted the endpoint resolves it from the live retail anchor
+(``ingestion/retail_loader.py``), which falls back to a committed snapshot. A
+caller supplying both prices gets an answer with no database or network
+dependency at all.
 """
 
 from __future__ import annotations
@@ -28,7 +36,10 @@ class RupeeRequest(BaseModel):
     commodity_id: Optional[str] = None
     category: Category = "vegetable"
     farm_price: float = Field(..., gt=0, description="Mandi modal price, Rs/quintal")
-    retail_price: Optional[float] = Field(None, gt=0, description="Consumer price, Rs/quintal")
+    retail_price: Optional[float] = Field(
+        None, gt=0, description="Consumer price, Rs/quintal; fetched from the live "
+        "retail anchor when omitted"
+    )
     calibrate: bool = True
     stages: Optional[List[dict]] = Field(
         None, description="Optional override of the whole traditional chain stage list"
@@ -41,7 +52,10 @@ class FairPriceRequest(BaseModel):
     commodity_id: Optional[str] = None
     category: Category = "vegetable"
     farm_price: float = Field(..., gt=0, description="Farmer's mandi fallback, Rs/quintal")
-    retail_price: Optional[float] = Field(None, gt=0, description="Consumer's shop fallback, Rs/quintal")
+    retail_price: Optional[float] = Field(
+        None, gt=0, description="Consumer's shop fallback, Rs/quintal; fetched from the "
+        "live retail anchor when omitted"
+    )
     origin_lat: float = Field(..., ge=-90, le=90)
     origin_lng: float = Field(..., ge=-180, le=180)
     dest_lat: float = Field(..., ge=-90, le=90)
@@ -94,7 +108,10 @@ class DemandIn(BaseModel):
     id: str
     commodity_id: str
     quantity_qtl: float = Field(..., gt=0, description="Quintals the consumer wants to receive")
-    retail_price_per_qtl: Optional[float] = Field(None, gt=0, description="What the shop charges")
+    retail_price_per_qtl: Optional[float] = Field(
+        None, gt=0, description="What the shop charges, Rs/quintal; fetched from the live "
+        "retail anchor when omitted"
+    )
     lat: Optional[float] = None
     lng: Optional[float] = None
     category: Category = "vegetable"

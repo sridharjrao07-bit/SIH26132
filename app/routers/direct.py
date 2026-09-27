@@ -29,6 +29,7 @@ body — otherwise a caller could persist any impact figure they liked.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any, Dict, List, Optional
 
 import structlog
@@ -63,43 +64,6 @@ router = APIRouter(prefix="/api/v1/direct", tags=["Direct channel"])
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
-
-from ingestion.retail_loader import latest_retail_price
-
-def _load_chain_profiles(supabase: Client) -> Dict[str, ValueChain]:
-    try:
-        resp = supabase.table("value_chain_profiles").select("*").eq("is_active", True).eq("channel", "traditional").execute()
-        chains = {}
-        for row in resp.data:
-            if row.get("commodity_id"):
-                stages = [Stage.from_dict(s) for s in row.get("stages", [])]
-                if stages:
-                    vc = ValueChain(stages, name="db_profile")
-                    if row.get("margin_scale") is not None:
-                        vc = vc.scaled(float(row["margin_scale"]))
-                    chains[row["commodity_id"]] = vc
-        return chains
-    except Exception as e:
-        structlog.get_logger().error("failed_to_load_chain_profiles", error=str(e))
-        return {}
-
-def _resolve_retail_price(supabase: Client, commodity_id: Optional[str], category: str, provided_price: Optional[float], district: str = "Maharashtra") -> float:
-    if provided_price is not None:
-        return provided_price
-    commodity_name = category.capitalize() # fallback
-    if commodity_id:
-        try:
-            res = supabase.table("commodities").select("name_en").eq("id", commodity_id).limit(1).execute()
-            if res.data:
-                commodity_name = res.data[0]["name_en"]
-        except Exception:
-            pass
-    try:
-        price, _, _ = latest_retail_price(commodity_name, "Maharashtra")
-        return price
-    except Exception as e:
-        raise HTTPException(422, f"Could not fetch retail price for {commodity_name}: {e}")
-
 
 
 def _call_rpc(supabase: Client, fn: str, params: dict):
@@ -140,6 +104,175 @@ def _freight_cfg(override: Optional[Any], circuity: Optional[float] = None) -> F
     return cfg
 
 
+# Retail anchor resolution
+# ─────────────────────────────────────────────────────────────────────────────
+# The retail price is the right-hand side of every consumer-rupee figure, so it
+# is the one input worth defaulting: asking a caller to know the national
+# average onion price before they can ask "where does my rupee go" is a
+# barrier. But it is defaulted *lazily*, never eagerly — a caller who supplies
+# the price gets an answer that touches neither the database nor the network,
+# which is what makes the arithmetic checkable by hand.
+
+
+def _commodity_name_for(
+    supabase: Optional[Client], commodity_id: Optional[str]
+) -> Optional[str]:
+    """Resolve a commodity id to the name the retail dataset is keyed by.
+
+    The Consumer Affairs dataset publishes rows under commodity *names*
+    ("Onion", "Potato"), while the API deals in commodity uuids. Passing the
+    category instead ("vegetable") silently matches nothing, which surfaces as
+    a confusing "no anchor" error rather than a wrong number, so the mapping is
+    made explicit here.
+
+    Returns ``None`` when the name cannot be resolved, in which case the loader
+    applies its own documented default.
+    """
+    if not commodity_id or supabase is None:
+        return None
+    try:
+        rows = (
+            supabase.table("commodities")
+            .select("name_en")
+            .eq("id", commodity_id)
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+    except Exception as exc:  # noqa: BLE001 - name lookup is best-effort
+        structlog.get_logger().warning("commodity_name_lookup_failed", error=str(exc))
+        return None
+    name = (rows[0].get("name_en") or "").strip() if rows else ""
+    return name or None
+
+
+def _resolve_retail_price(
+    supplied: Optional[float],
+    commodity_id: Optional[str],
+    category: str,
+    supabase: Optional[Client],
+) -> float:
+    """Return a retail price in Rs/quintal.
+
+    Uses ``supplied`` when the caller gave one: that path needs no database and
+    no network. Otherwise resolves the live anchor, which itself falls back to
+    a committed snapshot of the government dataset.
+
+    Raises 503 when the anchor cannot be resolved *and* none was supplied,
+    because proceeding on a guessed price would publish numbers that look
+    authoritative and are not.
+    """
+    if supplied is not None and supplied > 0:
+        return float(supplied)
+
+    from ingestion.retail_loader import latest_retail_price
+
+    commodity = _commodity_name_for(supabase, commodity_id)
+    try:
+        if commodity:
+            price, price_date, origin = latest_retail_price(commodity=commodity)
+        else:
+            price, price_date, origin = latest_retail_price()
+    except Exception as exc:  # noqa: BLE001 - degrade, never guess
+        structlog.get_logger().warning("retail_anchor_unresolved", error=str(exc))
+        raise HTTPException(
+            503,
+            "No retail price anchor available: supply retail_price explicitly, or "
+            "configure DATA_GOV_IN_API_KEY and DCA_RETAIL_RESOURCE_ID.",
+        ) from exc
+
+    structlog.get_logger().info(
+        "retail_anchor_resolved",
+        commodity=commodity,
+        price_per_qtl=price,
+        price_date=price_date,
+        origin=origin,
+    )
+    return float(price)
+
+
+# Value-chain profile loading
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _load_chain_profiles(
+    supabase: Optional[Client],
+    category: Optional[str] = None,
+) -> Optional[Dict[str, ValueChain]]:
+    """Load active traditional chain profiles from ``value_chain_profiles``.
+
+    Returns ``None`` when nothing usable is found — which is the normal case
+    when the table is empty or the database is absent — so the engine falls
+    back to its built-in default chains. That fallback is deliberate: a missing
+    or half-migrated table must not take the planning endpoints down, because
+    the built-in model is correct, merely less tunable.
+
+    Rows are keyed by category. A row bound to a specific commodity is keyed by
+    that commodity's id instead, which takes precedence in the engine.
+    """
+    if supabase is None:
+        return None
+    try:
+        q = supabase.table("value_chain_profiles").select(
+            "category, commodity_id, scope_district, stages, is_active, channel"
+        )
+        q = q.eq("is_active", True).eq("channel", "traditional")
+        if category:
+            q = q.eq("category", category)
+        rows = q.execute().data or []
+    except Exception as exc:  # noqa: BLE001 - a missing table is not an error
+        structlog.get_logger().warning(
+            "value_chain_profiles_unavailable", error=str(exc)
+        )
+        return None
+
+    by_category: Dict[str, ValueChain] = {}
+    by_commodity: Dict[str, ValueChain] = {}
+    for row in rows:
+        stages = row.get("stages")
+        if not isinstance(stages, list) or not stages:
+            continue
+        try:
+            # Reuse the engine's own parser rather than re-deriving field names
+            # here: Stage.from_dict validates margins, losses and unknown keys,
+            # so a bad row is skipped instead of becoming nonsense arithmetic.
+            chain = ValueChain(
+                [Stage.from_dict(s) for s in stages],
+                name=f"db:{row.get('scope_district') or row.get('category')}",
+            )
+        except (TypeError, ValueError) as exc:
+            structlog.get_logger().warning(
+                "value_chain_profile_unparsable",
+                category=row.get("category"),
+                error=str(exc),
+            )
+            continue
+        cid = row.get("commodity_id")
+        if cid:
+            by_commodity[str(cid)] = chain
+        else:
+            by_category[str(row.get("category"))] = chain
+
+    if not by_category and not by_commodity:
+        return None
+    return {"by_category": by_category, "by_commodity": by_commodity}
+
+
+def _apply_chain_profiles(cfg: DirectConfig, profiles: Optional[dict]) -> DirectConfig:
+    """Thread loaded profiles into a DirectConfig without mutating it."""
+    if not profiles:
+        return cfg
+    # dataclasses.replace, not **cfg.to_dict(): DirectConfig has no to_dict,
+    # and replace() keeps the nested FreightConfig dataclass intact rather than
+    # trying to rebuild it from a dict.
+    return replace(
+        cfg,
+        traditional_chains=profiles.get("by_commodity") or None,
+        category_chains=profiles.get("by_category") or None,
+    )
+
+
 def _chain_from_override(stages: Optional[List[dict]], category: str) -> ValueChain:
     """Build a chain from a caller-supplied stage list, or fall back to the default.
 
@@ -159,7 +292,7 @@ def _chain_from_override(stages: Optional[List[dict]], category: str) -> ValueCh
     return ValueChain(parsed, name="custom")
 
 
-def _to_plan_config(req: PlanRequest, supabase: Client) -> DirectConfig:
+def _to_plan_config(req: PlanRequest) -> DirectConfig:
     return DirectConfig(
         alpha=req.alpha,
         platform_fee_pct=req.platform_fee_pct,
@@ -169,7 +302,6 @@ def _to_plan_config(req: PlanRequest, supabase: Client) -> DirectConfig:
         circuity=req.circuity,
         calibrate=req.calibrate,
         enforce_grade=req.enforce_grade,
-        traditional_chains=_load_chain_profiles(supabase),
         freight=_freight_cfg(req.freight),
     )
 
@@ -192,22 +324,39 @@ def _to_lots(req: PlanRequest) -> List[SupplyLot]:
     ]
 
 
-def _to_demands(req: PlanRequest) -> List[DemandNode]:
-    return [
-        DemandNode(
-            id=d.id,
-            commodity_id=d.commodity_id,
-            quantity_qtl=d.quantity_qtl,
-            retail_price_per_qtl=d.retail_price_per_qtl,
-            lat=d.lat,
-            lng=d.lng,
-            category=d.category,
-            kind=d.kind,
-            label=d.label,
-            min_grade=d.min_grade,
+def _to_demands(req: PlanRequest, retail_anchor: Optional[float] = None) -> List[DemandNode]:
+    """Convert request demand nodes, filling any omitted retail price.
+
+    ``retail_anchor`` is the plan-wide resolved retail price. A demand node that
+    supplied its own price keeps it — a hostel that has seen a real invoice
+    knows better than a national average. Only the omitted ones take the
+    anchor, so a partially-specified request stays internally consistent.
+    """
+    out: List[DemandNode] = []
+    for d in req.demands:
+        price = d.retail_price_per_qtl
+        if price is None:
+            if retail_anchor is None:
+                raise HTTPException(
+                    422,
+                    f"demand '{d.id}' has no retail price and none could be resolved",
+                )
+            price = retail_anchor
+        out.append(
+            DemandNode(
+                id=d.id,
+                commodity_id=d.commodity_id,
+                quantity_qtl=d.quantity_qtl,
+                retail_price_per_qtl=price,
+                lat=d.lat,
+                lng=d.lng,
+                category=d.category,
+                kind=d.kind,
+                label=d.label,
+                min_grade=d.min_grade,
+            )
         )
-        for d in req.demands
-    ]
+    return out
 
 
 def _plan_dict(plan) -> Dict[str, Any]:
@@ -262,8 +411,9 @@ def _plan_dict(plan) -> Dict[str, Any]:
 
 
 @router.post("/rupee")
-def consumer_rupee(req: RupeeRequest, supabase: Client = Depends(get_supabase)) -> Dict[str, Any]:
-    req.retail_price = _resolve_retail_price(supabase, req.commodity_id, req.category, req.retail_price)
+def consumer_rupee(
+    req: RupeeRequest, supabase: Client = Depends(get_supabase)
+) -> Dict[str, Any]:
     """Where does the consumer's rupee go?
 
     Pushes the farm-gate price through the traditional chain and attributes
@@ -274,17 +424,18 @@ def consumer_rupee(req: RupeeRequest, supabase: Client = Depends(get_supabase)) 
     With ``calibrate=true`` (default) the chain's overall margin level is first
     re-fitted so the model reproduces this exact ``(farm_price, retail_price)``
     pair — so the report describes *this* market, not a textbook average.
+
+    ``retail_price`` is optional. Supply it and the answer needs no database and
+    no network; omit it and the live retail anchor is resolved for you.
     """
     chain = _chain_from_override(req.stages, req.category)
-    if req.retail_price <= req.farm_price:
-        # Still reportable, but flag it: a retail price at or below the mandi
-        # price means the chain is not absorbing anything (a glut) and the
-        # "leakage" framing does not apply.
-        pass
+    retail_price = _resolve_retail_price(
+        req.retail_price, req.commodity_id, req.category, supabase
+    )
     report = leakage_report(
         chain,
         req.farm_price,
-        req.retail_price,
+        retail_price,
         commodity=req.commodity_id or req.category,
         calibrate=req.calibrate,
     )
@@ -292,14 +443,18 @@ def consumer_rupee(req: RupeeRequest, supabase: Client = Depends(get_supabase)) 
 
 
 @router.post("/fair-price")
-def fair_price(req: FairPriceRequest, supabase: Client = Depends(get_supabase)) -> Dict[str, Any]:
-    req.retail_price = _resolve_retail_price(supabase, req.commodity_id, req.category, req.retail_price)
+def fair_price(
+    req: FairPriceRequest, supabase: Client = Depends(get_supabase)
+) -> Dict[str, Any]:
     """Price one direct trade on one lane.
 
     Returns the farmer's price, the consumer's price, the split of the consumer's
     rupee, and the leakage report it displaces.  The split is the closed-form
     asymmetric-Nash-bargaining solution, so it is reproducible: no solver, no
     iteration, and the same inputs always give the same answer.
+
+    ``retail_price`` is optional — supply it for a self-contained answer, or
+    omit it to use the live retail anchor.
     """
     trad = default_traditional_chain(req.category)
     distance = road_distance_km(
@@ -311,11 +466,14 @@ def fair_price(req: FairPriceRequest, supabase: Client = Depends(get_supabase)) 
     cfg = _freight_cfg(None, req.circuity)
     direct = default_direct_chain(req.category, req.platform_fee_pct)
 
+    retail_price = _resolve_retail_price(
+        req.retail_price, req.commodity_id, req.category, supabase
+    )
     quote = direct_quote(
         traditional_chain=trad,
         direct_chain=direct,
         farm_price=req.farm_price,
-        retail_price=req.retail_price,
+        retail_price=retail_price,
         distance_km=distance,
         freight_cfg=cfg,
         alpha=req.alpha,
@@ -327,16 +485,12 @@ def fair_price(req: FairPriceRequest, supabase: Client = Depends(get_supabase)) 
 
 
 @router.get("/config")
-def direct_config(category: str = Query("vegetable"), supabase: Client = Depends(get_supabase)) -> Dict[str, Any]:
+def direct_config(category: str = Query("vegetable")) -> Dict[str, Any]:
     """Publish the chain model and rate card the engine is using.
 
     Auditable by design: anyone can read the exact assumptions behind a quote.
     """
-    chains = _load_chain_profiles(supabase)
-    # just pick first for the category if any, else default
-    trad = next((v for k,v in chains.items() if v.category == category), None)
-    if not trad:
-        trad = default_traditional_chain(category)
+    trad = default_traditional_chain(category)
     direct = default_direct_chain(category)
     return {
         "category": category,
@@ -366,20 +520,46 @@ def direct_config(category: str = Query("vegetable"), supabase: Client = Depends
 def plan_direct(req: PlanRequest, supabase: Client = Depends(get_supabase)) -> Dict[str, Any]:
     """Plan a direct farm-to-consumer allocation.
 
-    Pure computation — nothing is written.  The returned plan is reproducible:
-    ``plan_id`` is a hash of (lots, demands, config), so the same request always
-    yields the same plan and the same id.
+    Nothing is written.  The returned plan is reproducible: ``plan_id`` is a
+    hash of (lots, demands, config), so the same request always yields the same
+    plan and the same id.
 
     The allocation is solved as a transportation problem with min-cost flow, not
     greedily by lane — see ``direct/allocation.py`` for why that distinction
     changes the answer materially.
+
+    Demand nodes may omit ``retail_price_per_qtl``; each missing one is filled
+    from the live retail anchor (once, not per node) so a caller listing twenty
+    housing societies need not know the national average price. Traditional
+    chain shapes are read from ``value_chain_profiles`` when that table is
+    populated, and fall back to the engine's built-in model otherwise.
     """
     if not req.lots or not req.demands:
         raise HTTPException(422, "at least one lot and one demand are required")
-    for d in req.demands:
-        d.retail_price_per_qtl = _resolve_retail_price(supabase, d.commodity_id, d.category, d.retail_price_per_qtl)
+
+    categories = {d.category for d in req.demands}
+    if len(categories) > 1:
+        # One retune per call keeps provenance unambiguous: which chain was
+        # retuned, for which category, is a single answer.
+        raise HTTPException(
+            422, "all demands must share one category so the chain model is unambiguous"
+        )
+    category = next(iter(categories))
+
+    # Resolve the retail anchor once for the whole plan rather than per demand
+    # node: it is one national figure, and twenty identical lookups would be
+    # twenty chances to disagree.
+    anchor = None
+    if any(d.retail_price_per_qtl is None for d in req.demands):
+        anchor = _resolve_retail_price(None, None, category, supabase)
+
+    cfg = _apply_chain_profiles(
+        _to_plan_config(req), _load_chain_profiles(supabase, category)
+    )
     try:
-        plan = plan_direct_channel(_to_lots(req), _to_demands(req), _to_plan_config(req, supabase))
+        plan = plan_direct_channel(
+            _to_lots(req), _to_demands(req, anchor), cfg
+        )
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     return plan.to_dict()
@@ -451,9 +631,7 @@ def commit_plan(
     """
     if not req.plan.lots or not req.plan.demands:
         raise HTTPException(422, "at least one lot and one demand are required")
-    for d in req.plan.demands:
-        d.retail_price_per_qtl = _resolve_retail_price(supabase, d.commodity_id, d.category, d.retail_price_per_qtl, req.district)
-    plan = plan_direct_channel(_to_lots(req.plan), _to_demands(req.plan), _to_plan_config(req.plan, supabase))
+    plan = plan_direct_channel(_to_lots(req.plan), _to_demands(req.plan), _to_plan_config(req.plan))
     if not plan.allocations:
         raise HTTPException(422, "plan produced no viable allocation; nothing to commit")
 
