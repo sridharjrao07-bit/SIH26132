@@ -32,7 +32,7 @@ export function OtherMarketsList({ commodityId, current, markets }: { commodityI
     <ul>
       {rows.map((r) => (
         <li key={r.marketId} className="rule-b last:border-b-0">
-          <Link to="/c/$crop/m/$market" params={{ crop: commodityId, market: r.marketId }} className="tap flex items-center gap-3 py-2">
+          <Link to="/c/$crop/m/$market" params={{ crop: commodityId, market: r.marketId }} className="tap flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-paper-2">
             <span className="min-w-0 flex-1 truncate">{r.name}</span>
             {daysBetween(r.date, today) > 1 && <span className="text-xs text-ink-2">{formatDay(r.date, lang)}</span>}
             <span className="tabular w-20 text-right font-semibold">{formatINR(r.modal)}</span>

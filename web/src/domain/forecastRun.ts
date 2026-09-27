@@ -7,15 +7,10 @@ import type { ForecastRow } from '../api/schemas.ts';
  * the mock stamps per row (µs apart), hence the tolerance window.
  */
 export function selectLatestRun(rows: readonly ForecastRow[], toleranceMs = 10 * 60_000): ForecastRow[] {
-  // Parse once and drop rows we cannot place in time (missing/malformed generated_at).
-  // Otherwise a single bad timestamp poisons Math.max -> NaN and wipes the whole run.
-  const stamped = rows
-    .map((r) => ({ r, ts: Date.parse(r.generated_at ?? '') }))
-    .filter((x) => x.r.predicted_price != null && Number.isFinite(x.ts));
+  const stamped = rows.filter((r) => r.generated_at && r.predicted_price != null);
   if (stamped.length === 0) return [];
-  const newest = Math.max(...stamped.map((x) => x.ts));
+  const newest = Math.max(...stamped.map((r) => Date.parse(r.generated_at!)));
   return stamped
-    .filter((x) => newest - x.ts <= toleranceMs)
-    .map((x) => x.r)
+    .filter((r) => newest - Date.parse(r.generated_at!) <= toleranceMs)
     .sort((a, b) => (a.forecast_date < b.forecast_date ? -1 : 1));
 }

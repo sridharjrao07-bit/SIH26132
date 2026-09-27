@@ -36,37 +36,13 @@ export function BuyPage() {
 }
 
 function Buy({ me }: { me: Profile }) {
-  const localBuyerId = useMyBuyer((s) => s.byUser[me.id]);
-  const save = useMyBuyer((s) => s.set);
-
-  // G12 fix: resolve buyer ID from the server (cross-device) first, then fall
-  // back to the localStorage cache. This prevents the "registration lock" where
-  // clearing browser storage re-shows the form but the backend already has a profile.
-  const serverProfile = useQuery({
-    queryKey: ['buyers', 'me'],
-    queryFn: ({ signal }) => marketplace.myBuyerProfile(signal),
-    staleTime: 5 * 60_000,
-    retry: false,
-  });
-  const buyerId = serverProfile.data?.id ?? localBuyerId;
-
-  // Keep Zustand store in sync when the server resolves the profile.
-  if (serverProfile.data && serverProfile.data.id !== localBuyerId) {
-    save(me.id, serverProfile.data.id);
-  }
-
+  const buyerId = useMyBuyer((s) => s.byUser[me.id]);
   const status = useQuery({
     queryKey: ['buyers', 'status', buyerId],
-    queryFn: ({ signal }) =>
-      marketplace.buyers(undefined, signal).then(async (verified) =>
-        verified.some((b) => b.id === buyerId) ? 'verified' as const : 'pending' as const),
+    queryFn: ({ signal }) => marketplace.buyers(undefined, signal).then(async (verified) =>
+      verified.some((b) => b.id === buyerId) ? 'verified' as const : 'pending' as const),
     enabled: !!buyerId, staleTime: 5 * 60_000,
   });
-
-  if (serverProfile.isPending) {
-    return <div className="p-4"><Block h={120} /></div>;
-  }
-
   return (
     <div className="mx-auto max-w-2xl">
       <div className="px-4 pt-4">
@@ -79,12 +55,7 @@ function Buy({ me }: { me: Profile }) {
             <p className="font-semibold"><Trans>Waiting for verification</Trans></p>
             <p className="mt-1 text-sm text-ink-2"><Trans>An admin checks every buyer before farmers can see them. You will be able to see produce and make offers after that.</Trans></p>
           </Section>
-        ) : (
-          <>
-            <Supply buyerId={buyerId} />
-            <MyOffers />
-          </>
-        )}
+        ) : <Supply buyerId={buyerId} />}
     </div>
   );
 }
@@ -117,75 +88,25 @@ function RegisterBuyer({ me }: { me: Profile }) {
 
   return (
     <Section title={<Trans>Register as a buyer</Trans>}>
-      <p className="mb-6 text-sm text-ink-2"><Trans>After you register, an admin verifies you. Only verified buyers are shown to farmers.</Trans></p>
-      <form onSubmit={submit} className="space-y-5 bg-paper-2 p-4 md:p-6 rounded">
+      <p className="mb-3 text-sm text-ink-2"><Trans>After you register, an admin verifies you. Only verified buyers are shown to farmers.</Trans></p>
+      <form onSubmit={submit} className="space-y-3">
         <Field label={<Trans>Business name</Trans>} required minLength={2} maxLength={200} value={name} onChange={(e) => setName(e.target.value)} error={fe('name')} />
         <NativeSelect label={<Trans>Type</Trans>} value={type} onChange={(v) => setType(v as (typeof TYPES)[number])}>
           {TYPES.map((t) => <option key={t} value={t}>{_(label(BUYER_TYPE, t))}</option>)}
         </NativeSelect>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label={<Trans>District</Trans>} required value={district} onChange={(e) => setDistrict(e.target.value)} error={fe('district')} />
-          <Field label={<Trans>Mobile number</Trans>} type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} error={fe('phone')} />
-        </div>
+        <Field label={<Trans>District</Trans>} required value={district} onChange={(e) => setDistrict(e.target.value)} error={fe('district')} />
+        <Field label={<Trans>Mobile number</Trans>} type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} error={fe('phone')} />
         <NativeSelect label={<Trans>Crop you buy</Trans>} value={crop} onChange={setCrop}>
           <option value=""><Trans>Any crop</Trans></option>
           {(commodities.data ?? []).map((c) => <option key={c.id} value={c.id}>{cropName(c, lang)}</option>)}
         </NativeSelect>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-2">
           <Field label={<Trans>Quantity needed</Trans>} inputMode="decimal" value={qty} onChange={(e) => setQty(e.target.value)} suffix={<Trans>qtl</Trans>} error={fe('demand_qty_qtl')} />
           <Field label={<Trans>Highest price</Trans>} inputMode="numeric" value={max} onChange={(e) => setMax(e.target.value)} suffix="₹" error={fe('max_price')} />
         </div>
         {!Object.keys((register.error as { fields?: object } | null)?.fields ?? {}).length && <ErrorNote error={register.error} />}
-        <Button type="submit" className="w-full mt-4" disabled={register.isPending}><Trans>Register</Trans></Button>
+        <Button type="submit" className="w-full" disabled={register.isPending}><Trans>Register</Trans></Button>
       </form>
-    </Section>
-  );
-}
-
-function MyOffers() {
-  const { lang } = usePrefs();
-  const commodities = useQuery(commoditiesQuery());
-  const q = useQuery({
-    queryKey: ['offers', 'me'],
-    queryFn: ({ signal }) => marketplace.offers(signal)
-  });
-
-  if (q.isPending) return <div className="p-4"><Block h={120} /></div>;
-  if (q.isError) return <div className="p-4"><ErrorNote error={q.error} /></div>;
-  if (q.data.length === 0) return null;
-
-  return (
-    <Section title={<Trans>Your Submitted Offers</Trans>}>
-      <ul className="divide-y divide-rule border border-rule rounded-sm bg-paper mt-4">
-        {q.data.map((offer: any) => {
-          const cropId = offer.lot?.commodity_id;
-          const cropNameStr = cropId ? cropName(commodities.data?.find((c) => c.id === cropId), lang) : 'Produce';
-          
-          let badgeBg = 'var(--color-paper-2)';
-          let badgeColor = 'var(--color-ink-2)';
-          if (offer.status === 'pending') { badgeBg = 'var(--color-wait-tint)'; badgeColor = 'var(--color-wait)'; }
-          if (offer.status === 'accepted') { badgeBg = 'var(--color-sell-tint)'; badgeColor = 'var(--color-sell)'; }
-          
-          return (
-            <li key={offer.id} className="p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div>
-                <p className="font-semibold text-lg">{cropNameStr}</p>
-                <p className="text-sm text-ink-2 mt-0.5"><Trans>{offer.quantity_qtl} qtl at {formatINR(offer.price_per_qtl)}/qtl</Trans></p>
-              </div>
-              <div className="flex flex-col items-start md:items-end gap-1.5">
-                <span className="px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wide" style={{ background: badgeBg, color: badgeColor }}>
-                  {offer.status}
-                </span>
-                {offer.status === 'pending' && offer.expires_at && (
-                  <p className="text-xs text-ink-2">
-                    <Trans>Expires {new Date(offer.expires_at).toLocaleDateString()}</Trans>
-                  </p>
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
     </Section>
   );
 }
@@ -201,20 +122,7 @@ function Supply({ buyerId }: { buyerId: string }) {
   return (
     <Section title={<Trans>Produce that fits what you buy</Trans>}>
       {supply.data.lots.length === 0 ? <p className="text-sm text-ink-2"><Trans>No open lots match right now.</Trans></p>
-        : (
-          <div className="mt-4 border border-rule rounded-sm overflow-hidden">
-            {/* Table Header for Desktop */}
-            <div className="hidden md:flex bg-paper-2 px-4 py-2 text-xs font-semibold text-ink-2 border-b border-rule">
-              <div className="flex-[2]">Crop & Grade</div>
-              <div className="flex-[3]">Location</div>
-              <div className="flex-[1] text-right">Qty & Price</div>
-              <div className="flex-[1] text-right ml-4">Action</div>
-            </div>
-            <ul className="divide-y divide-rule bg-paper">
-              {supply.data.lots.map((l) => <SupplyRow key={l.id} lot={l} buyerId={buyerId} />)}
-            </ul>
-          </div>
-        )}
+        : <ul className="-mx-4">{supply.data.lots.map((l) => <SupplyRow key={l.id} lot={l} buyerId={buyerId} />)}</ul>}
     </Section>
   );
 }
@@ -234,47 +142,33 @@ function SupplyRow({ lot, buyerId }: { lot: Lot; buyerId: string }) {
   const q = formatNumber(lot.quantity_qtl);
 
   return (
-    <li className="px-4 py-4 flex flex-col md:flex-row md:items-center gap-4 hover:bg-paper-2 transition-colors">
-      <div className="flex-1 flex flex-col md:flex-row justify-between md:items-center w-full gap-4">
-        {/* Crop & Grade */}
-        <div className="flex-[2] flex flex-row md:flex-col justify-between items-baseline md:items-start w-full md:w-auto">
-          <p className="font-semibold text-base md:text-lg">{cropName(commodities.data?.find((c) => c.id === lot.commodity_id), lang)}</p>
-          <p className="text-sm text-ink-2 mt-1 md:mt-0"><Trans>Grade {lot.grade}</Trans></p>
+    <li className="rule-t px-4 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-semibold">{cropName(commodities.data?.find((c) => c.id === lot.commodity_id), lang)} · <span className="tabular"><Trans>{q} qtl</Trans></span></p>
+          <p className="text-sm text-ink-2">
+            <Trans>Grade {lot.grade}</Trans>
+            {extra.market_name && <> · {extra.market_name}</>}
+            {lot.asking_price != null && <> · <span className="tabular"><Trans>asking {formatINR(lot.asking_price)}</Trans></span></>}
+          </p>
+          {extra.reasons?.length ? <p className="mt-1 text-xs text-ink-2">{extra.reasons.map((r) => _(label(MATCH_REASON, r))).join(' · ')}</p> : null}
+          {sent && <p role="status" className="mt-1 text-sm font-semibold"><Trans>Offer sent. The farmer has 48 hours to reply.</Trans></p>}
         </div>
-        
-        {/* Location & Reasons */}
-        <div className="flex-[3] flex flex-row md:flex-col justify-between items-baseline md:items-start w-full md:w-auto mt-2 md:mt-0">
-          <p className="font-semibold text-sm md:text-base">{extra.market_name ?? '—'}</p>
-          {extra.reasons?.length ? <p className="text-xs text-ink-2 mt-1 hidden md:block">{extra.reasons.map((r) => _(label(MATCH_REASON, r))).join(' · ')}</p> : null}
-        </div>
-
-        {/* Qty & Price */}
-        <div className="flex-[1] text-left md:text-right mt-2 md:mt-0 flex flex-row md:flex-col justify-between items-baseline md:items-end w-full md:w-auto">
-          <p className="tabular font-medium text-base md:text-lg"><Trans>{q} qtl</Trans></p>
-          {lot.asking_price != null && <p className="tabular text-sm text-ink-2 mt-1"><Trans>asking {formatINR(lot.asking_price)}</Trans></p>}
-        </div>
+        {!open && !sent && <Button variant="secondary" className="shrink-0 text-sm" onClick={() => setOpen(true)}><Trans>Make offer</Trans></Button>}
       </div>
-      
-      {/* Action / Form */}
-      <div className="flex-[1] shrink-0 mt-4 md:mt-0 md:ml-4 w-full md:w-auto flex flex-col justify-center">
-        {sent ? (
-          <p role="status" className="text-xs font-semibold text-sell md:text-right"><Trans>Offer sent. The farmer has 48 hours to reply.</Trans></p>
-        ) : open ? (
-          <form className="bg-paper border border-rule rounded p-3 space-y-3 shadow-sm w-full min-w-[200px]" onSubmit={(e) => { e.preventDefault(); bid.mutate(undefined); }}>
+      {open && (
+        <form className="mt-3 space-y-2" onSubmit={(e) => { e.preventDefault(); bid.mutate(undefined); }}>
+          <div className="grid grid-cols-2 gap-2">
             <Field label={<Trans>Price</Trans>} inputMode="numeric" required value={price} onChange={(e) => setPrice(e.target.value)} suffix="₹" />
             <Field label={<Trans>Quantity</Trans>} inputMode="decimal" required value={qty} onChange={(e) => setQty(e.target.value)} suffix={<Trans>qtl</Trans>} />
-            <ErrorNote error={bid.error} />
-            <div className="flex flex-col gap-2 mt-2">
-              <Button type="submit" className="text-sm w-full" disabled={bid.isPending || !numOrUndef(price) || !numOrUndef(qty)}><Trans>Send offer</Trans></Button>
-              <Button type="button" variant="secondary" className="text-sm w-full" onClick={() => setOpen(false)}><Trans>Cancel</Trans></Button>
-            </div>
-          </form>
-        ) : (
-          <Button variant="secondary" className="text-sm w-full md:w-auto md:ml-auto" onClick={() => setOpen(true)}>
-            <Trans>Make offer</Trans>
-          </Button>
-        )}
-      </div>
+          </div>
+          <ErrorNote error={bid.error} />
+          <div className="grid grid-cols-2 gap-2">
+            <Button type="submit" className="text-sm" disabled={bid.isPending || !numOrUndef(price) || !numOrUndef(qty)}><Trans>Send offer</Trans></Button>
+            <Button type="button" variant="secondary" className="text-sm" onClick={() => setOpen(false)}><Trans>Cancel</Trans></Button>
+          </div>
+        </form>
+      )}
     </li>
   );
 }

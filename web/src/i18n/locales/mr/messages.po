@@ -13,14 +13,9 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/features/price-detail/PairView.tsx:74
+#: src/features/price-detail/PairView.tsx:192
 msgid "— Same as the last price"
 msgstr "— मागील भावाइतकाच"
-
-#. placeholder {0}: formatDay(row.date, lang)
-#: src/features/board/BoardPage.tsx:195
-msgid "· {0}"
-msgstr "· {0}"
 
 #: src/features/sell/LotDetailPage.tsx:55
 #: src/features/sell/LotDetailPage.tsx:67
@@ -28,20 +23,9 @@ msgid "‹ My produce"
 msgstr "‹ माझा माल"
 
 #. placeholder {0}: formatNumber(sale.arrivals_qty)
-#: src/features/sale-window/SaleWindowCard.tsx:66
+#: src/features/sale-window/SaleWindowCard.tsx:36
 msgid "{0} qtl"
 msgstr "{0} क्विंटल"
-
-#. placeholder {0}: offer.quantity_qtl
-#. placeholder {1}: formatINR(offer.price_per_qtl)
-#: src/features/buy/BuyPage.tsx:173
-msgid "{0} qtl at {1}/qtl"
-msgstr "{0} क्विं. {1}/क्विं. दराने"
-
-#: src/features/price-detail/PairView.tsx:81
-#: src/features/price-detail/PairView.tsx:82
-msgid "{abs} ({p}) from yesterday"
-msgstr "{abs} ({p}) काल पेक्षा"
 
 #: src/features/trust/ModelChip.tsx:64
 msgid "{observations} days"
@@ -51,7 +35,7 @@ msgstr "{observations} दिवस"
 msgid "{observations} days of data"
 msgstr "{observations} दिवसांचा डेटा"
 
-#: src/features/sell/LotsPage.tsx:184
+#: src/features/sell/LotsPage.tsx:73
 msgid "{pendingOffers} new"
 msgstr "{pendingOffers} नवीन"
 
@@ -59,17 +43,17 @@ msgstr "{pendingOffers} नवीन"
 msgid "{price}/qtl × {qty} qtl = {total}"
 msgstr "{price}/क्विं. × {qty} क्विं. = {total}"
 
-#: src/features/buy/BuyPage.tsx:253
+#: src/features/buy/BuyPage.tsx:148
 msgid "{q} qtl"
 msgstr "{q} क्विंटल"
 
 #: src/features/sell/LotDetailPage.tsx:68
-#: src/features/sell/LotsPage.tsx:160
-#: src/features/sell/LotsPage.tsx:244
+#: src/features/sell/LotsPage.tsx:66
+#: src/features/sell/LotsPage.tsx:107
 msgid "{qty} qtl"
 msgstr "{qty} क्विंटल"
 
-#: src/features/price-detail/PairView.tsx:345
+#: src/features/price-detail/PairView.tsx:119
 msgid "{r}d"
 msgstr "{r} दि."
 
@@ -78,18 +62,35 @@ msgstr "{r} दि."
 msgid "{rate} per quintal"
 msgstr "{rate} प्रति क्विंटल"
 
-#: src/features/price-detail/PairView.tsx:255
+#: src/features/price-detail/PairView.tsx:95
 msgid "/quintal"
 msgstr "/क्विंटल"
 
-#: src/features/sell/LotsPage.tsx:257
+#: src/features/sell/LotsPage.tsx:40
+msgid "+ List produce"
+msgstr "+ माल विक्रीस टाका"
+
+#: src/features/price-detail/PairView.tsx:198
+msgid "▲ {abs} ({p}) since the last price"
+msgstr "▲ मागील भावापेक्षा {abs} ({p}) जास्त"
+
+#: src/features/price-detail/PairView.tsx:198
+msgid "▼ {abs} ({p}) since the last price"
+msgstr "▼ मागील भावापेक्षा {abs} ({p}) कमी"
+
+#: src/features/alerts/AlertsPage.tsx:92
+#: src/features/sell/LotsPage.tsx:114
 #: src/features/sell/NewLotPage.tsx:83
 msgid "₹ / quintal"
 msgstr "₹ / क्विंटल"
 
-#: src/features/price-detail/PairView.tsx:345
+#: src/features/price-detail/PairView.tsx:119
 msgid "1y"
 msgstr "1 वर्ष"
+
+#: src/features/board/BoardPage.tsx:46
+msgid "7 days"
+msgstr "7 दिवस"
 
 #: src/features/trust/HealthNotice.tsx:24
 msgid "A forecast needs at least {need} days of prices. This mandi has {observations} so far."
@@ -109,7 +110,7 @@ msgstr "अंदाज देण्यापूर्वी बाजारा�
 msgid "A mix of the recent average and the recent trend. Used automatically when there is enough history but no advanced model has been approved."
 msgstr "अलीकडील सरासरी आणि अलीकडील कल यांचे मिश्रण. पुरेसा इतिहास असेल पण कोणतेही प्रगत मॉडेल मंजूर झाले नसेल तेव्हा आपोआप वापरले जाते."
 
-#: src/features/about/ForecastsAboutPage.tsx:48
+#: src/features/about/ForecastsAboutPage.tsx:33
 msgid "A more complex model is used only if it beats a simple one on real past prices. Every forecast names the model that made it."
 msgstr "प्रत्यक्ष जुन्या भावांवर साध्या मॉडेलपेक्षा चांगले ठरले तरच गुंतागुंतीचे मॉडेल वापरले जाते. प्रत्येक अंदाजासोबत तो कोणत्या मॉडेलने दिला ते दाखवले जाते."
 
@@ -117,14 +118,13 @@ msgstr "प्रत्यक्ष जुन्या भावांवर स
 msgid "A regression on recent prices, mandi arrivals, rainfall and district prices. Signals that did not change recently are dropped automatically."
 msgstr "अलीकडील भाव, बाजारातील आवक, पाऊस आणि जिल्ह्यातील भाव यांवर आधारित रिग्रेशन. अलीकडे न बदललेले घटक आपोआप वगळले जातात."
 
-#: src/features/account/AccountPage.tsx:204
+#: src/features/account/AccountPage.tsx:83
 msgid "About forecasts"
 msgstr "अंदाजाविषयी"
 
-#: src/features/alerts/AlertsPage.tsx:120
-#: src/features/alerts/AlertsPage.tsx:274
-msgid "above"
-msgstr "वर"
+#: src/features/alerts/AlertsPage.tsx:135
+msgid "Above {price}"
+msgstr "{price} च्या वर"
 
 #: src/features/sell/LotDetailPage.tsx:237
 msgid "Accept"
@@ -134,7 +134,8 @@ msgstr "स्वीकारा"
 msgid "Accepted"
 msgstr "स्वीकारली"
 
-#: src/app/AppShell.tsx:126
+#: src/app/AppShell.tsx:59
+#: src/features/account/AccountPage.tsx:56
 msgid "Account"
 msgstr "खाते"
 
@@ -142,31 +143,31 @@ msgstr "खाते"
 msgid "Accuracy: not measured yet. We are collecting history first."
 msgstr "अचूकता: अजून मोजलेली नाही. आधी भावांचा इतिहास गोळा करत आहोत."
 
-#: src/features/alerts/AlertsPage.tsx:239
-msgid "Active"
-msgstr "सक्रिय"
+#: src/features/alerts/AlertsPage.tsx:27
+msgid "Add your phone number in Account, otherwise the SMS cannot reach you."
+msgstr "'खाते' मध्ये तुमचा मोबाईल नंबर टाका, नाहीतर SMS तुमच्यापर्यंत पोहोचणार नाही."
 
-#: src/features/alerts/AlertsPage.tsx:44
-msgid "Add your phone number in Account so the SMS can reach you."
-msgstr "SMS मिळवण्यासाठी खात्यात मोबाईल नंबर जोडा."
-
-#: src/features/account/AccountPage.tsx:66
+#: src/features/account/AccountPage.tsx:59
 msgid "Admin account"
 msgstr "ॲडमिन खाते"
+
+#: src/features/price-detail/PairView.tsx:161
+msgid "Advice"
+msgstr "सल्ला"
 
 #: src/features/sell/LotDetailPage.tsx:116
 msgid "Advice for this lot"
 msgstr "या मालासाठी सल्ला"
 
-#: src/features/buy/BuyPage.tsx:120
+#: src/features/buy/BuyPage.tsx:91
 msgid "After you register, an admin verifies you. Only verified buyers are shown to farmers."
 msgstr "नोंदणीनंतर ॲडमिन तुमची पडताळणी करतो. फक्त पडताळलेले खरेदीदार शेतकऱ्यांना दिसतात."
 
-#: src/app/AppShell.tsx:125
+#: src/app/AppShell.tsx:58
 msgid "Alerts"
 msgstr "सूचना"
 
-#: src/features/alerts/AlertsPage.tsx:18
+#: src/features/alerts/AlertsPage.tsx:19
 msgid "Alerts are sent by SMS to your phone number, so we need to know who you are."
 msgstr "सूचना तुमच्या मोबाईलवर SMS ने पाठवल्या जातात, म्हणून तुम्ही कोण आहात हे आम्हाला माहीत हवे."
 
@@ -174,47 +175,39 @@ msgstr "सूचना तुमच्या मोबाईलवर SMS न�
 msgid "Already have an account? Sign in"
 msgstr "आधीच खाते आहे? लॉगिन करा"
 
-#: src/features/buy/BuyPage.tsx:80
+#: src/features/buy/BuyPage.tsx:56
 msgid "An admin checks every buyer before farmers can see them. You will be able to see produce and make offers after that."
 msgstr "शेतकऱ्यांना दिसण्यापूर्वी ॲडमिन प्रत्येक खरेदीदार तपासतो. त्यानंतर तुम्ही माल पाहू शकाल आणि ऑफर देऊ शकाल."
 
-#: src/features/buy/BuyPage.tsx:131
+#: src/features/buy/BuyPage.tsx:100
 msgid "Any crop"
 msgstr "कोणतेही पीक"
-
-#: src/features/setup/SetupPage.tsx:87
-msgid "APMC Mandi Intelligence"
-msgstr "APMC बाजार माहिती"
 
 #: src/charts/PriceForecastChart.tsx:49
 msgid "arrivals"
 msgstr "आवक"
 
-#: src/features/sale-window/SaleWindowCard.tsx:63
+#: src/features/sale-window/SaleWindowCard.tsx:33
 msgid "Arrivals"
 msgstr "आवक"
 
 #. placeholder {0}: formatINR(l.asking_price)
 #. placeholder {0}: formatINR(lot.asking_price)
-#: src/features/buy/BuyPage.tsx:254
+#: src/features/buy/BuyPage.tsx:152
 #: src/features/sell/LotDetailPage.tsx:71
+#: src/features/sell/LotsPage.tsx:69
 msgid "asking {0}"
 msgstr "अपेक्षित {0}"
-
-#. placeholder {0}: formatINR(lot.asking_price)
-#: src/features/sell/LotsPage.tsx:172
-msgid "Asking <0>{0}</0>/qtl"
-msgstr "अपेक्षित <0>{0}</0>/क्विं."
 
 #: src/features/sell/NewLotPage.tsx:82
 msgid "Asking price (optional)"
 msgstr "अपेक्षित भाव (ऐच्छिक)"
 
-#: src/features/sell/LotsPage.tsx:253
+#: src/features/sell/LotsPage.tsx:114
 msgid "Asking price for the pool (optional)"
 msgstr "एकत्रित मालाचा अपेक्षित भाव (ऐच्छिक)"
 
-#: src/features/sale-window/SaleWindowCard.tsx:75
+#: src/features/sale-window/SaleWindowCard.tsx:45
 msgid "Available"
 msgstr "उपलब्ध"
 
@@ -234,11 +227,7 @@ msgstr "अलीकडील भावांची सरासरी, पु�
 msgid "Average of the last 7 days of prices, carried forward. Used when a mandi has only 10–14 days of history."
 msgstr "मागील 7 दिवसांच्या भावांची सरासरी, पुढे चालवलेली. बाजाराचा फक्त 10–14 दिवसांचा इतिहास असताना वापरली जाते."
 
-#: src/features/setup/SetupPage.tsx:240
-msgid "Back"
-msgstr "मागे"
-
-#: src/features/about/ForecastsAboutPage.tsx:33
+#: src/features/about/ForecastsAboutPage.tsx:20
 msgid "Bars below: how much produce arrived at the mandi. More arrivals often mean lower prices."
 msgstr "खालील पट्ट्या: बाजारात किती माल आला. आवक जास्त असल्यास भाव अनेकदा कमी होतो."
 
@@ -250,26 +239,17 @@ msgstr "पट्ट्या: बाजारातील आवक (क्व�
 msgid "Being handled"
 msgstr "कार्यवाही सुरू"
 
-#: src/features/alerts/AlertsPage.tsx:128
-#: src/features/alerts/AlertsPage.tsx:274
-msgid "below"
-msgstr "खाली"
+#: src/features/alerts/AlertsPage.tsx:135
+msgid "Below {price}"
+msgstr "{price} च्या खाली"
 
 #: src/features/sell/LotDetailPage.tsx:329
 msgid "Best fit"
 msgstr "सर्वात योग्य"
 
-#: src/features/board/BoardPage.tsx:99
-msgid "Best today"
-msgstr "आज सर्वोत्तम"
-
 #: src/features/sale-window/BetterMarketCard.tsx:18
 msgid "Better price nearby"
 msgstr "जवळ चांगला भाव"
-
-#: src/features/board/BoardPage.tsx:115
-msgid "Biggest mover"
-msgstr "सर्वाधिक बदल"
 
 #: src/features/sell/LotDetailPage.tsx:150
 #: src/features/sell/LotDetailPage.tsx:184
@@ -296,11 +276,11 @@ msgstr "बुकिंग निश्चित"
 msgid "Booking requested"
 msgstr "बुकिंगची विनंती"
 
-#: src/features/buy/BuyPage.tsx:122
+#: src/features/buy/BuyPage.tsx:93
 msgid "Business name"
 msgstr "व्यवसायाचे नाव"
 
-#: src/features/buy/BuyPage.tsx:73
+#: src/features/buy/BuyPage.tsx:49
 msgid "Buy produce"
 msgstr "माल खरेदी"
 
@@ -310,7 +290,7 @@ msgstr "माल खरेदी"
 msgid "Buyer"
 msgstr "खरेदीदार"
 
-#: src/features/account/AccountPage.tsx:64
+#: src/features/account/AccountPage.tsx:58
 msgid "Buyer account"
 msgstr "खरेदीदार खाते"
 
@@ -322,7 +302,7 @@ msgstr "या मालासाठी खरेदीदार"
 msgid "Buyers need an account so farmers know who is making the offer."
 msgstr "ऑफर कोण देत आहे हे शेतकऱ्यांना कळावे म्हणून खरेदीदारांना खाते लागते."
 
-#: src/features/buy/BuyPage.tsx:269
+#: src/features/buy/BuyPage.tsx:168
 #: src/features/sell/LotDetailPage.tsx:350
 #: src/features/sell/LotDetailPage.tsx:394
 msgid "Cancel"
@@ -332,15 +312,15 @@ msgstr "रद्द करा"
 msgid "Cancelled"
 msgstr "रद्द"
 
-#: src/features/price-detail/PairView.tsx:108
-msgid "Check the date on each price shown below."
-msgstr "खाली दाखवलेल्या प्रत्येक भावाची तारीख तपासा."
+#: src/features/board/BoardPage.tsx:46
+msgid "Change"
+msgstr "बदल"
 
 #: src/auth/RequireAuth.tsx:41
 msgid "Check your email to confirm the account, then sign in."
 msgstr "खाते निश्चित करण्यासाठी तुमचा ईमेल तपासा, मग लॉगिन करा."
 
-#: src/features/setup/SetupPage.tsx:59
+#: src/features/setup/SetupPage.tsx:44
 msgid "Choose your language"
 msgstr "तुमची भाषा निवडा"
 
@@ -351,10 +331,6 @@ msgstr "बंद करा"
 #: src/features/sell/labels.ts:16
 msgid "Close by"
 msgstr "जवळ"
-
-#: src/features/price-detail/PairView.tsx:177
-msgid "Commodity"
-msgstr "पीक"
 
 #: src/features/sell/labels.ts:50
 msgid "Complaint being handled"
@@ -398,25 +374,17 @@ msgstr "अलीकडील भावांचा कल सरळ रेष�
 msgid "Create account"
 msgstr "खाते उघडा"
 
+#: src/features/alerts/AlertsPage.tsx:73
+#: src/features/price-detail/PairView.tsx:78
 #: src/features/sell/NewLotPage.tsx:61
 msgid "Crop"
 msgstr "पीक"
 
-#: src/features/buy/BuyPage.tsx:130
+#: src/features/buy/BuyPage.tsx:99
 msgid "Crop you buy"
 msgstr "तुम्ही खरेदी करता ते पीक"
 
-#: src/features/setup/SetupPage.tsx:128
-msgid "Current"
-msgstr "सध्याचा"
-
-#. placeholder {0}: formatINR(current.modal)
-#. placeholder {1}: formatDay(current.date, lang)
-#: src/features/alerts/AlertsPage.tsx:155
-msgid "Current price here: {0} · {1}"
-msgstr "इथे सध्याचा भाव: {0} · {1}"
-
-#: src/features/about/ForecastsAboutPage.tsx:25
+#: src/features/about/ForecastsAboutPage.tsx:18
 msgid "Dashed line: the model’s forecast for the next few days."
 msgstr "तुटक रेषा: पुढील काही दिवसांचा मॉडेलचा अंदाज."
 
@@ -424,7 +392,7 @@ msgstr "तुटक रेषा: पुढील काही दिवसा�
 msgid "Deal agreed"
 msgstr "सौदा ठरला"
 
-#: src/features/alerts/AlertsPage.tsx:296
+#: src/features/alerts/AlertsPage.tsx:147
 msgid "Delete"
 msgstr "काढून टाका"
 
@@ -444,8 +412,8 @@ msgstr "वाद नोंदवा"
 msgid "Disputed"
 msgstr "वादग्रस्त"
 
-#: src/features/account/AccountPage.tsx:127
-#: src/features/buy/BuyPage.tsx:127
+#: src/features/account/AccountPage.tsx:68
+#: src/features/buy/BuyPage.tsx:97
 msgid "District"
 msgstr "जिल्हा"
 
@@ -453,19 +421,14 @@ msgstr "जिल्हा"
 msgid "Email"
 msgstr "ईमेल"
 
-#: src/features/price-detail/PairView.tsx:376
+#: src/features/price-detail/PairView.tsx:143
 msgid "Enlarge the forecast ›"
 msgstr "अंदाज मोठा करून पहा ›"
 
-#: src/features/alerts/AlertsPage.tsx:239
+#: src/features/alerts/AlertsPage.tsx:137
 #: src/features/sell/labels.ts:27
 msgid "Expired"
 msgstr "मुदत संपली"
-
-#. placeholder {0}: new Date(offer.expires_at).toLocaleDateString()
-#: src/features/buy/BuyPage.tsx:181
-msgid "Expires {0}"
-msgstr "मुदत {0}"
 
 #: src/features/sell/LotDetailPage.tsx:231
 msgid "expires in {h} h"
@@ -475,9 +438,13 @@ msgstr "{h} तासांत मुदत संपेल"
 msgid "Failed"
 msgstr "अयशस्वी"
 
-#: src/features/sale-window/SaleWindowCard.tsx:45
+#: src/features/sale-window/SaleWindowCard.tsx:22
 msgid "Falling"
 msgstr "घसरता"
+
+#: src/features/alerts/AlertsPage.tsx:86
+msgid "falls below"
+msgstr "खाली गेल्यावर"
 
 #: src/features/sell/NewLotPage.tsx:80
 msgid "FAQ = fair average quality, the standard mandi grade."
@@ -491,11 +458,11 @@ msgstr "लांब"
 msgid "Farmer"
 msgstr "शेतकरी"
 
-#: src/features/account/AccountPage.tsx:63
+#: src/features/account/AccountPage.tsx:58
 msgid "Farmer account"
 msgstr "शेतकरी खाते"
 
-#: src/features/setup/SetupPage.tsx:193
+#: src/features/setup/SetupPage.tsx:72
 msgid "Finding your location…"
 msgstr "तुमचे ठिकाण शोधत आहोत…"
 
@@ -503,7 +470,7 @@ msgstr "तुमचे ठिकाण शोधत आहोत…"
 msgid "forecast"
 msgstr "अंदाज"
 
-#: src/features/sale-window/SaleWindowCard.tsx:69
+#: src/features/sale-window/SaleWindowCard.tsx:39
 msgid "Forecast"
 msgstr "अंदाज"
 
@@ -512,7 +479,7 @@ msgid "Forecast accuracy"
 msgstr "अंदाजाची अचूकता"
 
 #. placeholder {0}: formatTime(generatedAt, lang)
-#: src/features/trust/AsOfStamp.tsx:34
+#: src/features/trust/AsOfStamp.tsx:23
 msgid "forecast updated {0}"
 msgstr "अंदाज {0} ला अद्ययावत"
 
@@ -520,7 +487,7 @@ msgstr "अंदाज {0} ला अद्ययावत"
 msgid "FPO"
 msgstr "FPO"
 
-#: src/features/account/AccountPage.tsx:65
+#: src/features/account/AccountPage.tsx:59
 msgid "FPO account"
 msgstr "FPO खाते"
 
@@ -532,13 +499,21 @@ msgstr "सर्वसाधारण"
 msgid "Generated"
 msgstr "तयार केला"
 
+#: src/features/alerts/AlertsPage.tsx:24
+msgid "Get an SMS when the price at your mandi goes above or below a price you choose."
+msgstr "तुमच्या बाजारातील भाव तुम्ही ठरवलेल्या भावाच्या वर किंवा खाली गेल्यावर SMS मिळवा."
+
+#: src/features/alerts/AlertsPage.tsx:86
+msgid "goes above"
+msgstr "वर गेल्यावर"
+
 #: src/features/sell/NewLotPage.tsx:71
 msgid "Grade"
 msgstr "दर्जा"
 
 #. placeholder {0}: l.grade
 #. placeholder {0}: lot.grade
-#: src/features/buy/BuyPage.tsx:242
+#: src/features/buy/BuyPage.tsx:150
 #: src/features/sell/LotDetailPage.tsx:70
 msgid "Grade {0}"
 msgstr "दर्जा {0}"
@@ -555,7 +530,7 @@ msgstr "ग्रेडियंट बूस्टिंग (GBM)"
 msgid "Harvest date (optional)"
 msgstr "काढणीची तारीख (ऐच्छिक)"
 
-#: src/features/sale-window/SaleWindowCard.tsx:41
+#: src/features/sale-window/SaleWindowCard.tsx:18
 msgid "High"
 msgstr "जास्त"
 
@@ -563,7 +538,7 @@ msgstr "जास्त"
 msgid "high confidence"
 msgstr "जास्त विश्वास"
 
-#: src/features/buy/BuyPage.tsx:136
+#: src/features/buy/BuyPage.tsx:105
 msgid "Highest price"
 msgstr "जास्तीत जास्त भाव"
 
@@ -580,7 +555,7 @@ msgstr "अंदाज कसे तपासले जातात"
 msgid "How forecasts work"
 msgstr "अंदाज कसे काढले जातात"
 
-#: src/features/account/AccountPage.tsx:191
+#: src/features/account/AccountPage.tsx:81
 msgid "I buy produce"
 msgstr "मी माल खरेदी करतो"
 
@@ -597,24 +572,34 @@ msgstr "जुन्या चाचण्यांमध्ये प्रत�
 msgid "Institution"
 msgstr "संस्था"
 
-#: src/app/AppShell.tsx:184
-#: src/features/setup/SetupPage.tsx:86
+#: src/app/AppShell.tsx:70
 msgid "Krishi Bazaar"
 msgstr "कृषी बाजार"
-
-#: src/app/AppShell.tsx:171
-msgid "Krishi Bazaar home"
-msgstr "कृषी बाजार मुखपृष्ठ"
 
 #: src/app/AppShell.tsx:13
 msgid "Language"
 msgstr "भाषा"
+
+#. placeholder {0}: formatDateTime(a.last_notified_at, lang)
+#: src/features/alerts/AlertsPage.tsx:138
+msgid "Last SMS {0}"
+msgstr "शेवटचा SMS {0}"
+
+#: src/features/price-detail/PairView.tsx:93
+msgid "Latest mandi price (modal)"
+msgstr "बाजारातील ताजा भाव (सर्वसाधारण)"
 
 #. placeholder {0}: formatINR(here.modal)
 #. placeholder {1}: formatDay(here.date, lang)
 #: src/features/sell/NewLotPage.tsx:84
 msgid "Latest mandi price: {0} on {1}"
 msgstr "ताजा बाजारभाव: {1} रोजी {0}"
+
+#. placeholder {0}: formatINR(current.modal)
+#. placeholder {1}: formatDay(current.date, lang)
+#: src/features/alerts/AlertsPage.tsx:93
+msgid "Latest price here: {0} on {1}"
+msgstr "येथील ताजा भाव: {1} रोजी {0}"
 
 #: src/charts/PriceForecastChart.tsx:56
 msgid "likely"
@@ -624,24 +609,19 @@ msgstr "संभाव्य"
 msgid "Likely range for the next {horizonDays} days: {lo}–{hi} (model’s estimate)."
 msgstr "पुढील {horizonDays} दिवसांचा संभाव्य भाव: {lo}–{hi} (मॉडेलचा अंदाज)."
 
+#: src/features/sell/LotsPage.tsx:38
+msgid "List a lot, get advice, and choose a buyer."
+msgstr "माल विक्रीस टाका, सल्ला घ्या आणि खरेदीदार निवडा."
+
 #: src/features/sell/NewLotPage.tsx:88
 msgid "List and get advice"
 msgstr "विक्रीस टाका आणि सल्ला घ्या"
-
-#: src/features/sell/LotsPage.tsx:46
-msgid "List lots · Get offers · Choose buyers"
-msgstr "माल नोंदवा · ऑफर मिळवा · खरेदीदार निवडा"
-
-#: src/features/sell/LotsPage.tsx:57
-#: src/features/sell/LotsPage.tsx:99
-msgid "List produce"
-msgstr "माल नोंदवा"
 
 #: src/features/sell/NewLotPage.tsx:59
 msgid "List produce for sale"
 msgstr "माल विक्रीस टाका"
 
-#: src/app/AppShell.tsx:53
+#: src/app/AppShell.tsx:35
 msgid "Live"
 msgstr "चालू"
 
@@ -649,7 +629,7 @@ msgstr "चालू"
 msgid "Lot listed"
 msgstr "माल विक्रीस टाकला"
 
-#: src/features/sale-window/SaleWindowCard.tsx:42
+#: src/features/sale-window/SaleWindowCard.tsx:19
 msgid "Low"
 msgstr "कमी"
 
@@ -661,15 +641,21 @@ msgstr "कमी विश्वास"
 msgid "Low price"
 msgstr "कमी भाव"
 
-#: src/features/buy/BuyPage.tsx:274
+#: src/features/buy/BuyPage.tsx:157
 msgid "Make offer"
 msgstr "ऑफर द्या"
 
-#: src/features/trust/AsOfStamp.tsx:29
+#: src/features/alerts/AlertsPage.tsx:76
+#: src/features/board/BoardPage.tsx:46
+#: src/features/price-detail/PairView.tsx:81
+msgid "Mandi"
+msgstr "बाजार"
+
+#: src/features/trust/AsOfStamp.tsx:18
 msgid "Mandi price of {day}"
 msgstr "{day} चा बाजारभाव"
 
-#: src/features/board/BoardPage.tsx:49
+#: src/features/board/BoardPage.tsx:29
 msgid "Mandi prices · {district}"
 msgstr "बाजारभाव · {district}"
 
@@ -689,8 +675,14 @@ msgstr "मध्यम विश्वास"
 msgid "min"
 msgstr "किमान"
 
-#: src/features/account/AccountPage.tsx:117
-#: src/features/buy/BuyPage.tsx:128
+#. placeholder {0}: formatINR(last.min)
+#. placeholder {1}: formatINR(last.max)
+#: src/features/price-detail/PairView.tsx:99
+msgid "Min {0} · Max {1}"
+msgstr "किमान {0} · कमाल {1}"
+
+#: src/features/account/AccountPage.tsx:65
+#: src/features/buy/BuyPage.tsx:98
 msgid "Mobile number"
 msgstr "मोबाईल नंबर"
 
@@ -706,7 +698,7 @@ msgstr "मॉडेल आवृत्ती"
 msgid "Model: {label}"
 msgstr "मॉडेल: {label}"
 
-#: src/features/about/ForecastsAboutPage.tsx:38
+#: src/features/about/ForecastsAboutPage.tsx:23
 msgid "Models we use"
 msgstr "आम्ही वापरतो ती मॉडेल्स"
 
@@ -719,25 +711,25 @@ msgstr "त्यांच्या गरजेपेक्षा जास्�
 msgid "Moving average"
 msgstr "चल सरासरी"
 
-#: src/features/sell/LotsPage.tsx:44
-msgid "My Produce"
-msgstr "माझा माल"
-
-#: src/features/account/AccountPage.tsx:178
+#: src/features/account/AccountPage.tsx:79
+#: src/features/sell/LotsPage.tsx:37
 msgid "My produce for sale"
 msgstr "विक्रीसाठी माझा माल"
 
-#: src/features/account/AccountPage.tsx:110
+#: src/features/account/AccountPage.tsx:64
 msgid "Name"
 msgstr "नाव"
 
-#: src/features/alerts/AlertsPage.tsx:108
-#: src/features/alerts/AlertsPage.tsx:273
+#: src/features/alerts/AlertsPage.tsx:134
 msgid "nearest mandi"
 msgstr "जवळचा बाजार"
 
-#: src/features/alerts/AlertsPage.tsx:91
-msgid "New Alert"
+#: src/features/alerts/AlertsPage.tsx:77
+msgid "Nearest mandi to me"
+msgstr "माझ्या जवळचा बाजार"
+
+#: src/features/alerts/AlertsPage.tsx:71
+msgid "New alert"
 msgstr "नवीन सूचना"
 
 #: src/auth/RequireAuth.tsx:50
@@ -753,43 +745,39 @@ msgstr "पुढील {0} दिवस"
 msgid "Next:"
 msgstr "पुढे:"
 
-#: src/features/sale-window/SaleWindowCard.tsx:86
+#: src/features/sale-window/SaleWindowCard.tsx:56
 msgid "No advice for today"
 msgstr "आजसाठी सल्ला नाही"
 
-#: src/features/alerts/AlertsPage.tsx:208
-msgid "No alerts yet"
-msgstr "अजून कोणतीही सूचना नाही"
+#: src/features/alerts/AlertsPage.tsx:109
+msgid "No alerts yet."
+msgstr "अजून कोणतीही सूचना नाही."
 
-#: src/ui/Form.tsx:52
+#: src/ui/Form.tsx:53
 msgid "No connection. Try again when you have signal."
 msgstr "नेटवर्क नाही. सिग्नल आल्यावर पुन्हा प्रयत्न करा."
 
+#: src/features/alerts/AlertsPage.tsx:137
+msgid "No end date"
+msgstr "शेवटची तारीख नाही"
+
+#: src/features/board/BoardPage.tsx:58
 #: src/features/trust/methods.ts:28
 msgid "No forecast"
 msgstr "अंदाज नाही"
 
 #. placeholder {0}: series.missingDays
-#: src/features/price-detail/PairView.tsx:359
+#: src/features/price-detail/PairView.tsx:132
 msgid "No mandi price for the last {0} days (dotted line)."
 msgstr "मागील {0} दिवस बाजारभाव नाही (ठिपक्यांची रेषा)."
 
-#: src/features/buy/BuyPage.tsx:203
+#: src/features/buy/BuyPage.tsx:124
 msgid "No open lots match right now."
 msgstr "सध्या जुळणारा माल नाही."
 
 #: src/features/markets/OtherMarketsList.tsx:28
 msgid "No other mandi reported this crop in the last 7 days."
 msgstr "मागील 7 दिवसांत इतर कोणत्याही बाजारात या पिकाचा भाव नोंदला नाही."
-
-#: src/features/price-detail/PairView.tsx:104
-msgid "No prices available yet"
-msgstr "अजून कोणताही भाव उपलब्ध नाही"
-
-#. placeholder {0}: cropName(cropObj, lang)
-#: src/features/board/BoardPage.tsx:234
-msgid "No prices yet for {0} in {district}"
-msgstr "{district} मध्ये {0} साठी अजून भाव नाही"
 
 #: src/features/sell/LotDetailPage.tsx:380
 msgid "No problems reported."
@@ -803,11 +791,11 @@ msgstr "या बाजारात या पिकाचा अलीकड�
 msgid "No verified local buyer fits this lot yet."
 msgstr "या मालासाठी अजून कोणताही पडताळलेला स्थानिक खरेदीदार नाही."
 
-#: src/features/sale-window/SaleWindowCard.tsx:75
+#: src/features/sale-window/SaleWindowCard.tsx:45
 msgid "None nearby"
 msgstr "जवळ नाही"
 
-#: src/features/sale-window/SaleWindowCard.tsx:43
+#: src/features/sale-window/SaleWindowCard.tsx:20
 msgid "Normal"
 msgstr "सामान्य"
 
@@ -815,15 +803,15 @@ msgstr "सामान्य"
 msgid "Not decided"
 msgstr "अजून ठरले नाही"
 
-#: src/features/board/BoardPage.tsx:187
-msgid "Not enough data yet"
-msgstr "अजून पुरेसा डेटा नाही"
+#: src/features/board/BoardPage.tsx:59
+msgid "Not enough data for a forecast yet"
+msgstr "अंदाजासाठी अजून पुरेसा डेटा नाही"
 
 #: src/features/trust/methods.ts:28
 msgid "Not enough price history to make an honest forecast."
 msgstr "प्रामाणिक अंदाजासाठी पुरेसा भावांचा इतिहास नाही."
 
-#: src/ui/Form.tsx:55
+#: src/ui/Form.tsx:56
 msgid "Not found."
 msgstr "सापडले नाही."
 
@@ -836,13 +824,13 @@ msgid "Not published yet"
 msgstr "अजून प्रकाशित नाही"
 
 #: src/charts/PriceForecastChart.tsx:49
-#: src/features/sale-window/SaleWindowCard.tsx:66
+#: src/features/sale-window/SaleWindowCard.tsx:36
 msgid "not reported"
 msgstr "नोंद नाही"
 
-#: src/features/sell/LotsPage.tsx:87
-msgid "Nothing listed yet"
-msgstr "अजून काहीही नोंदवलेले नाही"
+#: src/features/sell/LotsPage.tsx:45
+msgid "Nothing listed yet. Tap “List produce” to add your first lot."
+msgstr "अजून काहीही विक्रीस नाही. पहिला माल टाकण्यासाठी “माल विक्रीस टाका” दाबा."
 
 #: src/features/sell/LotDetailPage.tsx:338
 msgid "Offer"
@@ -868,7 +856,7 @@ msgstr "ऑफर आली"
 msgid "Offer rejected"
 msgstr "ऑफर नाकारली"
 
-#: src/features/buy/BuyPage.tsx:261
+#: src/features/buy/BuyPage.tsx:155
 msgid "Offer sent. The farmer has 48 hours to reply."
 msgstr "ऑफर पाठवली. शेतकऱ्याकडे उत्तरासाठी 48 तास आहेत."
 
@@ -876,13 +864,9 @@ msgstr "ऑफर पाठवली. शेतकऱ्याकडे उत�
 msgid "Offers"
 msgstr "ऑफर"
 
-#: src/app/AppShell.tsx:49
+#: src/app/AppShell.tsx:35
 msgid "Offline"
 msgstr "ऑफलाइन"
-
-#: src/app/AppShell.tsx:72
-msgid "Offline — showing saved prices. Check the date on each price."
-msgstr "ऑफलाइन — जतन केलेले भाव दाखवत आहे. प्रत्येक भावाची तारीख तपासा."
 
 #: src/features/sell/labels.ts:55
 msgid "Online buyer"
@@ -898,7 +882,7 @@ msgid "Other"
 msgstr "इतर"
 
 #. placeholder {0}: cropName(crop, lang)
-#: src/features/price-detail/PairView.tsx:416
+#: src/features/price-detail/PairView.tsx:171
 msgid "Other mandis · {0}"
 msgstr "इतर बाजार · {0}"
 
@@ -910,11 +894,11 @@ msgstr "पैसे मिळाले"
 msgid "Password"
 msgstr "पासवर्ड"
 
-#: src/features/alerts/AlertsPage.tsx:288
+#: src/features/alerts/AlertsPage.tsx:144
 msgid "Pause"
 msgstr "थांबवा"
 
-#: src/features/alerts/AlertsPage.tsx:239
+#: src/features/alerts/AlertsPage.tsx:137
 msgid "Paused"
 msgstr "थांबवलेली"
 
@@ -972,30 +956,32 @@ msgstr "{maxPrice}/क्विं. पर्यंत देतो"
 msgid "Pays your asking price"
 msgstr "तुमचा अपेक्षित भाव देतो"
 
-#: src/features/sell/LotsPage.tsx:219
-msgid "Pick 2+ open lots of the same crop to sell as one bigger lot."
-msgstr "एकाच पिकाचे 2 किंवा जास्त माल एकत्र मोठ्या लॉटमध्ये विकण्यासाठी निवडा."
+#: src/features/sell/LotsPage.tsx:95
+msgid "Pick at least 2 open lots of the same crop to sell as one bigger lot."
+msgstr "एकाच पिकाचे किमान 2 माल निवडा आणि एक मोठा माल म्हणून विका."
 
-#: src/ui/Form.tsx:53
+#: src/ui/Form.tsx:54
 msgid "Please sign in again."
 msgstr "कृपया पुन्हा लॉगिन करा."
 
 #. placeholder {0}: picked.length
-#: src/features/sell/LotsPage.tsx:266
+#: src/features/sell/LotsPage.tsx:117
 msgid "Pool {0} lots ({totalLabel} qtl)"
 msgstr "{0} माल एकत्र करा ({totalLabel} क्विं.)"
 
-#: src/features/sell/LotsPage.tsx:216
+#: src/features/sell/LotsPage.tsx:94
 msgid "Pool lots (FPO)"
 msgstr "माल एकत्र करा (FPO)"
 
-#: src/features/buy/BuyPage.tsx:264
+#: src/features/alerts/AlertsPage.tsx:91
+#: src/features/board/BoardPage.tsx:46
+#: src/features/buy/BuyPage.tsx:162
 #: src/features/sell/LotDetailPage.tsx:343
 msgid "Price"
 msgstr "भाव"
 
-#: src/features/alerts/AlertsPage.tsx:28
-msgid "Price Alerts"
+#: src/features/alerts/AlertsPage.tsx:23
+msgid "Price alerts"
 msgstr "भाव सूचना"
 
 #: src/charts/PriceForecastChart.tsx:81
@@ -1006,7 +992,7 @@ msgstr "अंदाजासह भावाचा आलेख"
 msgid "Price fell {pct} in {days} days."
 msgstr "{days} दिवसांत भाव {pct} ने घटला."
 
-#: src/features/trust/AsOfStamp.tsx:27
+#: src/features/trust/AsOfStamp.tsx:16
 msgid "Price from {day} ({age} days old)"
 msgstr "{day} चा भाव ({age} दिवस जुना)"
 
@@ -1014,11 +1000,16 @@ msgstr "{day} चा भाव ({age} दिवस जुना)"
 msgid "Price history used"
 msgstr "वापरलेला भावांचा इतिहास"
 
+#. placeholder {0}: formatDay(row.date, lang)
+#: src/features/board/BoardPage.tsx:63
+msgid "Price of {0}"
+msgstr "{0} चा भाव"
+
 #: src/features/price-detail/ChartCaption.tsx:22
 msgid "Price rose {pct} in {days} days."
 msgstr "{days} दिवसांत भाव {pct} ने वाढला."
 
-#: src/features/price-detail/PairView.tsx:330
+#: src/features/price-detail/PairView.tsx:113
 msgid "Price trend"
 msgstr "भावाचा कल"
 
@@ -1026,33 +1017,21 @@ msgstr "भावाचा कल"
 msgid "Price was steady over {days} days."
 msgstr "{days} दिवसांत भाव स्थिर राहिला."
 
-#: src/app/AppShell.tsx:123
+#: src/app/AppShell.tsx:56
 msgid "Prices"
 msgstr "बाजारभाव"
 
-#: src/features/alerts/AlertsPage.tsx:48
-msgid "Prices are checked about once an hour. No in-app notifications."
-msgstr "भाव साधारण प्रत्येक तासाला तपासले जातात. ॲपमध्ये सूचना नाहीत."
+#: src/features/alerts/AlertsPage.tsx:30
+msgid "Prices are checked about once an hour. There are no notifications inside the app."
+msgstr "भाव साधारण तासातून एकदा तपासले जातात. ॲपमध्ये सूचना येत नाहीत."
 
-#: src/features/board/BoardPage.tsx:237
-msgid "Prices are typically reported after 9 AM on market days."
-msgstr "बाजाराच्या दिवशी भाव साधारण सकाळी 9 नंतर नोंदवले जातात."
-
-#: src/features/board/BoardPage.tsx:243
+#: src/features/board/BoardPage.tsx:77
 msgid "Prices in ₹ per quintal. Change is against the previous reported day."
 msgstr "भाव ₹ प्रति क्विंटल. बदल मागील नोंदवलेल्या दिवसाच्या तुलनेत."
 
 #: src/auth/RequireAuth.tsx:69
 msgid "Prices, forecasts and advice work without an account."
 msgstr "भाव, अंदाज आणि सल्ला खात्याशिवायही मिळतात."
-
-#: src/features/board/BoardPage.tsx:180
-msgid "Primary"
-msgstr "मुख्य"
-
-#: src/features/price-detail/PairView.tsx:187
-msgid "Primary APMC"
-msgstr "मुख्य बाजार"
 
 #: src/features/sell/LotDetailPage.tsx:372
 msgid "Problems"
@@ -1062,7 +1041,7 @@ msgstr "तक्रारी"
 msgid "Processor"
 msgstr "प्रक्रिया उद्योग"
 
-#: src/features/buy/BuyPage.tsx:202
+#: src/features/buy/BuyPage.tsx:123
 msgid "Produce that fits what you buy"
 msgstr "तुमच्या खरेदीला जुळणारा माल"
 
@@ -1075,8 +1054,8 @@ msgid "Provisional: tested on a few mandis only."
 msgstr "तात्पुरते: फक्त काही बाजारांवर तपासलेले."
 
 #: src/charts/PriceForecastChart.tsx:49
-#: src/features/buy/BuyPage.tsx:135
-#: src/features/buy/BuyPage.tsx:265
+#: src/features/buy/BuyPage.tsx:104
+#: src/features/buy/BuyPage.tsx:163
 #: src/features/sell/LotDetailPage.tsx:344
 msgid "qtl"
 msgstr "क्विं."
@@ -1089,25 +1068,21 @@ msgstr "दर्जा"
 msgid "Quality notes (optional)"
 msgstr "दर्जाविषयी माहिती (ऐच्छिक)"
 
-#: src/features/buy/BuyPage.tsx:265
+#: src/features/buy/BuyPage.tsx:163
 #: src/features/sell/LotDetailPage.tsx:344
 #: src/features/sell/NewLotPage.tsx:68
 msgid "Quantity"
 msgstr "प्रमाण"
 
-#: src/features/buy/BuyPage.tsx:135
+#: src/features/buy/BuyPage.tsx:104
 msgid "Quantity needed"
 msgstr "लागणारे प्रमाण"
-
-#: src/features/account/AccountPage.tsx:168
-msgid "Quick links"
-msgstr "द्रुत दुवे"
 
 #: src/features/sell/NewLotPage.tsx:69
 msgid "quintal"
 msgstr "क्विंटल"
 
-#: src/features/price-detail/PairView.tsx:332
+#: src/features/price-detail/PairView.tsx:115
 msgid "Range"
 msgstr "कालावधी"
 
@@ -1123,11 +1098,11 @@ msgstr "या मालाची नोंद"
 msgid "Record payment of {amount}"
 msgstr "{amount} चे पेमेंट नोंदवा"
 
-#: src/features/buy/BuyPage.tsx:139
+#: src/features/buy/BuyPage.tsx:108
 msgid "Register"
 msgstr "नोंदणी करा"
 
-#: src/features/buy/BuyPage.tsx:119
+#: src/features/buy/BuyPage.tsx:90
 msgid "Register as a buyer"
 msgstr "खरेदीदार म्हणून नोंदणी करा"
 
@@ -1151,11 +1126,11 @@ msgstr "विनंती केली"
 msgid "Resolved"
 msgstr "सोडवली"
 
-#: src/features/alerts/AlertsPage.tsx:288
+#: src/features/alerts/AlertsPage.tsx:144
 msgid "Resume"
 msgstr "पुन्हा सुरू करा"
 
-#: src/features/sale-window/SaleWindowCard.tsx:44
+#: src/features/sale-window/SaleWindowCard.tsx:21
 msgid "Rising"
 msgstr "वाढता"
 
@@ -1163,31 +1138,27 @@ msgstr "वाढता"
 msgid "Same district"
 msgstr "त्याच जिल्ह्यात"
 
-#: src/features/alerts/AlertsPage.tsx:177
+#: src/features/account/AccountPage.tsx:74
+msgid "Save"
+msgstr "जतन करा"
+
+#: src/features/alerts/AlertsPage.tsx:96
 msgid "Save alert"
 msgstr "सूचना जतन करा"
 
-#: src/features/account/AccountPage.tsx:157
-msgid "Save changes"
-msgstr "बदल जतन करा"
-
-#: src/features/account/AccountPage.tsx:148
-msgid "Saved successfully."
-msgstr "यशस्वीरित्या जतन केले."
+#: src/features/account/AccountPage.tsx:73
+msgid "Saved."
+msgstr "जतन झाले."
 
 #: src/features/trust/methods.ts:23
 msgid "Seasonal smoothing"
 msgstr "हंगामी सरासरी पद्धत"
 
-#: src/features/price-detail/PairView.tsx:159
-msgid "Select crop and mandi"
-msgstr "पीक आणि बाजार निवडा"
-
-#: src/app/AppShell.tsx:124
+#: src/app/AppShell.tsx:57
 msgid "Sell"
 msgstr "विक्री"
 
-#: src/features/about/ForecastsAboutPage.tsx:54
+#: src/features/about/ForecastsAboutPage.tsx:38
 msgid "Sell / Hold / Wait is decided by the server from mandi arrivals, nearby storage and the forecast. The app shows the advice exactly as the server gives it."
 msgstr "विका / थांबा हा सल्ला सर्व्हर बाजारातील आवक, जवळची साठवण आणि अंदाज यांवरून ठरवतो. ॲप तो सल्ला जसाच्या तसा दाखवते."
 
@@ -1201,20 +1172,20 @@ msgstr "खरेदीदारांच्या ऑफर तुमच्य�
 msgid "Send"
 msgstr "पाठवा"
 
-#: src/features/buy/BuyPage.tsx:268
+#: src/features/price-detail/PairView.tsx:177
+msgid "Send me an SMS when the price changes"
+msgstr "भाव बदलल्यावर मला SMS पाठवा"
+
+#: src/features/buy/BuyPage.tsx:167
 #: src/features/sell/LotDetailPage.tsx:349
 msgid "Send offer"
 msgstr "ऑफर पाठवा"
 
-#: src/features/price-detail/PairView.tsx:312
-msgid "Set a price alert"
-msgstr "भावाची सूचना लावा"
+#: src/features/alerts/AlertsPage.tsx:81
+msgid "Send the SMS when the price"
+msgstr "भाव असा झाल्यावर SMS पाठवा:"
 
-#: src/features/alerts/AlertsPage.tsx:210
-msgid "Set a target price above and get an SMS the moment the mandi crosses it."
-msgstr "वर लक्ष्य भाव ठरवा आणि बाजाराने तो ओलांडताच SMS मिळवा."
-
-#: src/features/about/ForecastsAboutPage.tsx:29
+#: src/features/about/ForecastsAboutPage.tsx:19
 msgid "Shaded area: the likely range. The real price can still fall outside it."
 msgstr "छटा असलेला भाग: संभाव्य भाव. प्रत्यक्ष भाव याच्या बाहेरही जाऊ शकतो."
 
@@ -1222,16 +1193,12 @@ msgstr "छटा असलेला भाग: संभाव्य भाव.
 msgid "Show this on my Today screen"
 msgstr "हे माझ्या 'आज' स्क्रीनवर दाखवा"
 
-#: src/features/price-detail/PairView.tsx:103
-msgid "Showing saved prices — reconnect for live data"
-msgstr "जतन केलेले भाव दाखवत आहे — थेट डेटासाठी पुन्हा जोडा"
-
 #: src/auth/RequireAuth.tsx:37
 #: src/auth/RequireAuth.tsx:48
 msgid "Sign in"
 msgstr "लॉगिन करा"
 
-#: src/features/account/AccountPage.tsx:218
+#: src/features/account/AccountPage.tsx:87
 msgid "Sign out"
 msgstr "लॉगआउट करा"
 
@@ -1239,51 +1206,23 @@ msgstr "लॉगआउट करा"
 msgid "Sign-in is not configured on this build."
 msgstr "या आवृत्तीत लॉगिन सुरू केलेले नाही."
 
-#: src/features/account/AccountPage.tsx:124
+#: src/features/account/AccountPage.tsx:67
 msgid "SMS alerts go to this number."
 msgstr "SMS सूचना या नंबरवर येतील."
 
-#: src/features/account/AccountPage.tsx:133
+#: src/features/account/AccountPage.tsx:69
 msgid "SMS and advice language"
 msgstr "SMS आणि सल्ल्याची भाषा"
-
-#. placeholder {0}: mandi ?? t`nearest mandi`
-#. placeholder {1}: a.condition === 'gte' ? t`above` : t`below`
-#: src/features/alerts/AlertsPage.tsx:272
-msgid "SMS me when <0>{0}</0> goes <1>{1}</1> <2>{price}</2> for {crop}."
-msgstr "<0>{0}</0> मध्ये {crop} चा भाव <1>{1}</1> <2>{price}</2> गेल्यावर मला SMS पाठवा."
-
-#. placeholder {0}: import { useState } from 'react'; import { useQuery } from '@tanstack/react-query'; import { Trans, useLingui } from '@lingui/react/macro'; import { RequireAuth } from '../../auth/RequireAuth.tsx'; import { alerts as alertsApi } from '../../api/index.ts'; import type { Alert } from '../../api/schemasMarket.ts'; import { alertsQuery, useAuthMutation } from '../../queries/auth.ts'; import { commoditiesQuery, latestForCommodityQuery, marketsQuery } from '../../queries/index.ts'; import { usePrefs } from '../../stores/prefs.ts'; import { cropName } from '../price-detail/PairView.tsx'; import { formatDateTime, formatDay, formatINR } from '../../domain/format.ts'; import { Button, ErrorNote, fieldError, numOrUndef } from '../../ui/Form.tsx'; import { Block } from '../../ui/Skeleton.tsx'; export function AlertsPage() { const { t } = useLingui(); return ( <RequireAuth why={t`Alerts are sent by SMS to your phone number, so we need to know who you are.`}> {(me) => ( <div className="mx-auto max-w-2xl"> {/* ── DARK HERO STRIP ───────────────────────────────────── */} <div className="px-4 pt-6 pb-5" style={{ background: 'linear-gradient(135deg, #0F0E0C 0%, #1C1A17 60%, #0F0E0C 100%)' }} > <div className="flex items-start justify-between"> <div> <h1 className="text-xl font-bold text-white"><Trans>Price Alerts</Trans></h1> <p className="text-sm text-white/60 mt-0.5"> <Trans>SMS when the mandi price crosses your target</Trans> </p> </div> {/* Bell icon */} <div className="flex size-10 shrink-0 items-center justify-center rounded-xl" style={{ background: 'var(--color-accent)' }}> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden> <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/> </svg> </div> </div> {!me.phone && ( <div className="mt-3 rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: 'rgba(110,74,3,0.3)', color: '#F5C842', border: '1px solid rgba(245,200,66,0.2)' }}> <svg className="inline mr-1.5 -mt-0.5" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg> <Trans>Add your phone number in Account so the SMS can reach you.</Trans> </div> )} <p className="mt-2 text-xs text-white/40"> <Trans>Prices are checked about once an hour. No in-app notifications.</Trans> </p> </div> <NewAlert /> <AlertList /> </div> )} </RequireAuth> ); } function NewAlert() { const { t } = useLingui(); const { lang, district, pinnedPairs } = usePrefs(); const commodities = useQuery(commoditiesQuery()); const markets = useQuery(marketsQuery(district)); const [crop, setCrop] = useState(pinnedPairs[0]?.commodityId ?? ''); const [market, setMarket] = useState(pinnedPairs[0]?.marketId ?? ''); const [condition, setCondition] = useState<'gte' | 'lte'>('gte'); const [price, setPrice] = useState(''); const [expires, setExpires] = useState(''); const cropId = crop || commodities.data?.[0]?.id || ''; const latest = useQuery({ ...latestForCommodityQuery(cropId), enabled: !!cropId }); const current = latest.data?.find((r) => r.marketId === market); const create = useAuthMutation(alertsApi.create, () => { setPrice(''); setExpires(''); }); const submit = (e: React.FormEvent) => { e.preventDefault(); const threshold = numOrUndef(price); if (!threshold || !cropId) return; create.mutate({ commodity_id: cropId, market_id: market || null, threshold_price: threshold, condition, ...(expires ? { expires_at: new Date(`${expires}T23:59:59+05:30`).toISOString() } : {}), }); }; return ( <div className="px-4 pt-4"> <h2 className="text-base font-bold text-ink mb-3"><Trans>New Alert</Trans></h2> {/* ── SENTENCE FORM CARD (paper-2) ──────────────────────────── */} <form onSubmit={submit} className="rounded-2xl p-4 border border-rule mb-6" style={{ background: 'var(--color-paper-2)', boxShadow: 'var(--shadow-card)' }} > {/* Natural language sentence */} <p className="text-base leading-loose font-medium text-ink"> <Trans> SMS me when{' '} <select className="rounded-md border border-rule px-2 py-1 text-sm font-semibold bg-paper text-ink focus:border-accent focus:outline-none" value={market} onChange={(e) => setMarket(e.target.value)} > <option value="">{t`nearest mandi`}</option> {markets.data?.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)} </select> {' '}goes{' '} {/* Condition toggle pills */} <span className="inline-flex rounded-md border border-rule overflow-hidden"> <button type="button" onClick={() => setCondition('gte')} className="px-2 py-1 text-sm font-semibold transition-colors" style={{ background: condition === 'gte' ? 'var(--color-accent)' : 'var(--color-paper)', color: condition === 'gte' ? 'white' : 'var(--color-ink-2)' }} > {t`above`} </button> <button type="button" onClick={() => setCondition('lte')} className="px-2 py-1 text-sm font-semibold transition-colors" style={{ background: condition === 'lte' ? 'var(--color-accent)' : 'var(--color-paper)', color: condition === 'lte' ? 'white' : 'var(--color-ink-2)' }} > {t`below`} </button> </span> {' '} <input type="number" className="rounded-md border border-rule px-2 py-1 text-sm tabular text-center font-semibold bg-paper text-ink focus:border-accent focus:outline-none" style={{ width: 96 }} placeholder="₹ price" value={price} onChange={(e) => setPrice(e.target.value)} required /> {' '}for{' '} <select className="rounded-md border border-rule px-2 py-1 text-sm font-semibold bg-paper text-ink focus:border-accent focus:outline-none" value={cropId} onChange={(e) => setCrop(e.target.value)} > {commodities.data?.map((c) => <option key={c.id} value={c.id}>{cropName(c, lang)}</option>)} </select>. </Trans> </p> {/* Current price context */} {current && ( <p className="text-xs text-ink-2 mt-3 pl-1"> <Trans>Current price here: {formatINR(current.modal)} · {formatDay(current.date, lang)}</Trans> </p> )} {/* Expiry + submit row */} <div className="mt-4 flex flex-col md:flex-row items-start md:items-center gap-3"> <label className="text-sm flex items-center gap-2 text-ink-2"> <span className="font-semibold"><Trans>Stop after (optional):</Trans></span> <input type="date" className="rounded-md border border-rule px-2 py-1 text-sm tabular bg-paper focus:border-accent focus:outline-none" value={expires} onChange={(e) => setExpires(e.target.value)} /> </label> <div className="flex-1" /> <Button type="submit" disabled={create.isPending || !numOrUndef(price)} className="w-full md:w-auto px-8 rounded-xl" style={{ background: 'var(--color-accent)', color: 'white', border: 'none' }} > <Trans>Save alert</Trans> </Button> </div> {!fieldError(create.error, 'threshold_price') && <ErrorNote error={create.error} className="mt-3" />} {fieldError(create.error, 'threshold_price') && ( <p className="text-sm font-semibold mt-2" style={{ color: 'var(--color-wait)' }}> {fieldError(create.error, 'threshold_price')} </p> )} </form> </div> ); } function AlertList() { const q = useQuery(alertsQuery()); if (q.isPending) return <div className="px-4"><Block h={120} /></div>; if (q.isError) return <div className="px-4"><ErrorNote error={q.error} /></div>; return ( <div className="px-4"> <h2 className="text-base font-bold text-ink mb-3"><Trans>Your Alerts</Trans></h2> {q.data.length === 0 ? ( /* Empty state illustration */ <div className="flex flex-col items-center justify-center py-10 text-center rounded-2xl border border-rule" style={{ background: 'var(--color-paper-2)' }}> <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--color-ink-2)" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden> <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/> <path d="M13.73 21a2 2 0 0 1-3.46 0"/> <path d="M8 2 L8 0M12 2 L12 0M16 2 L16 0" strokeDasharray="2 1"/> </svg> <p className="mt-3 font-semibold text-ink"><Trans>No alerts yet</Trans></p> <p className="mt-1 text-sm text-ink-2 max-w-[240px]"> <Trans>Set a target price above and get an SMS the moment the mandi crosses it.</Trans> </p> </div> ) : ( <ul className="space-y-3"> {q.data.map((a) => <AlertRow key={a.id} alert={a} />)} </ul> )} </div> ); } function AlertRow({ alert: a }: { alert: Alert }) { const { lang, district } = usePrefs(); const { t } = useLingui(); const commodities = useQuery(commoditiesQuery()); const markets = useQuery(marketsQuery(district)); const toggle = useAuthMutation(() => alertsApi.update(a.id, { active: !a.active })); const remove = useAuthMutation(() => alertsApi.remove(a.id)); const crop = cropName(commodities.data?.find((c) => c.id === a.commodity_id), lang); const joined = (a as { markets?: { name?: string } | null }).markets?.name; const mandi = a.market_id ? joined ?? markets.data?.find((m) => m.id === a.market_id)?.name : null; const expired = a.expires_at != null && Date.parse(a.expires_at) < Date.now(); const price = formatINR(a.threshold_price); /* State indicator: green border=active, slate=paused, rule=expired */ const borderColor = expired ? 'var(--color-rule)' : a.active ? 'var(--color-sell)' : 'var(--color-wait)'; const badgeBg = expired ? 'var(--color-paper-2)' : a.active ? 'var(--color-sell-tint)' : 'var(--color-wait-tint)'; const badgeColor = expired ? 'var(--color-ink-2)' : a.active ? 'var(--color-sell)' : 'var(--color-wait)'; const badgeLabel = expired ? t`Expired` : a.active ? t`Active` : t`Paused`; return ( <li className="rounded-2xl border overflow-hidden" style={{ background: 'var(--color-paper)', borderColor: 'var(--color-rule)', boxShadow: 'var(--shadow-card)' }} > {/* Colored top accent line */} <div className="h-1 w-full" style={{ background: borderColor }} aria-hidden /> <div className={`p-4 ${a.active && !expired ? '' : 'opacity-70'}`}> {/* Status badge */} <div className="flex items-center gap-2 mb-2"> <span className="text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md" style={{ background: badgeBg, color: badgeColor }} > {badgeLabel} </span> {a.expires_at && !expired && ( <span className="text-xs text-ink-2"> <Trans>Until {formatDay(a.expires_at, lang)}</Trans> </span> )} {a.last_notified_at && ( <span className="text-xs text-ink-2 ml-auto"> <Trans>SMS sent {formatDateTime(a.last_notified_at, lang)}</Trans> </span> )} </div> {/* Alert sentence */} <p className="text-sm leading-snug font-medium text-ink"> <Trans> SMS me when <strong>{mandi ?? t`nearest mandi`}</strong> goes{' '} <strong>{a.condition === 'gte' ? t`above` : t`below`}</strong>{' '} <strong>{price}</strong> for {crop}. </Trans> </p> </div> {/* Action buttons */} <div className="flex items-center gap-2 px-4 pb-3 rule-t pt-3"> {!expired && ( <button className="tap flex-1 rounded-xl text-sm font-semibold border border-rule hover:bg-paper-2 transition-colors" disabled={toggle.isPending} onClick={() => toggle.mutate(undefined)} > {a.active ? <Trans>Pause</Trans> : <Trans>Resume</Trans>} </button> )} <button className="tap flex-1 rounded-xl text-sm font-semibold text-ink-2 hover:bg-paper-2 transition-colors" disabled={remove.isPending} onClick={() => remove.mutate(undefined)} > <Trans>Delete</Trans> </button> </div> <ErrorNote error={toggle.error ?? remove.error} className="px-4 pb-3" /> </li> ); } 
-#. placeholder {1}: markets.data?.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)
-#. placeholder {2}: import { useState } from 'react'; import { useQuery } from '@tanstack/react-query'; import { Trans, useLingui } from '@lingui/react/macro'; import { RequireAuth } from '../../auth/RequireAuth.tsx'; import { alerts as alertsApi } from '../../api/index.ts'; import type { Alert } from '../../api/schemasMarket.ts'; import { alertsQuery, useAuthMutation } from '../../queries/auth.ts'; import { commoditiesQuery, latestForCommodityQuery, marketsQuery } from '../../queries/index.ts'; import { usePrefs } from '../../stores/prefs.ts'; import { cropName } from '../price-detail/PairView.tsx'; import { formatDateTime, formatDay, formatINR } from '../../domain/format.ts'; import { Button, ErrorNote, fieldError, numOrUndef } from '../../ui/Form.tsx'; import { Block } from '../../ui/Skeleton.tsx'; export function AlertsPage() { const { t } = useLingui(); return ( <RequireAuth why={t`Alerts are sent by SMS to your phone number, so we need to know who you are.`}> {(me) => ( <div className="mx-auto max-w-2xl"> {/* ── DARK HERO STRIP ───────────────────────────────────── */} <div className="px-4 pt-6 pb-5" style={{ background: 'linear-gradient(135deg, #0F0E0C 0%, #1C1A17 60%, #0F0E0C 100%)' }} > <div className="flex items-start justify-between"> <div> <h1 className="text-xl font-bold text-white"><Trans>Price Alerts</Trans></h1> <p className="text-sm text-white/60 mt-0.5"> <Trans>SMS when the mandi price crosses your target</Trans> </p> </div> {/* Bell icon */} <div className="flex size-10 shrink-0 items-center justify-center rounded-xl" style={{ background: 'var(--color-accent)' }}> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden> <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/> </svg> </div> </div> {!me.phone && ( <div className="mt-3 rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: 'rgba(110,74,3,0.3)', color: '#F5C842', border: '1px solid rgba(245,200,66,0.2)' }}> <svg className="inline mr-1.5 -mt-0.5" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg> <Trans>Add your phone number in Account so the SMS can reach you.</Trans> </div> )} <p className="mt-2 text-xs text-white/40"> <Trans>Prices are checked about once an hour. No in-app notifications.</Trans> </p> </div> <NewAlert /> <AlertList /> </div> )} </RequireAuth> ); } function NewAlert() { const { t } = useLingui(); const { lang, district, pinnedPairs } = usePrefs(); const commodities = useQuery(commoditiesQuery()); const markets = useQuery(marketsQuery(district)); const [crop, setCrop] = useState(pinnedPairs[0]?.commodityId ?? ''); const [market, setMarket] = useState(pinnedPairs[0]?.marketId ?? ''); const [condition, setCondition] = useState<'gte' | 'lte'>('gte'); const [price, setPrice] = useState(''); const [expires, setExpires] = useState(''); const cropId = crop || commodities.data?.[0]?.id || ''; const latest = useQuery({ ...latestForCommodityQuery(cropId), enabled: !!cropId }); const current = latest.data?.find((r) => r.marketId === market); const create = useAuthMutation(alertsApi.create, () => { setPrice(''); setExpires(''); }); const submit = (e: React.FormEvent) => { e.preventDefault(); const threshold = numOrUndef(price); if (!threshold || !cropId) return; create.mutate({ commodity_id: cropId, market_id: market || null, threshold_price: threshold, condition, ...(expires ? { expires_at: new Date(`${expires}T23:59:59+05:30`).toISOString() } : {}), }); }; return ( <div className="px-4 pt-4"> <h2 className="text-base font-bold text-ink mb-3"><Trans>New Alert</Trans></h2> {/* ── SENTENCE FORM CARD (paper-2) ──────────────────────────── */} <form onSubmit={submit} className="rounded-2xl p-4 border border-rule mb-6" style={{ background: 'var(--color-paper-2)', boxShadow: 'var(--shadow-card)' }} > {/* Natural language sentence */} <p className="text-base leading-loose font-medium text-ink"> <Trans> SMS me when{' '} <select className="rounded-md border border-rule px-2 py-1 text-sm font-semibold bg-paper text-ink focus:border-accent focus:outline-none" value={market} onChange={(e) => setMarket(e.target.value)} > <option value="">{t`nearest mandi`}</option> {markets.data?.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)} </select> {' '}goes{' '} {/* Condition toggle pills */} <span className="inline-flex rounded-md border border-rule overflow-hidden"> <button type="button" onClick={() => setCondition('gte')} className="px-2 py-1 text-sm font-semibold transition-colors" style={{ background: condition === 'gte' ? 'var(--color-accent)' : 'var(--color-paper)', color: condition === 'gte' ? 'white' : 'var(--color-ink-2)' }} > {t`above`} </button> <button type="button" onClick={() => setCondition('lte')} className="px-2 py-1 text-sm font-semibold transition-colors" style={{ background: condition === 'lte' ? 'var(--color-accent)' : 'var(--color-paper)', color: condition === 'lte' ? 'white' : 'var(--color-ink-2)' }} > {t`below`} </button> </span> {' '} <input type="number" className="rounded-md border border-rule px-2 py-1 text-sm tabular text-center font-semibold bg-paper text-ink focus:border-accent focus:outline-none" style={{ width: 96 }} placeholder="₹ price" value={price} onChange={(e) => setPrice(e.target.value)} required /> {' '}for{' '} <select className="rounded-md border border-rule px-2 py-1 text-sm font-semibold bg-paper text-ink focus:border-accent focus:outline-none" value={cropId} onChange={(e) => setCrop(e.target.value)} > {commodities.data?.map((c) => <option key={c.id} value={c.id}>{cropName(c, lang)}</option>)} </select>. </Trans> </p> {/* Current price context */} {current && ( <p className="text-xs text-ink-2 mt-3 pl-1"> <Trans>Current price here: {formatINR(current.modal)} · {formatDay(current.date, lang)}</Trans> </p> )} {/* Expiry + submit row */} <div className="mt-4 flex flex-col md:flex-row items-start md:items-center gap-3"> <label className="text-sm flex items-center gap-2 text-ink-2"> <span className="font-semibold"><Trans>Stop after (optional):</Trans></span> <input type="date" className="rounded-md border border-rule px-2 py-1 text-sm tabular bg-paper focus:border-accent focus:outline-none" value={expires} onChange={(e) => setExpires(e.target.value)} /> </label> <div className="flex-1" /> <Button type="submit" disabled={create.isPending || !numOrUndef(price)} className="w-full md:w-auto px-8 rounded-xl" style={{ background: 'var(--color-accent)', color: 'white', border: 'none' }} > <Trans>Save alert</Trans> </Button> </div> {!fieldError(create.error, 'threshold_price') && <ErrorNote error={create.error} className="mt-3" />} {fieldError(create.error, 'threshold_price') && ( <p className="text-sm font-semibold mt-2" style={{ color: 'var(--color-wait)' }}> {fieldError(create.error, 'threshold_price')} </p> )} </form> </div> ); } function AlertList() { const q = useQuery(alertsQuery()); if (q.isPending) return <div className="px-4"><Block h={120} /></div>; if (q.isError) return <div className="px-4"><ErrorNote error={q.error} /></div>; return ( <div className="px-4"> <h2 className="text-base font-bold text-ink mb-3"><Trans>Your Alerts</Trans></h2> {q.data.length === 0 ? ( /* Empty state illustration */ <div className="flex flex-col items-center justify-center py-10 text-center rounded-2xl border border-rule" style={{ background: 'var(--color-paper-2)' }}> <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--color-ink-2)" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden> <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/> <path d="M13.73 21a2 2 0 0 1-3.46 0"/> <path d="M8 2 L8 0M12 2 L12 0M16 2 L16 0" strokeDasharray="2 1"/> </svg> <p className="mt-3 font-semibold text-ink"><Trans>No alerts yet</Trans></p> <p className="mt-1 text-sm text-ink-2 max-w-[240px]"> <Trans>Set a target price above and get an SMS the moment the mandi crosses it.</Trans> </p> </div> ) : ( <ul className="space-y-3"> {q.data.map((a) => <AlertRow key={a.id} alert={a} />)} </ul> )} </div> ); } function AlertRow({ alert: a }: { alert: Alert }) { const { lang, district } = usePrefs(); const { t } = useLingui(); const commodities = useQuery(commoditiesQuery()); const markets = useQuery(marketsQuery(district)); const toggle = useAuthMutation(() => alertsApi.update(a.id, { active: !a.active })); const remove = useAuthMutation(() => alertsApi.remove(a.id)); const crop = cropName(commodities.data?.find((c) => c.id === a.commodity_id), lang); const joined = (a as { markets?: { name?: string } | null }).markets?.name; const mandi = a.market_id ? joined ?? markets.data?.find((m) => m.id === a.market_id)?.name : null; const expired = a.expires_at != null && Date.parse(a.expires_at) < Date.now(); const price = formatINR(a.threshold_price); /* State indicator: green border=active, slate=paused, rule=expired */ const borderColor = expired ? 'var(--color-rule)' : a.active ? 'var(--color-sell)' : 'var(--color-wait)'; const badgeBg = expired ? 'var(--color-paper-2)' : a.active ? 'var(--color-sell-tint)' : 'var(--color-wait-tint)'; const badgeColor = expired ? 'var(--color-ink-2)' : a.active ? 'var(--color-sell)' : 'var(--color-wait)'; const badgeLabel = expired ? t`Expired` : a.active ? t`Active` : t`Paused`; return ( <li className="rounded-2xl border overflow-hidden" style={{ background: 'var(--color-paper)', borderColor: 'var(--color-rule)', boxShadow: 'var(--shadow-card)' }} > {/* Colored top accent line */} <div className="h-1 w-full" style={{ background: borderColor }} aria-hidden /> <div className={`p-4 ${a.active && !expired ? '' : 'opacity-70'}`}> {/* Status badge */} <div className="flex items-center gap-2 mb-2"> <span className="text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md" style={{ background: badgeBg, color: badgeColor }} > {badgeLabel} </span> {a.expires_at && !expired && ( <span className="text-xs text-ink-2"> <Trans>Until {formatDay(a.expires_at, lang)}</Trans> </span> )} {a.last_notified_at && ( <span className="text-xs text-ink-2 ml-auto"> <Trans>SMS sent {formatDateTime(a.last_notified_at, lang)}</Trans> </span> )} </div> {/* Alert sentence */} <p className="text-sm leading-snug font-medium text-ink"> <Trans> SMS me when <strong>{mandi ?? t`nearest mandi`}</strong> goes{' '} <strong>{a.condition === 'gte' ? t`above` : t`below`}</strong>{' '} <strong>{price}</strong> for {crop}. </Trans> </p> </div> {/* Action buttons */} <div className="flex items-center gap-2 px-4 pb-3 rule-t pt-3"> {!expired && ( <button className="tap flex-1 rounded-xl text-sm font-semibold border border-rule hover:bg-paper-2 transition-colors" disabled={toggle.isPending} onClick={() => toggle.mutate(undefined)} > {a.active ? <Trans>Pause</Trans> : <Trans>Resume</Trans>} </button> )} <button className="tap flex-1 rounded-xl text-sm font-semibold text-ink-2 hover:bg-paper-2 transition-colors" disabled={remove.isPending} onClick={() => remove.mutate(undefined)} > <Trans>Delete</Trans> </button> </div> <ErrorNote error={toggle.error ?? remove.error} className="px-4 pb-3" /> </li> ); } 
-#. placeholder {3}: import { useState } from 'react'; import { useQuery } from '@tanstack/react-query'; import { Trans, useLingui } from '@lingui/react/macro'; import { RequireAuth } from '../../auth/RequireAuth.tsx'; import { alerts as alertsApi } from '../../api/index.ts'; import type { Alert } from '../../api/schemasMarket.ts'; import { alertsQuery, useAuthMutation } from '../../queries/auth.ts'; import { commoditiesQuery, latestForCommodityQuery, marketsQuery } from '../../queries/index.ts'; import { usePrefs } from '../../stores/prefs.ts'; import { cropName } from '../price-detail/PairView.tsx'; import { formatDateTime, formatDay, formatINR } from '../../domain/format.ts'; import { Button, ErrorNote, fieldError, numOrUndef } from '../../ui/Form.tsx'; import { Block } from '../../ui/Skeleton.tsx'; export function AlertsPage() { const { t } = useLingui(); return ( <RequireAuth why={t`Alerts are sent by SMS to your phone number, so we need to know who you are.`}> {(me) => ( <div className="mx-auto max-w-2xl"> {/* ── DARK HERO STRIP ───────────────────────────────────── */} <div className="px-4 pt-6 pb-5" style={{ background: 'linear-gradient(135deg, #0F0E0C 0%, #1C1A17 60%, #0F0E0C 100%)' }} > <div className="flex items-start justify-between"> <div> <h1 className="text-xl font-bold text-white"><Trans>Price Alerts</Trans></h1> <p className="text-sm text-white/60 mt-0.5"> <Trans>SMS when the mandi price crosses your target</Trans> </p> </div> {/* Bell icon */} <div className="flex size-10 shrink-0 items-center justify-center rounded-xl" style={{ background: 'var(--color-accent)' }}> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden> <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/> </svg> </div> </div> {!me.phone && ( <div className="mt-3 rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: 'rgba(110,74,3,0.3)', color: '#F5C842', border: '1px solid rgba(245,200,66,0.2)' }}> <svg className="inline mr-1.5 -mt-0.5" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg> <Trans>Add your phone number in Account so the SMS can reach you.</Trans> </div> )} <p className="mt-2 text-xs text-white/40"> <Trans>Prices are checked about once an hour. No in-app notifications.</Trans> </p> </div> <NewAlert /> <AlertList /> </div> )} </RequireAuth> ); } function NewAlert() { const { t } = useLingui(); const { lang, district, pinnedPairs } = usePrefs(); const commodities = useQuery(commoditiesQuery()); const markets = useQuery(marketsQuery(district)); const [crop, setCrop] = useState(pinnedPairs[0]?.commodityId ?? ''); const [market, setMarket] = useState(pinnedPairs[0]?.marketId ?? ''); const [condition, setCondition] = useState<'gte' | 'lte'>('gte'); const [price, setPrice] = useState(''); const [expires, setExpires] = useState(''); const cropId = crop || commodities.data?.[0]?.id || ''; const latest = useQuery({ ...latestForCommodityQuery(cropId), enabled: !!cropId }); const current = latest.data?.find((r) => r.marketId === market); const create = useAuthMutation(alertsApi.create, () => { setPrice(''); setExpires(''); }); const submit = (e: React.FormEvent) => { e.preventDefault(); const threshold = numOrUndef(price); if (!threshold || !cropId) return; create.mutate({ commodity_id: cropId, market_id: market || null, threshold_price: threshold, condition, ...(expires ? { expires_at: new Date(`${expires}T23:59:59+05:30`).toISOString() } : {}), }); }; return ( <div className="px-4 pt-4"> <h2 className="text-base font-bold text-ink mb-3"><Trans>New Alert</Trans></h2> {/* ── SENTENCE FORM CARD (paper-2) ──────────────────────────── */} <form onSubmit={submit} className="rounded-2xl p-4 border border-rule mb-6" style={{ background: 'var(--color-paper-2)', boxShadow: 'var(--shadow-card)' }} > {/* Natural language sentence */} <p className="text-base leading-loose font-medium text-ink"> <Trans> SMS me when{' '} <select className="rounded-md border border-rule px-2 py-1 text-sm font-semibold bg-paper text-ink focus:border-accent focus:outline-none" value={market} onChange={(e) => setMarket(e.target.value)} > <option value="">{t`nearest mandi`}</option> {markets.data?.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)} </select> {' '}goes{' '} {/* Condition toggle pills */} <span className="inline-flex rounded-md border border-rule overflow-hidden"> <button type="button" onClick={() => setCondition('gte')} className="px-2 py-1 text-sm font-semibold transition-colors" style={{ background: condition === 'gte' ? 'var(--color-accent)' : 'var(--color-paper)', color: condition === 'gte' ? 'white' : 'var(--color-ink-2)' }} > {t`above`} </button> <button type="button" onClick={() => setCondition('lte')} className="px-2 py-1 text-sm font-semibold transition-colors" style={{ background: condition === 'lte' ? 'var(--color-accent)' : 'var(--color-paper)', color: condition === 'lte' ? 'white' : 'var(--color-ink-2)' }} > {t`below`} </button> </span> {' '} <input type="number" className="rounded-md border border-rule px-2 py-1 text-sm tabular text-center font-semibold bg-paper text-ink focus:border-accent focus:outline-none" style={{ width: 96 }} placeholder="₹ price" value={price} onChange={(e) => setPrice(e.target.value)} required /> {' '}for{' '} <select className="rounded-md border border-rule px-2 py-1 text-sm font-semibold bg-paper text-ink focus:border-accent focus:outline-none" value={cropId} onChange={(e) => setCrop(e.target.value)} > {commodities.data?.map((c) => <option key={c.id} value={c.id}>{cropName(c, lang)}</option>)} </select>. </Trans> </p> {/* Current price context */} {current && ( <p className="text-xs text-ink-2 mt-3 pl-1"> <Trans>Current price here: {formatINR(current.modal)} · {formatDay(current.date, lang)}</Trans> </p> )} {/* Expiry + submit row */} <div className="mt-4 flex flex-col md:flex-row items-start md:items-center gap-3"> <label className="text-sm flex items-center gap-2 text-ink-2"> <span className="font-semibold"><Trans>Stop after (optional):</Trans></span> <input type="date" className="rounded-md border border-rule px-2 py-1 text-sm tabular bg-paper focus:border-accent focus:outline-none" value={expires} onChange={(e) => setExpires(e.target.value)} /> </label> <div className="flex-1" /> <Button type="submit" disabled={create.isPending || !numOrUndef(price)} className="w-full md:w-auto px-8 rounded-xl" style={{ background: 'var(--color-accent)', color: 'white', border: 'none' }} > <Trans>Save alert</Trans> </Button> </div> {!fieldError(create.error, 'threshold_price') && <ErrorNote error={create.error} className="mt-3" />} {fieldError(create.error, 'threshold_price') && ( <p className="text-sm font-semibold mt-2" style={{ color: 'var(--color-wait)' }}> {fieldError(create.error, 'threshold_price')} </p> )} </form> </div> ); } function AlertList() { const q = useQuery(alertsQuery()); if (q.isPending) return <div className="px-4"><Block h={120} /></div>; if (q.isError) return <div className="px-4"><ErrorNote error={q.error} /></div>; return ( <div className="px-4"> <h2 className="text-base font-bold text-ink mb-3"><Trans>Your Alerts</Trans></h2> {q.data.length === 0 ? ( /* Empty state illustration */ <div className="flex flex-col items-center justify-center py-10 text-center rounded-2xl border border-rule" style={{ background: 'var(--color-paper-2)' }}> <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--color-ink-2)" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden> <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/> <path d="M13.73 21a2 2 0 0 1-3.46 0"/> <path d="M8 2 L8 0M12 2 L12 0M16 2 L16 0" strokeDasharray="2 1"/> </svg> <p className="mt-3 font-semibold text-ink"><Trans>No alerts yet</Trans></p> <p className="mt-1 text-sm text-ink-2 max-w-[240px]"> <Trans>Set a target price above and get an SMS the moment the mandi crosses it.</Trans> </p> </div> ) : ( <ul className="space-y-3"> {q.data.map((a) => <AlertRow key={a.id} alert={a} />)} </ul> )} </div> ); } function AlertRow({ alert: a }: { alert: Alert }) { const { lang, district } = usePrefs(); const { t } = useLingui(); const commodities = useQuery(commoditiesQuery()); const markets = useQuery(marketsQuery(district)); const toggle = useAuthMutation(() => alertsApi.update(a.id, { active: !a.active })); const remove = useAuthMutation(() => alertsApi.remove(a.id)); const crop = cropName(commodities.data?.find((c) => c.id === a.commodity_id), lang); const joined = (a as { markets?: { name?: string } | null }).markets?.name; const mandi = a.market_id ? joined ?? markets.data?.find((m) => m.id === a.market_id)?.name : null; const expired = a.expires_at != null && Date.parse(a.expires_at) < Date.now(); const price = formatINR(a.threshold_price); /* State indicator: green border=active, slate=paused, rule=expired */ const borderColor = expired ? 'var(--color-rule)' : a.active ? 'var(--color-sell)' : 'var(--color-wait)'; const badgeBg = expired ? 'var(--color-paper-2)' : a.active ? 'var(--color-sell-tint)' : 'var(--color-wait-tint)'; const badgeColor = expired ? 'var(--color-ink-2)' : a.active ? 'var(--color-sell)' : 'var(--color-wait)'; const badgeLabel = expired ? t`Expired` : a.active ? t`Active` : t`Paused`; return ( <li className="rounded-2xl border overflow-hidden" style={{ background: 'var(--color-paper)', borderColor: 'var(--color-rule)', boxShadow: 'var(--shadow-card)' }} > {/* Colored top accent line */} <div className="h-1 w-full" style={{ background: borderColor }} aria-hidden /> <div className={`p-4 ${a.active && !expired ? '' : 'opacity-70'}`}> {/* Status badge */} <div className="flex items-center gap-2 mb-2"> <span className="text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md" style={{ background: badgeBg, color: badgeColor }} > {badgeLabel} </span> {a.expires_at && !expired && ( <span className="text-xs text-ink-2"> <Trans>Until {formatDay(a.expires_at, lang)}</Trans> </span> )} {a.last_notified_at && ( <span className="text-xs text-ink-2 ml-auto"> <Trans>SMS sent {formatDateTime(a.last_notified_at, lang)}</Trans> </span> )} </div> {/* Alert sentence */} <p className="text-sm leading-snug font-medium text-ink"> <Trans> SMS me when <strong>{mandi ?? t`nearest mandi`}</strong> goes{' '} <strong>{a.condition === 'gte' ? t`above` : t`below`}</strong>{' '} <strong>{price}</strong> for {crop}. </Trans> </p> </div> {/* Action buttons */} <div className="flex items-center gap-2 px-4 pb-3 rule-t pt-3"> {!expired && ( <button className="tap flex-1 rounded-xl text-sm font-semibold border border-rule hover:bg-paper-2 transition-colors" disabled={toggle.isPending} onClick={() => toggle.mutate(undefined)} > {a.active ? <Trans>Pause</Trans> : <Trans>Resume</Trans>} </button> )} <button className="tap flex-1 rounded-xl text-sm font-semibold text-ink-2 hover:bg-paper-2 transition-colors" disabled={remove.isPending} onClick={() => remove.mutate(undefined)} > <Trans>Delete</Trans> </button> </div> <ErrorNote error={toggle.error ?? remove.error} className="px-4 pb-3" /> </li> ); } 
-#. placeholder {4}: commodities.data?.map((c) => <option key={c.id} value={c.id}>{cropName(c, lang)}</option>)
-#: src/features/alerts/AlertsPage.tsx:101
-msgid "SMS me when <0><1>{0}</1>{1}</0> goes <2><3>{2}</3><4>{3}</4></2> <5/> for <6>{4}</6>."
-msgstr "<0><1>{0}</1>{1}</0> मध्ये <6>{4}</6> चा भाव <2><3>{2}</3><4>{3}</4></2> <5/> गेल्यावर मला SMS पाठवा."
-
-#. placeholder {0}: formatDateTime(a.last_notified_at, lang)
-#: src/features/alerts/AlertsPage.tsx:265
-msgid "SMS sent {0}"
-msgstr "SMS पाठवला {0}"
-
-#: src/features/price-detail/PairView.tsx:313
-msgid "SMS when price crosses your target"
-msgstr "भाव लक्ष्य ओलांडताच SMS"
-
-#: src/features/alerts/AlertsPage.tsx:30
-msgid "SMS when the mandi price crosses your target"
-msgstr "बाजारभाव तुमचे लक्ष्य ओलांडताच SMS"
 
 #: src/features/sell/labels.ts:23
 msgid "Sold"
 msgstr "विकला"
 
-#: src/features/about/ForecastsAboutPage.tsx:21
+#: src/features/about/ForecastsAboutPage.tsx:17
 msgid "Solid line: real mandi prices (modal price, ₹ per quintal)."
 msgstr "सलग रेषा: प्रत्यक्ष बाजारभाव (सर्वसाधारण भाव, ₹ प्रति क्विंटल)."
 
-#: src/features/setup/SetupPage.tsx:193
+#: src/features/setup/SetupPage.tsx:72
 msgid "Sort by distance from me"
 msgstr "माझ्यापासूनच्या अंतरानुसार लावा"
 
@@ -1291,20 +1230,20 @@ msgstr "माझ्यापासूनच्या अंतरानुस�
 msgid "Special"
 msgstr "विशेष"
 
-#: src/features/sale-window/SaleWindowCard.tsx:46
+#: src/features/sale-window/SaleWindowCard.tsx:23
 msgid "Steady"
 msgstr "स्थिर"
 
 #. placeholder {0}: step + 1
-#: src/features/setup/SetupPage.tsx:100
+#: src/features/setup/SetupPage.tsx:41
 msgid "Step {0} of 3"
 msgstr "पायरी {0} / 3"
 
-#: src/features/alerts/AlertsPage.tsx:162
-msgid "Stop after (optional):"
-msgstr "यानंतर थांबवा (ऐच्छिक):"
+#: src/features/alerts/AlertsPage.tsx:94
+msgid "Stop after (optional)"
+msgstr "या तारखेनंतर थांबवा (ऐच्छिक)"
 
-#: src/features/sale-window/SaleWindowCard.tsx:74
+#: src/features/sale-window/SaleWindowCard.tsx:44
 #: src/features/sell/LotDetailPage.tsx:172
 msgid "Storage"
 msgstr "साठवण"
@@ -1317,10 +1256,6 @@ msgstr "माल साठवण्यासाठी गोदाम"
 msgid "Straight-line trend"
 msgstr "सरळ रेषेतील कल"
 
-#: src/features/sell/LotsPage.tsx:89
-msgid "Tap \"List produce\" to add your first lot and start receiving buyer offers."
-msgstr "पहिला माल जोडण्यासाठी \"माल नोंदवा\" वर टॅप करा आणि खरेदीदारांच्या ऑफर मिळवायला सुरुवात करा."
-
 #: src/features/trust/HealthNotice.tsx:20
 msgid "The forecast is out of date, so it is hidden. Waiting for new mandi data."
 msgstr "अंदाज जुना आहे, म्हणून लपवला आहे. नवीन बाजार डेटाची वाट पाहत आहोत."
@@ -1329,11 +1264,11 @@ msgstr "अंदाज जुना आहे, म्हणून लपवल�
 msgid "The offer stays open for 48 hours."
 msgstr "ऑफर 48 तास खुली राहते."
 
-#: src/ui/Form.tsx:57
+#: src/ui/Form.tsx:58
 msgid "The server is having trouble. Try again shortly."
 msgstr "सर्व्हरमध्ये अडचण आहे. थोड्या वेळाने पुन्हा प्रयत्न करा."
 
-#: src/ui/Form.tsx:58
+#: src/ui/Form.tsx:59
 msgid "The server sent something unexpected."
 msgstr "सर्व्हरकडून अनपेक्षित उत्तर आले."
 
@@ -1349,28 +1284,24 @@ msgstr "हा अंदाज एक दिवसापेक्षा जु�
 msgid "This lot was not found."
 msgstr "हा माल सापडला नाही."
 
-#: src/features/sale-window/SaleWindowCard.tsx:88
+#: src/features/sale-window/SaleWindowCard.tsx:58
 msgid "This mandi has not reported a price for this crop in the last 15 days. Try a nearby mandi below."
 msgstr "या बाजाराने मागील 15 दिवसांत या पिकाचा भाव नोंदवलेला नाही. खालील जवळचा बाजार पहा."
-
-#: src/features/price-detail/PairView.tsx:109
-msgid "This mandi hasn't reported prices yet. Try checking after 9 AM."
-msgstr "या बाजाराने अजून भाव नोंदवलेले नाहीत. सकाळी 9 नंतर तपासा."
 
 #: src/charts/PriceForecastChart.tsx:109
 msgid "today"
 msgstr "आज"
 
-#: src/app/AppShell.tsx:122
+#: src/app/AppShell.tsx:55
 msgid "Today"
 msgstr "आज"
 
 #. placeholder {0}: formatINR(f.predicted_price)
-#: src/features/board/BoardPage.tsx:190
-msgid "Tomorrow: {0}"
-msgstr "उद्या: {0}"
+#: src/features/board/BoardPage.tsx:60
+msgid "Tomorrow likely {0}"
+msgstr "उद्या संभाव्य {0}"
 
-#: src/ui/Form.tsx:56
+#: src/ui/Form.tsx:57
 msgid "Too many requests. Wait a minute and try again."
 msgstr "खूप विनंत्या झाल्या. एक मिनिट थांबून पुन्हा प्रयत्न करा."
 
@@ -1387,7 +1318,7 @@ msgstr "वाहतूक"
 msgid "Trend with arrivals and weather"
 msgstr "आवक व हवामानासह कल"
 
-#: src/features/buy/BuyPage.tsx:123
+#: src/features/buy/BuyPage.tsx:94
 msgid "Type"
 msgstr "प्रकार"
 
@@ -1396,7 +1327,7 @@ msgid "Typical error"
 msgstr "सर्वसाधारण चूक"
 
 #. placeholder {0}: formatDay(a.expires_at, lang)
-#: src/features/alerts/AlertsPage.tsx:260
+#: src/features/alerts/AlertsPage.tsx:137
 msgid "Until {0}"
 msgstr "{0} पर्यंत"
 
@@ -1404,7 +1335,7 @@ msgstr "{0} पर्यंत"
 msgid "Until then, every forecast is shown with its likely range and the name of the model that made it, never as a single certain number."
 msgstr "तोपर्यंत प्रत्येक अंदाज त्याच्या संभाव्य पट्ट्यासह आणि तो देणाऱ्या मॉडेलच्या नावासह दाखवला जातो, कधीही एकच निश्चित आकडा म्हणून नाही."
 
-#: src/app/AppShell.tsx:51
+#: src/app/AppShell.tsx:35
 msgid "Updating…"
 msgstr "अद्ययावत करत आहे…"
 
@@ -1424,7 +1355,7 @@ msgstr "तपासलेला इतिहास"
 msgid "Waiting"
 msgstr "प्रतीक्षेत"
 
-#: src/features/buy/BuyPage.tsx:79
+#: src/features/buy/BuyPage.tsx:55
 msgid "Waiting for verification"
 msgstr "पडताळणीची प्रतीक्षा"
 
@@ -1440,29 +1371,25 @@ msgstr "आम्ही अजून बाजारभावांचा इत
 msgid "What is the problem about?"
 msgstr "तक्रार कशाबद्दल आहे?"
 
-#: src/features/about/ForecastsAboutPage.tsx:17
+#: src/features/about/ForecastsAboutPage.tsx:15
 msgid "What the chart shows"
 msgstr "आलेख काय दाखवतो"
 
-#: src/features/about/ForecastsAboutPage.tsx:52
+#: src/features/about/ForecastsAboutPage.tsx:36
 msgid "Where the advice comes from"
 msgstr "सल्ला कुठून येतो"
 
-#: src/features/setup/SetupPage.tsx:60
+#: src/features/setup/SetupPage.tsx:56
 msgid "Which crop do you sell?"
 msgstr "तुम्ही कोणते पीक विकता?"
 
-#: src/features/setup/SetupPage.tsx:61
-msgid "Which mandi do you use?"
-msgstr "तुम्ही कोणता बाजार वापरता?"
+#: src/features/setup/SetupPage.tsx:68
+msgid "Which mandi do you sell at?"
+msgstr "तुम्ही कोणत्या बाजारात विकता?"
 
 #: src/features/trust/ModelChip.tsx:56
 msgid "Which model made this forecast?"
 msgstr "हा अंदाज कोणत्या मॉडेलने दिला?"
-
-#: src/features/price-detail/PairView.tsx:293
-msgid "Why this verdict?"
-msgstr "हा निर्णय का?"
 
 #: src/features/sell/LotDetailPage.tsx:99
 msgid "Withdraw lot"
@@ -1476,42 +1403,30 @@ msgstr "हा माल मागे घ्यायचा? हे परत �
 msgid "Withdrawn"
 msgstr "मागे घेतला"
 
-#: src/features/sell/LotsPage.tsx:223
+#: src/app/AppShell.tsx:45
+msgid "You are offline. Showing the prices saved on this phone. Check the date on each price."
+msgstr "तुम्ही ऑफलाइन आहात. या फोनवर साठवलेले भाव दाखवत आहोत. प्रत्येक भावाची तारीख तपासा."
+
+#: src/features/sell/LotsPage.tsx:96
 msgid "You need at least 2 open lots to pool."
 msgstr "एकत्र करण्यासाठी किमान 2 माल विक्रीस हवेत."
 
-#: src/features/account/AccountPage.tsx:221
-msgid "You will need to sign in again to manage alerts and listings."
-msgstr "सूचना आणि नोंदी व्यवस्थापित करण्यासाठी पुन्हा लॉगिन करावे लागेल."
-
-#: src/features/account/AccountPage.tsx:86
-msgid "Your Account"
-msgstr "तुमचे खाते"
-
-#: src/ui/Form.tsx:54
+#: src/ui/Form.tsx:55
 msgid "Your account can't do this."
 msgstr "तुमच्या खात्याला ही परवानगी नाही."
 
-#: src/features/account/AccountPage.tsx:24
+#: src/features/account/AccountPage.tsx:25
 msgid "Your account holds your phone number for SMS alerts and the produce you list for sale."
 msgstr "तुमच्या खात्यात SMS सूचनांसाठी मोबाईल नंबर आणि विक्रीस टाकलेला माल असतो."
 
-#: src/features/alerts/AlertsPage.tsx:199
-msgid "Your Alerts"
+#: src/features/alerts/AlertsPage.tsx:107
+msgid "Your alerts"
 msgstr "तुमच्या सूचना"
 
-#: src/features/buy/BuyPage.tsx:199
+#: src/features/buy/BuyPage.tsx:120
 msgid "Your buyer profile is not verified yet."
 msgstr "तुमची खरेदीदार नोंद अजून पडताळलेली नाही."
 
-#: src/features/account/AccountPage.tsx:107
+#: src/features/account/AccountPage.tsx:62
 msgid "Your details"
 msgstr "तुमची माहिती"
-
-#: src/features/buy/BuyPage.tsx:158
-msgid "Your Submitted Offers"
-msgstr "तुम्ही दिलेले ऑफर्स"
-
-#: src/app/AppShell.tsx:187
-msgid "कृषी बाजार"
-msgstr "कृषी बाजार"

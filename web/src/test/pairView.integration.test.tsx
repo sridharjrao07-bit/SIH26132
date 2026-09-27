@@ -37,9 +37,9 @@ describe.skipIf(!mockUp)('PairView against the mock', () => {
     expect(horizon).toBeLessThanOrEqual(7);
     expect(text).toContain('अजून मोजलेली नाही');                     // accuracy pending (G6 404 in mock)
     expect(text).not.toMatch(/95\s?%/);
-    // Chip was removed in redesign; label only appears once on the card now.
+    // Chip and card render the same action_label from the same query
     const label = container.querySelector('#verdict p')!.textContent!;
-    expect(screen.getAllByText(label).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(label).length).toBeGreaterThanOrEqual(2);
     // Prices use Latin digits even in Marathi
     expect(text).not.toMatch(/[०-९]/);
   });

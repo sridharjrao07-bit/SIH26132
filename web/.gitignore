@@ -8,5 +8,3 @@ dev-dist
 coverage
 src/i18n/locales/*/messages.ts
 *.tsbuildinfo
-
-.vercel

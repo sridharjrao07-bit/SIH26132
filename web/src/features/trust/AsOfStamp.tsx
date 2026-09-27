@@ -4,24 +4,13 @@ import { formatDay, formatTime } from '../../domain/format.ts';
 import { daysBetween, istToday } from '../../domain/dates.ts';
 
 /** Quiet when fresh, prominent when the price day is old (review point 2). */
-export function AsOfStamp({
-  priceDate,
-  generatedAt,
-  dark = false,
-}: {
-  priceDate: string;
-  generatedAt?: string | null;
-  dark?: boolean;
-}) {
+export function AsOfStamp({ priceDate, generatedAt }: { priceDate: string; generatedAt?: string | null }) {
   const lang = usePrefs((s) => s.lang);
   const age = daysBetween(priceDate, istToday());
   const day = formatDay(priceDate, lang);
   const old = age >= 2;
-  const baseClass = dark
-    ? `text-xs ${old ? 'font-semibold text-yellow-300' : 'text-white/50'}`
-    : `text-xs ${old ? 'font-semibold text-ink' : 'text-ink-2'}`;
   return (
-    <p className={baseClass}>
+    <p className={`text-xs ${old ? 'font-semibold text-ink' : 'text-ink-2'}`}>
       {old && <span aria-hidden>⚠ </span>}
       {old ? (
         <Trans>Price from {day} ({age} days old)</Trans>

@@ -67,5 +67,24 @@ export default defineConfig({
     proxy: { '/api': { target: API_TARGET, changeOrigin: true }, '/__dev': { target: API_TARGET, changeOrigin: true } },
   },
   preview: { host: '0.0.0.0', port: 4173, allowedHosts: true, proxy: { '/api': { target: API_TARGET, changeOrigin: true } } },
-  test: { environment: 'jsdom', globals: false, setupFiles: ['src/test/setup.ts'], env: { VITE_API_BASE_URL: process.env.API_TARGET ?? 'http://127.0.0.1:8000' } },
+  test: {
+    environment: 'jsdom',
+    globals: false,
+    // globalSetup runs in the main Node.js thread before jsdom VMs are created;
+    // it saves the native fetch so setup.ts can restore it inside each test VM.
+    globalSetup: ['src/test/global-setup.ts'],
+    setupFiles: ['src/test/setup.ts'],
+    env: { VITE_API_BASE_URL: process.env.API_TARGET ?? 'http://127.0.0.1:8000' },
+    // Use forks pool so each test file runs in a real Node.js child process.
+    // The default vmThreads pool creates an isolated VM realm for jsdom which
+    // breaks the native Node fetch (making integration tests fail with "network
+    // unavailable"). In the forks pool, Node's global fetch is available normally.
+    pool: 'forks',
+    // Allow jsdom tests to reach the local mock API on :8000.
+    testEnvironmentOptions: {
+      url: 'http://127.0.0.1:8000',
+      pretendToBeVisual: true,
+      resources: 'usable',
+    },
+  },
 });

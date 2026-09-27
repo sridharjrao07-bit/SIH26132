@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Trans } from '@lingui/react/macro';
 import type { SaleWindow } from '../../api/schemas.ts';
 import { formatINR, formatNumber } from '../../domain/format.ts';
-import { VERDICT_BG } from './verdict.ts';
+import { VERDICT_BG, VERDICT_TEXT } from './verdict.ts';
 
 function Signal({ label, value, sub, muted }: { label: ReactNode; value: ReactNode; sub?: ReactNode; muted?: boolean }) {
   return (
@@ -11,29 +11,6 @@ function Signal({ label, value, sub, muted }: { label: ReactNode; value: ReactNo
       <dd className={`font-semibold ${muted ? 'text-ink-2' : ''}`}>{value}</dd>
       {sub && <dd className="tabular text-xs text-ink-2">{sub}</dd>}
     </div>
-  );
-}
-
-function VerdictIcon({ action }: { action: SaleWindow['action'] }) {
-  if (action === 'SELL_NOW') {
-    return (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-      </svg>
-    );
-  }
-  if (action === 'HOLD') {
-    return (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M5 12h14M12 5l7 7-7 7" />
-      </svg>
-    );
-  }
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 8v4l3 3" />
-    </svg>
   );
 }
 
@@ -46,19 +23,12 @@ export function SaleWindowCard({ sale }: { sale: SaleWindow }) {
     : sale.forecast_trend ? <>— <Trans>Steady</Trans></> : '—';
 
   return (
-    <div id="verdict" className="scroll-mt-4" aria-live="polite">
-      <div className="relative overflow-hidden mb-4 rounded-sm">
-        <div aria-hidden className={`absolute inset-0 ${VERDICT_BG[sale.action]} origin-left animate-band`} />
-        <div className="relative px-4 py-3 flex items-center gap-3 text-white animate-rise">
-          <VerdictIcon action={sale.action} />
-          <p className="text-xl lg:text-2xl font-bold tracking-wide uppercase">{sale.action_label}</p>
-        </div>
-      </div>
-      
+    <div id="verdict" className="scroll-mt-4">
+      <p className={`text-xl font-semibold ${VERDICT_TEXT[sale.action]}`}>{sale.action_label}</p>
+      <div aria-hidden className={`mt-2 mb-3 h-[3px] w-full ${VERDICT_BG[sale.action]}`} />
       {/* Rendered as-is, never parsed. Headlines can only appear in the en reason (by design). */}
-      <p className="text-base text-ink animate-rise">{sale.reason}</p>
-      
-      <dl className="mt-6 grid grid-cols-3 gap-3 rule-t pt-4 animate-rise">
+      <p className="text-base">{sale.reason}</p>
+      <dl className="mt-4 grid grid-cols-3 gap-3">
         <Signal
           label={<Trans>Arrivals</Trans>}
           value={pressure}
