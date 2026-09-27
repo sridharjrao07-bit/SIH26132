@@ -159,15 +159,35 @@ ruff check .
 pytest -q
 ```
 
-Offline: FakeSupabase, no network. Live checks (uvicorn + real `.env`):
+Live checks (uvicorn + real `.env`):
 
 ```bat
 python scripts/test_db.py
-python demo/reconcile.py
-python demo/live_smoke.py
+python scripts/exercise_rpc.py
 ```
 
-Judge path: [`docs/DEMO.md`](docs/DEMO.md). Full demo runbook (live + offline-mock fallback, pre-flight, recovery): [`docs/DEMO_RUNBOOK.md`](docs/DEMO_RUNBOOK.md).
+**Demo rehearsal — run this before presenting:**
+
+```bash
+python scripts/rehearse_demo.py
+```
+
+Runs the numerical audit, the five-act demo, the migration linter, the suite and
+ruff, and prints one PASS/FAIL line per step. `--fast` skips the suite.
+
+**The demo itself needs no credentials at all:**
+
+```bash
+.venv/bin/python demo/direct_channel_demo.py
+```
+
+Judge path and the full runbook (what to say per act, what to say about
+accuracy, recovery table): **[`docs/DEMO_RUNBOOK_DIRECTLINK.md`](docs/DEMO_RUNBOOK_DIRECTLINK.md)**.
+
+> `docs/DEMO_RUNBOOK.md`, `docs/DEMO.md` and `demo/reconcile.py` /
+> `demo/live_smoke.py` describe the pre-pivot Krishi Bazaar concept. The two
+> demo scripts now live in `legacy/demo/`; the runbooks are kept for history and
+> are banner-marked at the top.
 
 ## Known Limitations
 
