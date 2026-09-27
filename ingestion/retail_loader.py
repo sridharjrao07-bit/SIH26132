@@ -96,7 +96,7 @@ def load_retail_prices(
             from ingestion.dca_retail import DcaRetailAdapter
 
             rows = asyncio.run(
-                DcaRetailAdapter(api_key).fetch_retail(
+                DcaRetailAdapter(api_key, timeout=5.0).fetch_retail(
                     commodity=commodity, state=state, since=since
                 )
             )

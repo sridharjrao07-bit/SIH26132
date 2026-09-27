@@ -28,7 +28,7 @@ class RupeeRequest(BaseModel):
     commodity_id: Optional[str] = None
     category: Category = "vegetable"
     farm_price: float = Field(..., gt=0, description="Mandi modal price, Rs/quintal")
-    retail_price: float = Field(..., gt=0, description="Consumer price, Rs/quintal")
+    retail_price: Optional[float] = Field(None, gt=0, description="Consumer price, Rs/quintal")
     calibrate: bool = True
     stages: Optional[List[dict]] = Field(
         None, description="Optional override of the whole traditional chain stage list"
@@ -41,7 +41,7 @@ class FairPriceRequest(BaseModel):
     commodity_id: Optional[str] = None
     category: Category = "vegetable"
     farm_price: float = Field(..., gt=0, description="Farmer's mandi fallback, Rs/quintal")
-    retail_price: float = Field(..., gt=0, description="Consumer's shop fallback, Rs/quintal")
+    retail_price: Optional[float] = Field(None, gt=0, description="Consumer's shop fallback, Rs/quintal")
     origin_lat: float = Field(..., ge=-90, le=90)
     origin_lng: float = Field(..., ge=-180, le=180)
     dest_lat: float = Field(..., ge=-90, le=90)
@@ -94,7 +94,7 @@ class DemandIn(BaseModel):
     id: str
     commodity_id: str
     quantity_qtl: float = Field(..., gt=0, description="Quintals the consumer wants to receive")
-    retail_price_per_qtl: float = Field(..., gt=0, description="What the shop charges")
+    retail_price_per_qtl: Optional[float] = Field(None, gt=0, description="What the shop charges")
     lat: Optional[float] = None
     lng: Optional[float] = None
     category: Category = "vegetable"

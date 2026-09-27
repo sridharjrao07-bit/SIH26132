@@ -339,11 +339,10 @@ exist.
 
 Nine routes under `/api/v1/direct`.
 
-The economics endpoints — `/rupee`, `/fair-price`, `/config`, `/plan`,
-`/group-buy` — are **pure functions with no database access**. This is a
-deliberate choice with three payoffs: they cannot be poisoned by stale data,
-they are testable without infrastructure, and a judge can call them with their
-own numbers and check the arithmetic.
+The economics endpoints — `/rupee`, `/fair-price`, `/config`, `/plan`, `/group-buy` —
+compute direct trade math dynamically. They read from the database for model
+configuration (`value_chain_profiles`) and default anchors, ensuring the latest
+district officer tunings apply without deploying new code.
 
 Only `POST /plans/commit` writes, and it **re-runs the engine server-side**
 from the submitted inputs. A client cannot supply an impact figure and have it
