@@ -30,11 +30,18 @@ chain removed, why a housing society cannot fill a truck alone, a 60-lot ×
 | HTTP API (9 routes) | `app/routers/direct.py` |
 | Schema | `db/migrations/038_direct_channel.sql`, `039_direct_fulfilment.sql` |
 
-Headline result on the reference Nashik onion chain (₹2,200 mandi → ₹4,000
-retail): the farmer keeps **64 paise** of the consumer's rupee; **70%** of the
-₹1,233/qtl spread is pure margin rather than work done. DirectLink pays the
-farmer **₹2,984** (+35.6%) and charges the consumer **₹3,180** (−20.5%) — both
-sides better off than their fallback, by construction, not by assertion.
+**Both anchors are real published government data.** Farm gate: data.gov.in
+daily mandi prices, Lasalgaon APMC onion modal **₹2,226/quintal** (26 Sep 2026,
+committed in `data/gov_prices_60days.csv`). Retail: Ministry of Consumer
+Affairs / Department of Consumer Affairs daily wholesale-and-retail dataset
+(`fcainfoweb.nic.in`), **₹5,392/quintal**, loaded live when configured and from
+a committed snapshot otherwise — see `ingestion/dca_retail.py`.
+
+Headline result on those numbers: the farmer keeps **48 paise** of the
+consumer's rupee, and **85%** of the ₹2,401/quintal spread is pure margin
+rather than work done. DirectLink pays the farmer **₹3,663 (+64.5%)** and
+charges the consumer **₹3,890 (−27.9%)** — both sides better off than their
+fallback, by construction, not by assertion.
 
 ---
 

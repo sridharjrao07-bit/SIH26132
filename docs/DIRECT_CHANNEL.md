@@ -351,7 +351,64 @@ stored; the numbers in the database are always the engine's own.
 
 ---
 
-## 10. What is a theorem and what is a model
+## 10. Data provenance
+
+Both anchors are real, published government data. This matters more than it
+sounds: the consumer-rupee analysis is a ratio between two prices, and if
+either is invented then every number downstream is decorative.
+
+### Farm gate — real
+
+`data/gov_prices_60days.csv` — 980 rows, 5 Nashik APMCs (Lasalgaon, Pimpalgaon
+Baswant, Yeola, Manmad, Nashik), Aug–Sep 2026, from the data.gov.in daily
+mandi price resource `9ef84268-d588-465a-a308-a864a43d0070`. The same
+real-time adapter feeds the `prices` table in production.
+
+Reference value: **Lasalgaon onion modal ₹2,226.39/quintal, 26 Sep 2026.**
+
+### Retail — real, live when configured
+
+Ministry of Consumer Affairs, Food & Public Distribution — Department of
+Consumer Affairs, *"Essential Commodity: State-wise Daily Wholesale and Retail
+Price of Onion"*, published daily at `fcainfoweb.nic.in` (mirrored on
+data.gov.in and `dataful.in/datasets/19942`, 253,825 rows, 2014–2026).
+
+* `ingestion/dca_retail.py` — live adapter. Resource id is **configurable**
+  (`DCA_RETAIL_RESOURCE_ID`, per-commodity override via
+  `DCA_RETAIL_RESOURCE_IDS`) because data.gov.in re-issues UUIDs when a dataset
+  is re-published; hard-coding one is a bet it will not move.
+* `data/gov_retail_prices.csv` — committed snapshot of the same dataset, so a
+  demo with no wifi still runs on real numbers.
+* `ingestion/retail_loader.py` — live first, snapshot second, and it **raises**
+  rather than guessing if neither is available. A missing anchor must be loud:
+  a plausible-looking fallback would discredit every figure below.
+* `db/migrations/040_seed_retail_prices.sql` seeds the `retail_prices` table.
+
+Units are normalised to ₹/quintal at the boundary (kg × 100), because the
+dataset mixes both in one column and a kg figure passed through as quintals is
+wrong by 100× while still looking reasonable.
+
+### Why the real numbers are worse — and the fix is bigger
+
+| | Assumed (₹2,200 → ₹4,000) | Real (₹2,226 → ₹5,392) |
+|---|---|---|
+| Farmer's share of the rupee | 64% | **48%** |
+| Margin as a share of the spread | 70% | **85%** |
+| Farmer gain from DirectLink | +35.6% | **+64.5%** |
+| Consumer saving | −20.5% | **−27.9%** |
+
+The September 2026 onion spike (inflation at 48% YoY) means the assumed figure
+*understated* the problem. Measuring it rather than assuming it made the case
+stronger.
+
+### Known limitation
+
+The Maharashtra retail row is the **All-India average** retail (₹53.92/kg,
+reported 16 Sep 2026), not a Nashik bazaar survey. The row's `note` column says
+so, and the live adapter replaces it with a state-specific observation as soon
+as one is published. City-level retail surveys would tighten this further.
+
+## 11. What is a theorem and what is a model
 
 Being precise about this is the point of the whole exercise.
 
@@ -382,7 +439,7 @@ chain model in `value_chain_profiles` without a deploy.
 
 ---
 
-## 11. Running it
+## 12. Running it
 
 ```bash
 # the whole argument, offline, no database or API keys

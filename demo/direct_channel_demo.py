@@ -47,12 +47,58 @@ from direct.value_chain import (  # noqa: E402
     default_traditional_chain,
 )
 
-# ── The scenario: Nashik onions, one night in April ──────────────────────────
-# Sources for the anchors are documented in direct/value_chain.py; the mandi
-# price is a Lasalgaon modal, the retail price a Nashik-city bazaar rate.
-MANDI_PRICE = 2200.0     # ₹/quintal, farm gate (what the farmer is paid today)
-RETAIL_PRICE = 4000.0    # ₹/quintal, shop shelf (what the consumer pays today)
+# ── The scenario: Nashik onions, tonight ─────────────────────────────────────
+#
+# Both anchors are REAL, published government data — not assumptions:
+#
+#   Farm gate  data.gov.in daily mandi prices (resource 9ef84268…), Lasalgaon
+#              APMC onion modal, 26 Sep 2026.  Committed in the repo at
+#              data/gov_prices_60days.csv (980 rows, 5 Nashik APMCs).
+#
+#   Retail     Ministry of Consumer Affairs / Department of Consumer Affairs
+#              "State-wise Daily Wholesale and Retail Price of Onion",
+#              published daily at fcainfoweb.nic.in.  Loaded live when
+#              DATA_GOV_IN_API_KEY + DCA_RETAIL_RESOURCE_ID are set, otherwise
+#              from the committed snapshot in data/gov_retail_prices.csv.
+#
+# The loader refuses to guess. If neither source is available it raises rather
+# than fall back to a plausible-looking number, because every figure below
+# depends on these two and a wrong anchor would discredit all of them.
 CATEGORY = "vegetable"
+
+
+def _load_anchors():
+    """Return (mandi_price, retail_price, provenance lines)."""
+    import csv as _csv
+    from datetime import datetime as _dt
+
+    from ingestion.retail_loader import latest_retail_price
+
+    prov = []
+
+    # Left anchor: the repo's own real mandi export.
+    rows = [
+        r for r in _csv.DictReader(open("data/gov_prices_60days.csv", encoding="utf-8"))
+        if r.get("Commodity") == "Onion" and r.get("Market") == "Lasalgaon APMC"
+    ]
+    rows.sort(key=lambda r: _dt.strptime(r["Arrival_Date"], "%d/%m/%Y"))
+    latest = rows[-1]
+    mandi = float(latest["Modal_x0020_Price"])
+    prov.append(
+        f"farm gate  Lasalgaon onion modal {latest['Arrival_Date']} "
+        f"[data.gov.in mandi prices]"
+    )
+
+    # Right anchor: live if configured, else the committed snapshot.
+    retail, rdate, origin = latest_retail_price("Onion", "Maharashtra")
+    prov.append(
+        f"retail     Dept. of Consumer Affairs {rdate} "
+        f"[{'live' if origin == 'live' else 'snapshot'}]"
+    )
+    return mandi, retail, prov
+
+
+MANDI_PRICE, RETAIL_PRICE, PROVENANCE = _load_anchors()
 
 RUPEE = "₹"
 W = 74
@@ -340,7 +386,15 @@ def _all_mutual(plan) -> bool:
 
 
 def _district():
-    """60 lots around Lasalgaon/Nashik, 25 consumer groups in Nashik city."""
+    """60 lots around Lasalgaon/Nashik, 25 consumer groups in Nashik city.
+
+    Quantities, locations and the mix of buyer types are synthetic — there is
+    no published dataset of who wants how many quintals. But the PRICES are not
+    synthetic: they are drawn around the two real anchors, because the whole
+    point of the exercise is what the engine does with real money. A demo whose
+    scenario used invented prices while its headline used real ones would be
+    quietly inconsistent.
+    """
     import random
 
     rng = random.Random(20260401)  # pinned: the same district every run
@@ -351,7 +405,9 @@ def _district():
                 id=f"L{i:02d}",
                 commodity_id="onion",
                 quantity_qtl=float(rng.choice([20, 30, 40, 50])),
-                mandi_price_per_qtl=float(rng.randint(2000, 2400)),
+                # Real anchor ±10%: the five Nashik APMCs differ by about this
+                # much on any given day (see data/gov_prices_60days.csv).
+                mandi_price_per_qtl=round(MANDI_PRICE * rng.uniform(0.90, 1.10), 2),
                 lat=20.05 + rng.uniform(-0.12, 0.12),
                 lng=74.30 + rng.uniform(-0.18, 0.18),
                 category=CATEGORY,
@@ -366,7 +422,9 @@ def _district():
                 id=f"D{j:02d}",
                 commodity_id="onion",
                 quantity_qtl=float(rng.choice([15, 25, 40, 60])),
-                retail_price_per_qtl=float(rng.randint(3800, 4200)),
+                # Real anchor ±5%: retail varies less across a single city than
+                # mandi prices do across markets.
+                retail_price_per_qtl=round(RETAIL_PRICE * rng.uniform(0.95, 1.05), 2),
                 lat=20.00 + rng.uniform(-0.05, 0.05),
                 lng=73.79 + rng.uniform(-0.05, 0.05),
                 category=CATEGORY,
@@ -443,6 +501,9 @@ def main() -> int:
     print("║" + f"  Nashik onions · mandi {RUPEE}{MANDI_PRICE:,.0f}/qtl · "
           f"retail {RUPEE}{RETAIL_PRICE:,.0f}/qtl".ljust(W - 2) + "║")
     print("║" + "  computed live from direct/ — no database, no network".ljust(W - 2) + "║")
+    print("╠" + "═" * (W - 2) + "╣")
+    for line in PROVENANCE:
+        print("║" + ("  " + line)[: W - 2].ljust(W - 2) + "║")
     print("╚" + "═" * (W - 2) + "╝")
 
     act_one()
