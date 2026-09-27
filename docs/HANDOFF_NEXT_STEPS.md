@@ -234,8 +234,45 @@ select public.group_buy_join('<group-buy-uuid>', 20.0);
 
 **Concurrency check worth actually running** — `group_buy_join` takes
 `SELECT … FOR UPDATE` on the group row so two simultaneous joins cannot lose an
-order. Open two psql sessions and join concurrently; `committed_qtl` must equal
-the true sum of member quantities, not one join's value.
+order, and recomputes `committed_qtl` as `sum(m.qtl)` rather than incrementing
+it. This is now scripted, so you do not need two psql sessions:
+
+```bash
+python scripts/exercise_rpc.py
+```
+
+It was rewritten from a print-only smoke script into a verifier that asserts and
+exits non-zero. The contention check opens **two independent connections**,
+releases them onto the same group with a `threading.Barrier`, and asserts
+`committed_qtl == sum(members.qtl)`. It joins with **different** quantities
+(30 and 40) on purpose: with equal quantities a lost update is coincidentally
+invisible, because 20+20 read stale twice still lands on 40. 30 and 40 make any
+lost increment show up as `committed_qtl` disagreeing with the members table.
+
+It also covers `direct_plan_commit` (including idempotency on `plan_id`),
+`direct_impact`, `direct_order_trace` on an unknown token, and that a join
+exceeding the target is refused with the real headroom.
+
+**Three things were broken and are fixed, all of which would have failed during
+your run:**
+
+1. `exercise_rpc.py` did a module-level `import pg8000.dbapi`, but pg8000 is in
+   neither requirements file — only `psycopg2-binary` is installed. The script
+   could not run at all in a fresh clone.
+2. `apply_migrations._connect` only enabled SSL when the URL contained
+   `sslmode=require`. Supabase's 5432 connection refuses plaintext and its
+   connection strings carry no `sslmode`, so `apply_migrations.py --dry-run`
+   would have failed at step 3 with what looks like a network error. SSL is now
+   on unless `sslmode=disable` is explicit.
+3. Nothing ever asserted `origin == 'live'`; the one existing test accepted
+   either value and so was vacuous for the live branch. Four tests added,
+   including one proven non-vacuous by breaking the branch and watching it fail.
+
+**Verified statically, so your SQL assertions will hold:** 041 seeds 3 rows with
+5 stages each and `is_active` true, and its `ON CONFLICT` target matches
+`uq_value_chain_profiles_scope` exactly. 040 seeds 5 rows into `retail_prices`,
+and its `ON CONFLICT` target matches `uq_retail_price_record` from 038 — which
+depends on 002 having seeded an `onion` commodity row (it has).
 
 ### P1 — Live retail adapter: fail-fast bounds added (code done, **offline fallback verified**, live run still unverified)
 
