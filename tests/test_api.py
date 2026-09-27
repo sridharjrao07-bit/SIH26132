@@ -9,20 +9,16 @@ previously-untested routes that contained runtime crashes in the evaluation:
   - Forecasts: get_forecasts, get_forecasts_summary (M7)
   - Auth gates: admin endpoints reject farmer tokens and no-token requests
 """
-from datetime import date, datetime, timedelta, timezone
-from unittest.mock import patch
+from datetime import date, datetime, timezone
 
 from app.main import app
 from fastapi.testclient import TestClient
-from notifications.sale_window import get_ist_today
 
 from tests.conftest import (
     ADMIN_USER_ID,
     COMMODITY_ID_ONION,
-    COMMODITY_ID_TOMATO,
     FARMER_USER_ID,
     MARKET_ID_LASALGAON,
-    MARKET_ID_PIMPALGAON,
     mint_jwt,
 )
 
@@ -106,196 +102,9 @@ def test_get_latest_prices_seeded(override_supabase, fake_supabase):
 
 # ─── Dashboard: B1 + A1 regression locks ─────────────────────────────────────
 
-def test_forecast_stats_admin_returns_200_with_confidence_key(override_supabase, fake_supabase):
-    """B1 regression: must not raise KeyError('confidence_tier')"""
-    fake_supabase._data["forecasts"] = [{
-        "id": "f-001",
-        "market_id": MARKET_ID_LASALGAON,
-        "commodity_id": COMMODITY_ID_ONION,
-        "forecast_date": date.today().isoformat(),
-        "predicted_price": 1800.0,
-        "lower_bound": 1600.0,
-        "upper_bound": 2000.0,
-        "confidence": "high",       # correct column name
-        "method": "blend",
-        "observations": 25,
-        "status": "ok",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "markets": {"name": "Lasalgaon APCM"},
-        "commodities": {"name_en": "Onion"},
-    }]
-    fake_supabase._data["prices"] = []
-
-    resp = client.get("/dashboard/api/forecast-stats", headers=admin_headers())
-    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
-    data = resp.json()
-    assert isinstance(data, list)
-    assert len(data) == 1
-    assert "confidence" in data[0]     # key must be 'confidence', not 'confidence_tier'
-
-def test_forecast_stats_farmer_gets_403(override_supabase, fake_supabase):
-    """Admin-only endpoint must reject farmer tokens"""
-    resp = client.get("/dashboard/api/forecast-stats", headers=farmer_headers())
-    assert resp.status_code == 403
-
-def test_forecast_stats_no_token_gets_401(override_supabase, fake_supabase):
-    resp = client.get("/dashboard/api/forecast-stats")
-    assert resp.status_code == 401
-
-def test_ingestion_logs_admin_returns_200(override_supabase, fake_supabase_with_logs):
-    """A1 regression: must not 400 (wrong order column 'start_time' → 'run_at')"""
-    resp = client.get("/dashboard/api/ingestion-logs", headers=admin_headers())
-    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
-    data = resp.json()
-    assert isinstance(data, list)
-    assert len(data) >= 1
-    # Verify the correct column is present in the response
-    assert "run_at" in data[0]
-
-def test_ingestion_logs_farmer_gets_403(override_supabase, fake_supabase):
-    resp = client.get("/dashboard/api/ingestion-logs", headers=farmer_headers())
-    assert resp.status_code == 403
-
-
 # ─── Forecasts ───────────────────────────────────────────────────────────────
 
-def test_get_forecasts_returns_ok_rows_only(override_supabase, fake_supabase):
-    """M7: status=ok filter — stale rows must not appear.
-    Rows are dated tomorrow: the engine writes tomorrow…today+7, and the S1 fix
-    excludes today-dated rows (they can only come from a superseded run)."""
-    today = (get_ist_today() + timedelta(days=1)).isoformat()
-    fake_supabase._data["forecasts"] = [
-        {
-            "id": "f-ok",
-            "market_id": MARKET_ID_LASALGAON,
-            "commodity_id": COMMODITY_ID_ONION,
-            "forecast_date": today,
-            "predicted_price": 1800.0,
-            "lower_bound": 1600.0, "upper_bound": 2000.0,
-            "confidence": "high", "method": "blend",
-            "observations": 25, "status": "ok",
-            "generated_at": datetime.now(timezone.utc).isoformat(),
-            "markets": {"name": "Lasalgaon APCM", "district": "Nashik"},
-            "commodities": {"name_en": "Onion", "name_mr": "कांदा", "name_hi": "प्याज"},
-        },
-        {
-            "id": "f-stale",
-            "market_id": MARKET_ID_LASALGAON,
-            "commodity_id": COMMODITY_ID_ONION,
-            "forecast_date": today,
-            "predicted_price": 1700.0,
-            "lower_bound": 1500.0, "upper_bound": 1900.0,
-            "confidence": "medium", "method": "moving_avg",
-            "observations": 12, "status": "stale",
-            "generated_at": datetime.now(timezone.utc).isoformat(),
-            "markets": {"name": "Lasalgaon APCM", "district": "Nashik"},
-            "commodities": {"name_en": "Onion", "name_mr": "कांदा", "name_hi": "प्याज"},
-        },
-    ]
-    resp = client.get(
-        f"/api/v1/forecasts?market_id={MARKET_ID_LASALGAON}&commodity_id={COMMODITY_ID_ONION}"
-    )
-    assert resp.status_code == 200
-    data = resp.json()
-    statuses = [r["status"] for r in data]
-    assert "stale" not in statuses
-    assert "ok" in statuses
-
-def test_get_forecasts_summary_includes_insufficient_data(override_supabase, fake_supabase):
-    """M7+B2: summary should include insufficient_data but not stale.
-    Rows dated tomorrow per the S1 contract (today rows = superseded run)."""
-    # IST, not UTC: /forecasts/summary filters on get_ist_today() + 1 day.
-    # With UTC date.today() these rows fall outside the window for the ~5.5
-    # hours a day when the IST date has already rolled over but UTC's has not.
-    today = (get_ist_today() + timedelta(days=1)).isoformat()
-    now_iso = datetime.now(timezone.utc).isoformat()
-    fake_supabase._data["forecasts"] = [
-        {
-            "id": "f-ok",
-            "market_id": MARKET_ID_LASALGAON, "commodity_id": COMMODITY_ID_ONION,
-            "forecast_date": today, "predicted_price": 1800.0,
-            "lower_bound": 1600.0, "upper_bound": 2000.0,
-            "confidence": "high", "method": "blend",
-            "observations": 25, "status": "ok", "generated_at": now_iso,
-            "markets": {"name": "Lasalgaon APCM", "district": "Nashik"},
-            "commodities": {"name_en": "Onion", "name_mr": "कांदा", "name_hi": "प्याज"},
-        },
-        {
-            "id": "f-insuf",
-            "market_id": MARKET_ID_PIMPALGAON, "commodity_id": COMMODITY_ID_TOMATO,
-            "forecast_date": today, "predicted_price": None,
-            "lower_bound": None, "upper_bound": None,
-            "confidence": None, "method": "none",
-            "observations": 5, "status": "insufficient_data", "generated_at": now_iso,
-            "markets": {"name": "Pimpalgaon Baswant APCM", "district": "Nashik"},
-            "commodities": {"name_en": "Tomato", "name_mr": "टोमॅटो", "name_hi": "टमाटर"},
-        },
-        {
-            "id": "f-stale",
-            "market_id": MARKET_ID_LASALGAON, "commodity_id": COMMODITY_ID_TOMATO,
-            "forecast_date": today, "predicted_price": 500.0,
-            "lower_bound": 400.0, "upper_bound": 600.0,
-            "confidence": "medium", "method": "moving_avg",
-            "observations": 12, "status": "stale", "generated_at": now_iso,
-            "markets": {"name": "Lasalgaon APCM", "district": "Nashik"},
-            "commodities": {"name_en": "Tomato", "name_mr": "टोमॅटो", "name_hi": "टमाटर"},
-        },
-    ]
-    resp = client.get("/api/v1/forecasts/summary")
-    assert resp.status_code == 200
-    data = resp.json()
-    statuses = {r["status"] for r in data}
-    assert "stale" not in statuses
-    assert "ok" in statuses
-    assert "insufficient_data" in statuses
-
-
 # ─── Alerts ──────────────────────────────────────────────────────────────────
-
-def test_alerts_patch_null_threshold_returns_422_not_500(override_supabase, fake_supabase):
-    """M3 regression: null threshold_price must return 422 (Pydantic), not 500 (TypeError)"""
-    fake_supabase._data["alerts"] = [
-        {"id": "a-1", "user_id": FARMER_USER_ID, "commodity_id": COMMODITY_ID_ONION,
-         "threshold_price": 1500.0, "condition": "lte", "active": True}
-    ]
-    resp = client.patch(
-        "/api/v1/alerts/a-1",
-        json={"threshold_price": None},
-        headers=farmer_headers(),
-    )
-    # Pydantic Field(gt=0) with explicit None: the field is Optional so None is allowed
-    # but the updated value passes through is not None guard. This tests the previous crash
-    # was a TypeError from '<=' with None, which Field(gt=0) now prevents at schema level.
-    assert resp.status_code in (200, 422), f"Must not be 500: {resp.status_code} {resp.text}"
-    assert resp.status_code != 500
-
-def test_alerts_patch_zero_threshold_returns_422(override_supabase, fake_supabase):
-    """M3: threshold=0 must be rejected by Field(gt=0)"""
-    resp = client.patch(
-        "/api/v1/alerts/a-1",
-        json={"threshold_price": 0},
-        headers=farmer_headers(),
-    )
-    assert resp.status_code == 422
-
-def test_alerts_list_no_auth_returns_401(override_supabase, fake_supabase):
-    """list_alerts was missing Depends(get_current_user) — must now return 401"""
-    resp = client.get("/api/v1/alerts/")
-    assert resp.status_code == 401
-
-def test_alerts_create_valid(override_supabase, fake_supabase):
-    """Happy path: create alert with valid threshold"""
-    resp = client.post(
-        "/api/v1/alerts/",
-        json={
-            "commodity_id": COMMODITY_ID_ONION,
-            "threshold_price": 1500.0,
-            "condition": "lte",
-        },
-        headers=farmer_headers(),
-    )
-    assert resp.status_code == 200
-
 
 # ─── Markets nearby ──────────────────────────────────────────────────────────
 
@@ -326,50 +135,5 @@ def test_nearby_markets_invalid_lat_returns_422(override_supabase, fake_supabase
 
 # ─── Auth gates ──────────────────────────────────────────────────────────────
 
-def test_admin_forecast_run_rejects_farmer_token(override_supabase, fake_supabase):
-    """Farmer role must not access admin endpoints"""
-    resp = client.post("/api/v1/admin/forecast/run", headers=farmer_headers())
-    assert resp.status_code == 403
-
-def test_admin_forecast_run_rejects_no_token(override_supabase, fake_supabase):
-    """No token must return 401 on admin endpoints"""
-    resp = client.post("/api/v1/admin/forecast/run")
-    assert resp.status_code == 401
-
-def test_admin_forecast_run_accepts_admin_token(override_supabase, fake_supabase):
-    """Admin token must be accepted (mocked Supabase won't actually run the job)"""
-    resp = client.post("/api/v1/admin/forecast/run", headers=admin_headers())
-    # 200 = accepted; any non-401/403 status is fine here against the fake DB
-    assert resp.status_code not in (401, 403), f"Admin must not be rejected: {resp.status_code}"
-
-
-def test_admin_events_ingest_handles_error(override_supabase, fake_supabase):
-    """P1 regression: admin_events_ingest must handle unhandled exceptions and return 503"""
-    with patch("events.runner.run", side_effect=Exception("Mock error")):
-        resp = client.post("/api/v1/admin/events/ingest", headers=admin_headers())
-        assert resp.status_code == 503, f"Expected 503 for run failure, got {resp.status_code}: {resp.text}"
-
-
 # ─── P1-1 regression: _call_rpc must RETURN, not RAISE, json_for_api_error ────
 
-def test_rpc_business_error_returns_mapped_4xx_not_500(override_supabase, fake_supabase):
-    """P1-1 regression: _call_rpc must RETURN json_for_api_error(exc), not RAISE it.
-
-    Raising a JSONResponse throws TypeError('exceptions must derive from
-    BaseException') and the client gets a 500 instead of the mapped 4xx.
-    """
-    fake_supabase.set_rpc_error("payment_mark_paid", "payment already settled")
-    r = client.patch("/api/v1/payments/p1/paid", headers=farmer_headers())
-    assert r.status_code == 409, f"P1-1 regression: got {r.status_code}: {r.text}"
-    assert r.json() == {"detail": "operation not permitted"}
-
-
-def test_rpc_error_survives_response_postprocessing(override_supabase, fake_supabase):
-    """offers.py wraps the result in with_expiry(); a JSONResponse must pass through."""
-    fake_supabase.set_rpc_error("offer_create", "lot already offered")
-    r = client.post(
-        "/api/v1/offers/",
-        headers=farmer_headers(),
-        json={"lot_id": "l1", "buyer_id": "b1", "price_per_qtl": 10, "quantity_qtl": 5},
-    )
-    assert r.status_code == 409, f"expected 409, got {r.status_code}: {r.text}"

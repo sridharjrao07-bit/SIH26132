@@ -2,7 +2,6 @@ from datetime import date
 
 from app.main import app
 from fastapi.testclient import TestClient
-
 from tests.conftest import FARMER_USER_ID, mint_jwt
 
 OTHER_FARMER_USER_ID = "farmer-uuid-0002-0000-000000000000"

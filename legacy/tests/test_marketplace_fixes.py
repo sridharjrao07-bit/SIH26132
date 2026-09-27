@@ -24,7 +24,6 @@ import pytest
 from app.main import app
 from notifications.sale_window import get_ist_today
 from starlette.testclient import TestClient
-
 from tests.conftest import (
     ADMIN_USER_ID,
     COMMODITY_ID_ONION,

@@ -14,6 +14,7 @@ def test_api_md_sync():
         if e.code != 0:
             raise AssertionError("docs/API.md is out of sync. Please run 'make docs'")
 
+
 def test_api_contract_paths():
     """Ensure all endpoints mentioned in API_CONTRACT.md exist."""
     project_root = Path(__file__).resolve().parent.parent
@@ -50,4 +51,5 @@ def test_api_contract_paths():
         raise AssertionError(f"Endpoints documented in API_CONTRACT.md but missing in app.openapi(): {set(missing)}")
     
     # bump this if you intentionally remove documented endpoints
-    assert len(set(matches)) >= 25, f"Expected at least 25 unique matches, found {len(set(matches))}"
+    assert len(set(matches)) >= 21, f"Expected at least 21 unique matches, found {len(set(matches))}"
+

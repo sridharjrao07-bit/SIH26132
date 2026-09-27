@@ -1,7 +1,6 @@
 """Judge-facing walkthrough tests — appended by audit HIGH patch."""
 from app.main import app
 from fastapi.testclient import TestClient
-
 from tests.conftest import FARMER_USER_ID, mint_jwt
 
 client = TestClient(app, raise_server_exceptions=False)

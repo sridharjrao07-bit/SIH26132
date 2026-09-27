@@ -4,7 +4,6 @@ from datetime import date, datetime, timezone
 from app.main import app
 from fastapi.testclient import TestClient
 from notifications.sale_window import get_ist_today
-
 from tests.conftest import (
     COMMODITY_ID_ONION,
     COMMODITY_ID_TOMATO,
@@ -221,7 +220,6 @@ def test_docs_available_in_development():
 
 def test_sms_reply_includes_sale_window(override_supabase, fake_supabase, tmp_path, monkeypatch):
     from notifications.sms_gateway import MockSMSGateway
-
     from tests.conftest import ADMIN_USER_ID, mint_jwt
 
     monkeypatch.setattr(
@@ -843,7 +841,6 @@ def test_lot_ledger_is_a_transaction_trail(override_supabase, fake_supabase):
 
 def test_sms_names_best_local_buyer_when_lot_open(override_supabase, fake_supabase, tmp_path, monkeypatch):
     from notifications.sms_gateway import MockSMSGateway
-
     from tests.conftest import ADMIN_USER_ID
     monkeypatch.setattr(
         "app.routers.sms.get_sms_gateway",

@@ -47,6 +47,27 @@ the whole argument and it needs no database.
 
 ---
 
+## Repository layout after the pivot
+
+The SIH26132 feature code has been **moved, not deleted**, into `legacy/`
+(`git mv`, so history is preserved and a single `git mv` restores anything):
+
+- `legacy/routers/` — 13 retired routers (`forecasts`, `alerts`, `buyers`,
+  `offers`, `payments`, `grievances`, `matching`, `storage`, `intelligence`,
+  `dashboard`, `admin`, `sms`, old `logistics`)
+- `legacy/notifications/`, `legacy/schemas/`, `legacy/demo/`, `legacy/tests/`
+
+The retained app serves six groups: `markets`, `commodities`, `prices`, `lots`,
+`me`, `direct`. `legacy/` is excluded from linting.
+
+**Kept in the active tree on purpose** (the new work depends on them, not
+sentiment): `app/schemas/marketplace.py` (`lots.py`/`profile.py` import it),
+`notifications/{alert_checker,prices,sale_window,sms_gateway}.py` (the scheduler
+and `profile.py` import them), `app/services/{marketplace,jobs}.py`, and the
+mandi + retail ingestion adapters that supply both price anchors.
+
+See `legacy/README.md` for what to update when restoring a file.
+
 ## Supabase: what to keep, what to add, what to retire
 
 The repo was built for SIH26132 (market linkage, price discovery) and has been

@@ -14,7 +14,6 @@ tests pin the two properties the documentation claims:
 from datetime import datetime, timedelta, timezone
 
 from app import auth
-
 from tests.test_backend_audit import ADMIN_USER_ID, admin_headers, client
 
 
