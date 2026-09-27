@@ -26,11 +26,13 @@ baseline commit and deleting .venv while leaving the working tree intact. Do not
 trust a failure until you have confirmed you are not looking at a reset:
 
     cd /home/user/SIH26132
-    git rev-parse HEAD                                   # expect c2cadad or later
+    git rev-parse HEAD
     git ls-remote origin refs/heads/arena/01a0e3c9-sih26132
     git status --short | wc -l
 
-If HEAD is 43dec5c (the baseline) and the tree is dirty, repair it — do NOT
+The two shas must MATCH. If HEAD is 43dec5c (the pivot baseline) while the remote
+is something later, that is a reset -- repair it. Do not hardcode a sha in your
+reasoning; it advances with every commit. — do NOT
 rebase, do NOT create a branch:
 
     git fetch origin "arena/01a0e3c9-sih26132:refs/remotes/origin/arena/01a0e3c9-sih26132"
