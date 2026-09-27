@@ -171,3 +171,24 @@ def test_vacuous_test_check():
     
     check_ratchet("vacuous_test", violations)
 
+
+
+def test_no_migration_contains_merge_conflict_markers():
+    """A migration committed with conflict markers fails to apply at all.
+
+    This is not hypothetical: migration 041 was once committed containing
+    '<<<<<<< HEAD' / '=======' / '>>>>>>>' markers after a rebase conflict was
+    resolved by a script that only replaced part of the file. Postgres rejects
+    the whole file, so the migration is not merely wrong, it is unusable — and
+    nothing in the test suite would have noticed, because no test ever reads the
+    migration text as SQL.
+    """
+    root = Path(__file__).resolve().parent.parent
+    markers = ("<<<<<<<", "=======", ">>>>>>>")
+    bad = []
+    for p in sorted((root / "db" / "migrations").glob("*.sql")):
+        text = p.read_text(encoding="utf-8")
+        for i, line in enumerate(text.splitlines(), start=1):
+            if line.startswith(markers):
+                bad.append(f"{p.name}:{i}")
+    assert not bad, f"merge conflict markers in migrations: {bad}"
