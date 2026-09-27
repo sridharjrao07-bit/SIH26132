@@ -354,6 +354,28 @@ endpoints are self-contained and the economics routes need no database.
 - **DCA `_normalise` must key on `(state, date)`.** Date alone lets one state's
   wholesale overwrite another's.
 
+## Before the demo: one command
+
+    python scripts/rehearse_demo.py
+
+Runs the audit, the five-act demo, the migration linter, the test suite and
+ruff, then prints one PASS/FAIL line per step. `--fast` skips the suite. Takes
+about seven seconds. If it says `READY`, the demo is safe to run.
+
+`scripts/audit_numbers.py` is the part worth knowing about. It re-derives every
+headline number from `data/` without importing the engine, so it catches a
+wrong derivation that the test suite cannot: the suite proves the engine is
+self-consistent, and a chain with wrong stage parameters is perfectly
+self-consistent. Every figure reconciles to four decimal places.
+
+Its one real limitation, stated in its own output: it checks the *derivations*,
+not the *anchors*. The engine calibrates to whatever (farm, retail) pair it is
+handed, so a plausible-but-wrong price still reconciles exactly. It rejects
+impossible anchors (₹12/quintal, retail below farm, anchors months apart) but
+not a subtly wrong one. `tests/test_retail_anchor.py` covers the plausibility
+band. Do not present a number from the audit as "verified against the market"
+— it is verified against the data, which is what "real data" means.
+
 ## Definition of done
 
 P0 and P1 closed, i.e. migrations applied to a real Postgres, the write-path
