@@ -94,8 +94,10 @@ an overclaim — some of the spread pays for packing and transport that any
 channel, direct or not, must pay. Saying so is the difference between a number
 that survives scrutiny and one that does not.
 
-For the reference onion chain: ₹864 margin (70%), ₹369 work (30%), on top of
-14.2% physical spoilage.
+For the reference onion chain on the real anchors (₹2,226 → ₹5,392):
+₹2,032 margin (85%), ₹369 work (15%), on top of 14.2% physical spoilage.
+(An earlier draft used an assumed ₹2,200 → ₹4,000 pair, which gave ₹864 and
+70% — it understated the problem by a third.)
 
 ---
 
