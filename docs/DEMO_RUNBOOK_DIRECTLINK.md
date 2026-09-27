@@ -209,3 +209,13 @@ trusts the rest:
 Say the second point before a judge finds it. "The prices are real, the
 arithmetic is verified, and the chain split is a calibrated model" is a stronger
 position than a claim that everything is measured.
+
+**There is one independent corroboration worth volunteering.** The DCA dataset
+publishes wholesale *and* retail for the same state and date, so the retail
+markup over wholesale is measured rather than modelled: 1.09 (Andhra Pradesh),
+1.13 (Assam), 1.27 (Arunachal Pradesh), 1.10 (Andaman and Nicobar Islands),
+median **1.12**. The engine's fitted chain reaches ₹3,407 at its wholesale stage
+against ₹5,392 retail, a terminal ratio of **1.58**. Same order of magnitude, and
+the gap is expected — DCA wholesale is a consuming-centre price while the engine's
+wholesale stage sits at the producing mandi. Volunteer this: a demo that names its
+own soft spot is more credible than one that claims none.

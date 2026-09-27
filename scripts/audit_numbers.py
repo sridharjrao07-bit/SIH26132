@@ -267,6 +267,46 @@ def main(argv: list[str] | None = None) -> int:
         for f in a.failures:
             print(f"  {f}")
         return 1
+    # The engine's fitted price at its wholesale stage. Read it from
+    # rep.chain.stages, NOT by cascading the stage margins yourself: the model
+    # is affine (A*farm + B), so a pure multiplicative cascade reproduces
+    # neither the B term nor the fitted price and gives a plausible-looking
+    # number the engine never produces.
+    ch_wholesale = next(
+        (st.price_out for st in rep.chain.stages if st.key.startswith("wholesal")),
+        None,
+    )
+
+    # ── corroboration against the second price tier ────────────────────────
+    # The DCA snapshot publishes wholesale *and* retail for the same state and
+    # date, which is an independently measured markup at the terminal tier.
+    # This is reported, not asserted: DCA wholesale is the price in a
+    # *consuming* centre, while the engine's wholesale stage sits at the
+    # producing mandi, so the two are an order-of-magnitude comparison and
+    # nothing stronger.
+    ratios = []
+    with open(RETAIL_CSV, encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            try:
+                r_ = float(row["retail_price_per_qtl"])
+                w_ = float(row["wholesale_price_per_qtl"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if r_ > 0 and w_ > 0:
+                ratios.append((row["state"], r_ / w_))
+    if ratios:
+        vals = sorted(v for _, v in ratios)
+        med = vals[len(vals) // 2] if len(vals) % 2 else (
+            vals[len(vals) // 2 - 1] + vals[len(vals) // 2]) / 2
+        print(f"\n    DCA-measured retail/wholesale, {len(ratios)} states on one date:")
+        print("      " + "  ".join(f"{st} {v:.2f}" for st, v in ratios))
+        if ch_wholesale:
+            print(f"      median {med:.2f}; engine's fitted price at its wholesale "
+                  f"stage {ch_wholesale:,.0f} -> terminal ratio {retail / ch_wholesale:.2f}")
+        print("      (DCA wholesale is a consuming-centre price; the engine's "
+              "wholesale stage sits\n       at the producing mandi, so this is an "
+              "order-of-magnitude check only.)")
+
     print(f"\nOK: all {len(a.rows)} headline numbers reconcile independently")
     print(f"    farmer share {ch['farmer_share_pct']:.1f}% | margin share "
           f"{ch['margin_share_of_absorption_pct']:.0f}% | pass-through {ch['pass_through']:.3f}")
