@@ -1,8 +1,42 @@
-# Krishi Bazaar — SIH26132 (backend)
+# Krishi Bazaar — SIH26132 (backend) + DirectLink (SIH26033)
 
 [![Run in Postman](https://run.pstmn.io/button.svg)](krishi_bazaar_sih.postman_collection.json)
 
-Market linkage and price discovery API for farmers (Government of Maharashtra / MSInS).
+Market linkage and price discovery API for farmers (Government of Maharashtra / MSInS),
+plus **DirectLink**, the disintermediation engine for SIH26033.
+
+## DirectLink — cutting the chain (SIH26033)
+
+> **Problem statement:** *multiple intermediaries reduce the farmer's earnings and
+> increase the consumer's price.*
+
+DirectLink attacks that from four directions: attribute the leak exactly, cut
+the chain and re-price the trade, consolidate so small orders can ship, and
+settle traceably so the claim can be audited.
+
+```bash
+python demo/direct_channel_demo.py      # the whole argument, offline
+```
+
+No database, no network, no API keys — every figure is computed live. Five
+acts: where the consumer's rupee goes today, what one lane looks like with the
+chain removed, why a housing society cannot fill a truck alone, a 60-lot ×
+25-group district plan, and one crate's traceable receipt.
+
+| Piece | Where |
+|---|---|
+| Algorithm and architecture | [`docs/DIRECT_CHANNEL.md`](docs/DIRECT_CHANNEL.md) |
+| Engine (pure, no I/O) | `direct/` |
+| HTTP API (9 routes) | `app/routers/direct.py` |
+| Schema | `db/migrations/038_direct_channel.sql`, `039_direct_fulfilment.sql` |
+
+Headline result on the reference Nashik onion chain (₹2,200 mandi → ₹4,000
+retail): the farmer keeps **64 paise** of the consumer's rupee; **70%** of the
+₹1,233/qtl spread is pure margin rather than work done. DirectLink pays the
+farmer **₹2,984** (+35.6%) and charges the consumer **₹3,180** (−20.5%) — both
+sides better off than their fallback, by construction, not by assertion.
+
+---
 
 This repository holds the **FastAPI + Supabase backend**. The farmer/buyer PWA lives in [`web/`](web/) (Vite + React; see [`web/README.md`](web/README.md)), with its design record in [`docs/frontend/`](docs/frontend/). HTTP contract: [`docs/API.md`](docs/API.md). Layout: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). How to contribute: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
@@ -16,6 +50,11 @@ This repository holds the **FastAPI + Supabase backend**. The farmer/buyer PWA l
 | Lots, grading, digital offers, payments | `/lots/` `/offers/` `/payments/` |
 | Logistics + disputes | `/logistics/bookings` `/grievances/` |
 | Transparent record | `GET /lots/{id}/ledger` |
+| **Where the consumer's rupee goes** (SIH26033) | `POST /api/v1/direct/rupee` |
+| **What a direct trade should cost** (SIH26033) | `POST /api/v1/direct/fair-price` |
+| **Match lots to consumers, optimally** (SIH26033) | `POST /api/v1/direct/plan` |
+| **Pool orders until a truck is viable** (SIH26033) | `POST /api/v1/direct/group-buy` |
+| **Scan a crate's receipt** (SIH26033) | `GET /api/v1/direct/trace/{token}` |
 
 ### Architecture
 ```mermaid
@@ -25,6 +64,7 @@ graph TD
     Services --> DB[(Supabase PostgreSQL)]
     Services --> Match[Matching Engine]
     Services --> Forecast[Forecasting Engine]
+    Services --> Direct[DirectLink Engine]
 ```
 
 ### Tech Stack Justification
