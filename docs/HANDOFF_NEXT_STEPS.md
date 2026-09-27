@@ -409,6 +409,26 @@ endpoints are self-contained and the economics routes need no database.
 - **DCA `_normalise` must key on `(state, date)`.** Date alone lets one state's
   wholesale overwrite another's.
 
+## The credential-gated half — one command
+
+```bash
+export SUPABASE_DB_URL="postgresql://postgres:<pw>@db.<ref>.supabase.co:5432/postgres"
+export DATA_GOV_IN_API_KEY="<key>"
+export DCA_RETAIL_RESOURCE_ID="<uuid>"
+python scripts/verify_live_stack.py
+```
+
+Ten checks in dependency order: preflight, static SQL lint, dry run, apply,
+**idempotency**, the two seeded-row assertions, the write path including the
+concurrency check, the live retail adapter, the snapshot fallback, and the
+offline rehearsal. Exits non-zero on any failure, one PASS/FAIL line each with
+the numbers.
+
+`docs/AGENT_LOOP_PROMPT.md` is a ready-made prompt to hand another agent to run
+this and iterate on failures. It includes the sandbox-reset repair (this repo has
+reset eight times, rewinding git to baseline and deleting `.venv`), the known
+failure modes, and an explicit "what a green run still does not prove" section.
+
 ## Before the demo: one command
 
     python scripts/rehearse_demo.py
