@@ -22,6 +22,7 @@ from datetime import date, datetime, timedelta, timezone
 
 import pytest
 from app.main import app
+from notifications.sale_window import get_ist_today
 from starlette.testclient import TestClient
 
 from tests.conftest import (
@@ -182,7 +183,10 @@ def test_sale_window_uses_latest_forecast_generation(fake_supabase):
 def test_forecast_summary_returns_day1_of_latest_run(override_supabase, fake_supabase):
     """/forecasts/summary must return day-1 of the LATEST run, not whichever
     row carries the newest per-row timestamp (day-7 written last)."""
-    today = date.today()
+    # IST, not UTC — see the note in tests/test_api.py. The endpoint's window
+    # starts at get_ist_today() + 1 day, so seeding from date.today() makes
+    # these rows invisible whenever IST is already on the next date.
+    today = get_ist_today()
     t0 = datetime.now(timezone.utc) - timedelta(hours=3)
     rows = [
         # older run: day-1 = 2000

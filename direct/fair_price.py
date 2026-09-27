@@ -65,14 +65,37 @@ class LeakageReport:
         }
 
 
-def _verdict(farmer_share_pct: float) -> str:
-    if farmer_share_pct >= 60:
-        return "Farmer retains a healthy share; limited headroom for direct trade."
-    if farmer_share_pct >= 45:
-        return "Typical horticulture spread: meaningful headroom for direct trade."
-    if farmer_share_pct >= 30:
-        return "Heavy intermediary absorption: direct trade would materially help the farmer."
-    return "Severe absorption: the farmer sees very little of the consumer rupee."
+def _verdict(farmer_share_pct: float, margin_share_pct: float) -> str:
+    """Judge the chain on the headroom it leaves, not on the share alone.
+
+    The first cut of this function looked only at the farmer's share of the
+    consumer's rupee, which scored a chain that loses 14% of the crop and takes
+    70% of the spread as pure margin as "healthy — limited headroom".  That is
+    backwards: the share says how the pie is *currently* cut, while the headroom
+    is the part of the spread that is margin rather than work done.
+
+    So the margin share leads.  A high farmer share only counts as healthy when
+    the chain is also not skimming much — otherwise a chain could look benign
+    purely because the farmer started from a high farm price.
+    """
+    if margin_share_pct >= 65:
+        return (
+            "Heavy intermediary absorption: most of the spread is margin rather "
+            "than work done, so direct trade would materially help both sides."
+        )
+    if margin_share_pct >= 45:
+        return (
+            "Typical horticulture spread: a meaningful slice is margin, so there "
+            "is real headroom for direct trade."
+        )
+    if farmer_share_pct <= 30:
+        return "Severe absorption: the farmer sees very little of the consumer rupee."
+    if margin_share_pct >= 25:
+        return (
+            "Modest spread: some margin to recover, but physical handling and "
+            "loss dominate."
+        )
+    return "Thin margin: the spread is mostly real handling cost, so little to recover."
 
 
 def leakage_report(
@@ -115,8 +138,20 @@ def leakage_report(
 
     chain_result = traditional_chain.forward(farm_price)
 
-    avoidable = sum(s.take for s in chain_result.stages if not s.essential)
-    unavoidable = sum(s.take for s in chain_result.stages if s.essential)
+    # What "avoidable" means here matters more than it looks.
+    #
+    # An earlier version summed the take of stages flagged `essential = False`.
+    # Every stage of the reference traditional chain is non-essential in that
+    # sense — the whole chain is what direct trade replaces — so the report
+    # declared 100% of the spread avoidable.  That overclaims: some of the
+    # spread pays for work (packing, transport, handling, wastage) that ANY
+    # channel, direct or not, has to pay for.  Promising to recover it would be
+    # the kind of number that collapses under a judge's first question.
+    #
+    # So avoidable = the margin taken above real cost.  Unavoidable = the real
+    # handling cost.  The two sum to the total absorption by construction.
+    avoidable = chain_result.margin_absorption
+    unavoidable = chain_result.cost_absorption
 
     return LeakageReport(
         commodity=commodity,
@@ -128,7 +163,7 @@ def leakage_report(
         farmer_share_pct=chain_result.farmer_share_pct,
         calibration_status=status,
         calibrated_margin_scale=scale,
-        verdict=_verdict(chain_result.farmer_share_pct),
+        verdict=_verdict(chain_result.farmer_share_pct, chain_result.margin_share_pct),
     )
 
 

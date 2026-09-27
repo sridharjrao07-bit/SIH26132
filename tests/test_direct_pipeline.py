@@ -465,3 +465,173 @@ def test_scale_up_stays_fast_and_feasible():
         assert a.farmer_gain_rs >= -1e-6
         assert a.consumer_saving_rs >= -1e-6
     assert plan.impact.allocation_optimal
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Who gets served first — the equity property of surplus maximisation
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _two_farmers_one_buyer():
+    """Identical lots on the same lane; only the mandi fallback differs."""
+    return [
+        SupplyLot(
+            id="L_WELLOFF", commodity_id="onion", quantity_qtl=40.0,
+            mandi_price_per_qtl=2400.0, lat=20.1201, lng=74.3374,
+            category="vegetable",
+        ),
+        SupplyLot(
+            id="L_NEEDY", commodity_id="onion", quantity_qtl=40.0,
+            mandi_price_per_qtl=2000.0, lat=20.1201, lng=74.3374,
+            category="vegetable",
+        ),
+    ], [
+        DemandNode(
+            id="D0", commodity_id="onion", quantity_qtl=30.0,
+            retail_price_per_qtl=4000.0, lat=20.0059, lng=73.7797,
+            category="vegetable", kind="rwa",
+        )
+    ]
+
+
+def test_surplus_maximisation_serves_the_neediest_farmer_first():
+    """The farmer the mandi pays least is the one DirectLink picks up.
+
+    This looks like it could be an accident, so the reasoning is worth stating.
+    Total surplus on a lane is
+
+        Π = w·R − (1+m)·(P + T)
+
+    where P is the farmer's mandi fallback, i.e. his opportunity cost.  With
+    R, T and m equal across two lots, the lane with the SMALLER P frees up more
+    surplus — so maximising total surplus and prioritising the worst-paid
+    farmer are the same thing here, not competing objectives.
+
+    A reader who expects "highest mandi price wins" has the sign backwards:
+    a high mandi price means the farmer already has a good fallback, so
+    moving him to the direct channel creates less new value.
+    """
+    lots, demands = _two_farmers_one_buyer()
+    plan = plan_direct_channel(lots, demands, DirectConfig())
+    assert len(plan.allocations) == 1
+    assert plan.allocations[0].lot_id == "L_NEEDY"
+
+
+def test_the_needier_farmer_also_gets_the_larger_raise():
+    """Both lots used: the farm price is PARTIALLY equalised, and the needier
+    farmer still comes out further ahead.
+
+    The Nash price is ``p_f = α·P_max + (1−α)·P``, so the farm price tracks the
+    mandi fallback at rate ``(1−α)`` — at α=½, half of any mandi advantage
+    carries over and half is pooled.  It is deliberately NOT a flat rate:
+    paying every farmer the same would hand the best-off farmer the entire
+    surplus and leave the worst-off no reason to join.
+
+    What matters for the problem statement is that the gap *narrows*: both
+    farmers are paid above their mandi, and the one the mandi pays least gets
+    the bigger lift in both rupees and percent.
+    """
+    lots, _ = _two_farmers_one_buyer()
+    alpha = 0.5
+    demands = [
+        DemandNode(
+            id="D0", commodity_id="onion", quantity_qtl=45.0,
+            retail_price_per_qtl=4000.0, lat=20.0059, lng=73.7797,
+            category="vegetable", kind="rwa",
+        )
+    ]
+    plan = plan_direct_channel(lots, demands, DirectConfig(alpha=alpha))
+    by_lot = {a.lot_id: a for a in plan.allocations}
+    assert set(by_lot) == {"L_NEEDY", "L_WELLOFF"}, set(by_lot)
+
+    needy, welloff = by_lot["L_NEEDY"], by_lot["L_WELLOFF"]
+    d_p = welloff.split.farmer_fallback - needy.split.farmer_fallback
+    assert d_p > 0
+
+    # Partial equalisation: the farm-price gap is (1−α) of the mandi gap.
+    assert welloff.split.farm_price_per_qtl - needy.split.farm_price_per_qtl == (
+        pytest.approx((1.0 - alpha) * d_p, abs=0.01)
+    )
+
+    # Both are lifted, and the needier farmer is lifted further.
+    for a in (needy, welloff):
+        assert a.split.farm_price_per_qtl > a.split.farmer_fallback
+    needy_gain = needy.split.farm_price_per_qtl - needy.split.farmer_fallback
+    welloff_gain = welloff.split.farm_price_per_qtl - welloff.split.farmer_fallback
+    assert needy_gain > welloff_gain
+    assert needy.split.farmer_gain_pct > welloff.split.farmer_gain_pct
+
+
+def test_alpha_redistributes_but_cannot_invent_surplus():
+    """α decides who keeps the pie; it cannot conjure a bigger one.
+
+    Two things are being pinned here, and the second is the interesting one.
+
+    First, redistribution: raising α moves rupees from the consumer's saving to
+    the farmer's gain, monotonically, and the endpoints give the whole pie to
+    one side.
+
+    Second — and this is a real design consequence, not an artefact — the
+    realised (after-fee) surplus is NOT perfectly α-invariant.  The platform
+    fee is ad valorem on the farm price, so every rupee pushed to the farmer
+    also enlarges the fee base.  The joint surplus BEFORE the fee
+    (``surplus + platform_fee``) is what α cannot touch, and it stays flat to
+    within a fraction of a percent (the residual is the freight fixed point
+    converging on a marginally different load).
+
+    That gap is the honest argument for keeping the fee small: every point of
+    platform margin is subtracted from the pie the farmer and consumer split.
+    """
+    lots, demands = _two_farmers_one_buyer()
+    rows = []
+    for alpha in (0.0, 0.25, 0.5, 0.75, 1.0):
+        impact = plan_direct_channel(lots, demands, DirectConfig(alpha=alpha)).impact
+        rows.append(
+            (
+                alpha,
+                impact.surplus_rs,
+                impact.platform_fee_rs,
+                impact.surplus_rs + impact.platform_fee_rs,
+                impact.farmer_gain_rs,
+                impact.consumer_saving_rs,
+            )
+        )
+
+    # (1) Monotone redistribution, with the endpoints handing over everything.
+    gains = [r[4] for r in rows]
+    savings = [r[5] for r in rows]
+    assert gains == sorted(gains) and gains[-1] > gains[0]
+    assert savings == sorted(savings, reverse=True) and savings[0] > savings[-1]
+    assert rows[0][4] == pytest.approx(0.0, abs=1e-6)   # α=0 → farmer at mandi
+    assert rows[-1][5] == pytest.approx(0.0, abs=1e-6)  # α=1 → consumer at retail
+
+    # (2) The pre-fee pie is invariant — α cannot touch it.
+    gross = [r[3] for r in rows]
+    assert (max(gross) - min(gross)) / max(gross) < 0.005
+
+    # (3) The marginal cost of a rupee moved to the farmer is exactly the
+    #     platform fee rate: the fee is ad valorem on the farm price, so
+    #     raising the farmer's share by ₹X costs m·X in extra fee and the
+    #     consumer's saving falls by (1+m)·X.
+    fees = [r[2] for r in rows]
+    assert fees == sorted(fees)
+    m = DirectConfig().platform_fee_pct
+    marginal_fee = (fees[-1] - fees[0]) / (gains[-1] - gains[0])
+    assert marginal_fee == pytest.approx(m, rel=0.05)
+    marginal_saving = (savings[0] - savings[-1]) / (gains[-1] - gains[0])
+    assert marginal_saving == pytest.approx(1.0 + m, rel=0.05)
+
+
+def test_no_farmer_is_ever_left_worse_off_than_his_mandi():
+    """The property the whole idea rests on: participation is voluntary.
+
+    If any allocation paid a farmer less than his mandi, the platform would
+    be extracting from the very people it claims to help, and the rational
+    response would be to stop using it.
+    """
+    lots, demands = _two_farmers_one_buyer()
+    for alpha in (0.0, 0.15, 0.5, 0.85, 1.0):
+        plan = plan_direct_channel(lots, demands, DirectConfig(alpha=alpha))
+        for a in plan.allocations:
+            assert a.split.farm_price_per_qtl >= a.split.farmer_fallback - 1e-9
+            assert a.split.consumer_price_per_delivered_qtl <= a.split.retail_price + 1e-9

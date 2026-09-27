@@ -204,7 +204,10 @@ def test_get_forecasts_returns_ok_rows_only(override_supabase, fake_supabase):
 def test_get_forecasts_summary_includes_insufficient_data(override_supabase, fake_supabase):
     """M7+B2: summary should include insufficient_data but not stale.
     Rows dated tomorrow per the S1 contract (today rows = superseded run)."""
-    today = (date.today() + timedelta(days=1)).isoformat()
+    # IST, not UTC: /forecasts/summary filters on get_ist_today() + 1 day.
+    # With UTC date.today() these rows fall outside the window for the ~5.5
+    # hours a day when the IST date has already rolled over but UTC's has not.
+    today = (get_ist_today() + timedelta(days=1)).isoformat()
     now_iso = datetime.now(timezone.utc).isoformat()
     fake_supabase._data["forecasts"] = [
         {
