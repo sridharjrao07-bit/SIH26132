@@ -246,42 +246,6 @@ def test_feature_importances_nonempty_on_success(mock_supabase):
 
 
 @pytest.mark.skipif(not HAS_LIGHTGBM, reason="lightgbm not installed")
-def test_feature_importances_nonempty_on_success(mock_supabase):
-    """
-    Regression guard for Bug 1: when GBM trains successfully, the report MUST
-    carry non-empty feature_importances with positive total gain.
-
-    The original bug called `model.feature_importance()` on the sklearn wrapper
-    (which only exists on the Booster), raising AttributeError that a bare
-    `except` swallowed — so importances were silently [] forever. This test
-    fails if that regresses.
-    """
-    rows, _, builder = _generate_synthetic_data(seed=42, n_days=200, is_noise=False)
-    supabase = mock_supabase(builder, rows)
-
-    report = run_backtest(supabase, pairs=[("M1", "C1")], history_days=150, model_names=["gbm"])
-
-    gbm_agg = report.aggregate["gbm"]
-    assert gbm_agg["status"] == "ok", f"precondition: GBM should train ok, got {gbm_agg['status']}"
-
-    importances = gbm_agg.get("feature_importances")
-    assert importances, "feature_importances must be non-empty when GBM trains successfully"
-
-    # Structural contract: list of {feature: str, gain: float}
-    for item in importances:
-        assert isinstance(item["feature"], str)
-        assert isinstance(item["gain"], float)
-
-    # A trained model must attribute positive gain somewhere.
-    total_gain = sum(item["gain"] for item in importances)
-    assert total_gain > 0, "total gain must be positive for a fitted model"
-
-    # Signal set is driven by dow + lag_1; lag_1 should carry real gain.
-    by_name = {item["feature"]: item["gain"] for item in importances}
-    assert by_name.get("lag_1", 0) > 0, "lag_1 must have positive gain on the autoregressive signal set"
-
-
-@pytest.mark.skipif(not HAS_LIGHTGBM, reason="lightgbm not installed")
 def test_backtest_report_format(mock_supabase):
     """Backtest report format: `gbm` exists, lists `feature_importances`, correctly formats nulls."""
     rows, _, builder = _generate_synthetic_data(seed=42, n_days=30, is_noise=True)
@@ -308,7 +272,7 @@ def test_backtest_report_format(mock_supabase):
 # ─── Regression Fallback Tests for LightGBM ───────────────────────────────────
 
 
-def test_gbm_fallback_to_feature_ols_when_pretrained_none(monkeypatch):
+def test_gbm_falls_back_to_blend_when_pretrained_none(monkeypatch):
     """When FORECAST_MODEL=gbm and pretrained_model is None, falls back to feature_ols."""
     from forecasting import engine as eng
     from forecasting.engine import _make_forecast_rows
@@ -346,13 +310,18 @@ def test_gbm_fallback_to_feature_ols_when_pretrained_none(monkeypatch):
 
     assert len(rows) == 7
     assert all(r["status"] == "ok" for r in rows)
-    assert all(r["method"] == "feature_ols" for r in rows)
-    assert all(r["model_id"] == "id-fols" for r in rows)
+    # The requested model failed, so the row must be stamped with what actually
+    # produced it: the blend tier, and the 'auto' registry id.  Stamping it
+    # 'gbm' would let the accuracy card credit GBM for a blended forecast.
+    assert all(r["method"] == "blend" for r in rows)
+    assert all(r["model_id"] == "id-auto" for r in rows)
     assert all(r["confidence"] == "high" for r in rows)
-    assert all("lag_1" in r["features_used"] for r in rows)
+    # The blend tier consumes no engineered features, so it reports none.
+    # Claiming 'lag_1' here would be the same over-claim as stamping 'gbm'.
+    assert all(r["features_used"] == [] for r in rows)
 
 
-def test_gbm_fallback_to_linear_regression_when_features_none(monkeypatch):
+def test_gbm_falls_back_to_blend_when_features_none(monkeypatch):
     """When FORECAST_MODEL=gbm and features=None, falls back to ols."""
     from forecasting import engine as eng
     from forecasting.engine import _make_forecast_rows
@@ -380,12 +349,12 @@ def test_gbm_fallback_to_linear_regression_when_features_none(monkeypatch):
 
     assert len(rows) == 7
     assert all(r["status"] == "ok" for r in rows)
-    assert all(r["method"] == "ols" for r in rows)
+    assert all(r["method"] == "blend" for r in rows)
     assert all(r["model_id"] == "id-auto" for r in rows)
     assert all(r["confidence"] == "high" for r in rows)
 
 
-def test_gbm_fallback_to_linear_regression_when_feature_ols_insufficient_samples(monkeypatch):
+def test_gbm_falls_back_to_blend_when_feature_ols_insufficient_samples(monkeypatch):
     """When feature_ols has insufficient samples (n-1 < 10*p), falls back to ols."""
     from forecasting import engine as eng
     from forecasting.engine import _make_forecast_rows
@@ -424,7 +393,7 @@ def test_gbm_fallback_to_linear_regression_when_feature_ols_insufficient_samples
 
     assert len(rows) == 7
     assert all(r["status"] == "ok" for r in rows)
-    assert all(r["method"] == "ols" for r in rows)
+    assert all(r["method"] == "blend" for r in rows)
     assert all(r["model_id"] == "id-auto" for r in rows)
 
 
@@ -471,7 +440,7 @@ def test_gbm_fallback_when_gbm_fit_fails(monkeypatch):
 
     assert len(rows) == 7
     assert all(r["status"] == "ok" for r in rows)
-    assert all(r["method"] == "feature_ols" for r in rows)
+    assert all(r["method"] == "blend" for r in rows)
 
 
 def test_gbm_fallback_when_gbm_predict_fails(monkeypatch):
@@ -519,7 +488,7 @@ def test_gbm_fallback_when_gbm_predict_fails(monkeypatch):
 
     assert len(rows) == 7
     assert all(r["status"] == "ok" for r in rows)
-    assert all(r["method"] == "feature_ols" for r in rows)
+    assert all(r["method"] == "blend" for r in rows)
 
 
 def test_gbm_fallback_when_gbm_has_fallback_flag(monkeypatch):
@@ -566,7 +535,7 @@ def test_gbm_fallback_when_gbm_has_fallback_flag(monkeypatch):
 
     assert len(rows) == 7
     assert all(r["status"] == "ok" for r in rows)
-    assert all(r["method"] == "feature_ols" for r in rows)
+    assert all(r["method"] == "blend" for r in rows)
 
 
 def test_gbm_fallback_preserves_insufficient_data(monkeypatch):

@@ -10,7 +10,7 @@ license = { text = "MIT" }
 # Runtime is Python 3.12 (Dockerfile / CI).
 target-version = "py312"
 line-length = 100
-src = ["app", "events", "ingestion", "forecasting", "notifications", "tests", "demo", "scripts"]
+src = ["app", "direct", "events", "ingestion", "forecasting", "notifications", "tests", "demo", "scripts"]
 exclude = [".venv", "venv", "build", "dist", "docs/archive"]
 
 [tool.ruff.lint]
@@ -36,5 +36,5 @@ addopts = "-q"
 markers = ["db: requires a real Postgres"]
 
 [tool.coverage.run]
-source = ["app", "events", "ingestion", "forecasting", "notifications"]
+source = ["app", "direct", "events", "ingestion", "forecasting", "notifications"]
 omit = ["tests/*", "demo/*", "scripts/*"]

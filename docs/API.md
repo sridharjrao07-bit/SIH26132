@@ -60,6 +60,15 @@ The API verifies that JWT itself. It does **not** forward it to PostgREST (hoste
 | GET | `/api/v1/buyers/{buyer_id}/supply` | Buyer Supply |
 | PATCH | `/api/v1/buyers/{buyer_id}/verify` | Verify Buyer |
 | GET | `/api/v1/commodities/` | Get Commodities |
+| GET | `/api/v1/direct/config` | Direct Config |
+| POST | `/api/v1/direct/fair-price` | Fair Price |
+| POST | `/api/v1/direct/group-buy` | Group Buy |
+| GET | `/api/v1/direct/impact` | Direct Impact |
+| POST | `/api/v1/direct/plan` | Plan Direct |
+| POST | `/api/v1/direct/plans/commit` | Commit Plan |
+| GET | `/api/v1/direct/plans/{plan_id}` | Get Plan |
+| POST | `/api/v1/direct/rupee` | Consumer Rupee |
+| GET | `/api/v1/direct/trace/{token}` | Trace Order |
 | GET | `/api/v1/forecasts` | Get Forecasts |
 | GET | `/api/v1/forecasts/summary` | Get Forecasts Summary |
 | GET | `/api/v1/grievances/` | List Grievances |

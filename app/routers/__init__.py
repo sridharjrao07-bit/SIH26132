@@ -3,6 +3,7 @@ from .alerts import router as alerts_router
 from .buyers import router as buyers_router
 from .commodities import router as commodities_router
 from .dashboard import router as dashboard_router
+from .direct import router as direct_router
 from .forecasts import router as forecasts_router
 from .grievances import router as grievances_router
 from .intelligence import router as intelligence_router
@@ -20,6 +21,7 @@ from .storage import router as storage_router
 __all__ = [
     "markets_router",
     "commodities_router",
+    "direct_router",
     "prices_router",
     "forecasts_router",
     "alerts_router",
