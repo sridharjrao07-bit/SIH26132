@@ -1,0 +1,981 @@
+State,District,Market,Commodity,Variety,Grade,Arrival_Date,Min_x0020_Price,Max_x0020_Price,Modal_x0020_Price
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,30/07/2026,2005.89,2477.04,2200.97
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,30/07/2026,1723.64,2096.36,1927.32
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,30/07/2026,3977.95,4923.39,4425.00
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,30/07/2026,2015.70,2422.78,2144.57
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,30/07/2026,2081.28,2494.12,2223.60
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,30/07/2026,1730.50,2175.83,1945.55
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,30/07/2026,4279.11,5037.88,4555.96
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,30/07/2026,1985.43,2446.38,2211.04
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,30/07/2026,1885.18,2336.69,2126.73
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,30/07/2026,1737.65,2022.28,1882.50
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,30/07/2026,3938.95,4866.22,4331.79
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,30/07/2026,1881.97,2243.54,2078.57
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,30/07/2026,2033.84,2524.68,2270.63
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,30/07/2026,1733.04,2096.52,1968.07
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,30/07/2026,4235.85,5190.40,4640.83
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,30/07/2026,1942.46,2366.84,2188.32
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,30/07/2026,2010.43,2313.45,2152.64
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,30/07/2026,1700.99,2059.03,1835.32
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,30/07/2026,3853.92,4875.91,4333.79
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,30/07/2026,1961.85,2369.69,2112.59
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,31/07/2026,2046.61,2440.92,2186.90
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,31/07/2026,1683.35,2094.99,1878.72
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,31/07/2026,4173.45,4818.86,4480.28
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,31/07/2026,1911.71,2374.28,2128.11
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,31/07/2026,1996.89,2416.52,2142.91
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,31/07/2026,1655.98,2067.61,1831.88
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,31/07/2026,3901.93,4962.22,4399.41
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,31/07/2026,1896.69,2260.09,2117.01
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,31/07/2026,2062.98,2466.92,2251.25
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,31/07/2026,1720.39,2132.25,1921.61
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,31/07/2026,4216.68,5132.08,4622.00
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,31/07/2026,1989.31,2348.95,2205.80
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,31/07/2026,1973.58,2354.14,2120.12
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,31/07/2026,1623.76,1953.48,1795.20
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,31/07/2026,3847.06,4784.57,4249.83
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,31/07/2026,1917.94,2261.27,2091.70
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,01/08/2026,2051.69,2480.13,2242.78
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,01/08/2026,1642.33,2010.78,1839.48
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,01/08/2026,4081.49,4887.33,4585.01
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,01/08/2026,1987.87,2467.50,2208.47
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,01/08/2026,1910.13,2273.68,2141.53
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,01/08/2026,1646.99,1884.25,1769.09
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,01/08/2026,3908.56,4860.11,4383.43
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,01/08/2026,1928.09,2223.85,2097.20
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,01/08/2026,2030.84,2404.94,2242.76
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,01/08/2026,1643.94,2005.92,1861.74
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,01/08/2026,4253.61,5072.38,4583.21
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,01/08/2026,2087.29,2500.29,2227.63
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,01/08/2026,1987.65,2347.88,2137.64
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,01/08/2026,1603.61,1903.10,1765.16
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,01/08/2026,4018.36,4758.46,4339.72
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,01/08/2026,1838.06,2243.95,2077.73
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,03/08/2026,1968.82,2385.24,2216.38
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,03/08/2026,1701.15,2095.10,1924.70
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,03/08/2026,3978.12,4856.30,4457.73
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,03/08/2026,1981.36,2407.50,2149.61
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,03/08/2026,2004.53,2475.32,2224.52
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,03/08/2026,1790.05,2199.79,1977.65
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,03/08/2026,4084.32,4917.10,4572.52
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,03/08/2026,1940.92,2388.06,2156.18
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,03/08/2026,1923.84,2391.76,2167.32
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,03/08/2026,1707.67,1984.29,1868.63
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,03/08/2026,3931.96,4606.93,4331.78
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,03/08/2026,1874.02,2319.13,2083.14
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,03/08/2026,2061.35,2454.20,2302.83
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,03/08/2026,1854.20,2139.25,1972.57
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,03/08/2026,4266.42,5165.52,4641.93
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,03/08/2026,1928.65,2343.27,2188.61
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,03/08/2026,1921.39,2385.84,2151.42
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,03/08/2026,1683.46,2043.36,1836.97
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,03/08/2026,4104.63,4672.19,4376.48
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,03/08/2026,1904.01,2330.94,2068.14
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,04/08/2026,1976.74,2368.19,2145.28
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,04/08/2026,1703.22,2016.07,1829.42
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,04/08/2026,4191.95,4903.51,4522.26
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,04/08/2026,1960.28,2333.94,2153.31
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,04/08/2026,2053.59,2419.00,2190.15
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,04/08/2026,1687.57,2069.80,1862.39
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,04/08/2026,4192.47,4956.37,4515.35
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,04/08/2026,2033.12,2374.07,2200.68
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,04/08/2026,1961.94,2265.14,2103.06
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,04/08/2026,1610.65,1894.82,1784.18
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,04/08/2026,3862.57,4827.95,4326.71
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,04/08/2026,1975.67,2312.63,2142.64
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,04/08/2026,2040.55,2418.50,2210.29
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,04/08/2026,1726.99,2057.07,1879.71
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,04/08/2026,4051.30,5026.96,4535.23
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,04/08/2026,2027.55,2448.88,2232.01
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,04/08/2026,1933.83,2262.63,2097.04
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,04/08/2026,1551.41,1859.09,1740.12
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,04/08/2026,3883.31,4685.32,4357.84
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,04/08/2026,1981.36,2315.16,2110.98
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,05/08/2026,1970.48,2364.98,2204.98
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,05/08/2026,1682.32,2117.22,1876.63
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,05/08/2026,4016.44,5071.79,4525.18
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,05/08/2026,2000.22,2390.47,2187.36
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,05/08/2026,2097.08,2448.61,2239.36
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,05/08/2026,1686.20,2104.90,1906.51
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,05/08/2026,4148.71,4909.19,4540.21
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,05/08/2026,2019.48,2404.62,2181.18
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,05/08/2026,1979.48,2380.94,2182.37
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,05/08/2026,1674.68,2057.13,1864.23
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,05/08/2026,4159.94,4771.32,4440.32
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,05/08/2026,1894.57,2283.83,2130.11
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,05/08/2026,1942.77,2329.67,2164.71
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,05/08/2026,1659.84,2027.36,1829.55
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,05/08/2026,4038.17,4869.04,4401.26
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,05/08/2026,1910.74,2314.08,2093.56
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,06/08/2026,1940.46,2358.17,2180.40
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,06/08/2026,1695.83,2019.73,1889.89
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,06/08/2026,4211.40,4924.00,4496.67
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,06/08/2026,1872.91,2314.08,2122.54
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,06/08/2026,2086.74,2489.09,2225.35
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,06/08/2026,1832.68,2158.45,1949.71
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,06/08/2026,4160.85,4914.26,4496.39
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,06/08/2026,1977.74,2444.12,2219.96
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,06/08/2026,1926.15,2316.25,2138.08
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,06/08/2026,1680.89,2070.88,1868.09
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,06/08/2026,4123.00,4876.26,4438.99
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,06/08/2026,1884.13,2362.84,2094.88
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,06/08/2026,2122.46,2534.56,2308.38
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,06/08/2026,1735.20,2141.71,1924.35
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,06/08/2026,4139.77,5096.67,4639.89
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,06/08/2026,2037.36,2361.35,2209.97
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,06/08/2026,1890.89,2335.29,2125.78
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,06/08/2026,1697.81,2030.98,1807.07
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,06/08/2026,3985.70,4692.72,4286.03
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,06/08/2026,1869.60,2332.67,2085.66
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,07/08/2026,1997.46,2487.45,2211.99
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,07/08/2026,1753.95,2031.57,1882.24
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,07/08/2026,4191.52,4905.68,4477.86
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,07/08/2026,1928.50,2364.87,2147.76
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,07/08/2026,2033.57,2416.61,2229.02
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,07/08/2026,1724.60,2057.62,1900.76
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,07/08/2026,4211.51,4957.91,4606.23
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,07/08/2026,2011.08,2412.75,2174.89
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,07/08/2026,2021.15,2454.89,2175.05
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,07/08/2026,1636.89,1980.72,1798.51
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,07/08/2026,4032.57,4879.64,4448.91
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,07/08/2026,1929.27,2358.46,2132.74
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,07/08/2026,2076.91,2557.14,2306.87
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,07/08/2026,1803.74,2169.88,1937.13
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,07/08/2026,4245.04,5118.92,4598.56
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,07/08/2026,1941.22,2424.44,2195.69
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,07/08/2026,1955.41,2302.56,2158.20
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,07/08/2026,1654.95,2023.61,1825.41
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,07/08/2026,3985.06,4641.25,4295.32
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,07/08/2026,1891.85,2281.36,2074.69
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,08/08/2026,2040.10,2414.59,2188.36
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,08/08/2026,1712.59,2105.17,1927.32
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,08/08/2026,3885.59,4925.92,4412.62
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,08/08/2026,1940.93,2380.50,2182.10
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,08/08/2026,2055.49,2446.06,2270.11
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,08/08/2026,1737.79,2104.84,1924.29
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,08/08/2026,4155.37,5132.32,4543.93
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,08/08/2026,2064.90,2423.58,2245.69
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,08/08/2026,1931.85,2412.12,2187.97
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,08/08/2026,1694.12,2107.18,1888.29
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,08/08/2026,3982.26,4785.76,4337.04
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,08/08/2026,1968.96,2395.35,2141.22
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,08/08/2026,2060.23,2501.19,2292.87
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,08/08/2026,1748.26,2133.78,1974.52
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,08/08/2026,4025.92,4977.29,4534.05
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,08/08/2026,2091.84,2502.07,2237.72
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,08/08/2026,1994.82,2389.90,2148.69
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,08/08/2026,1711.73,1952.81,1825.31
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,08/08/2026,4024.84,4918.95,4358.47
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,08/08/2026,1916.32,2369.72,2124.65
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,10/08/2026,2063.29,2481.83,2241.81
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,10/08/2026,1868.71,2130.46,1995.59
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,10/08/2026,4108.15,4840.11,4402.91
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,10/08/2026,1892.64,2393.49,2141.50
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,10/08/2026,2028.60,2571.72,2283.46
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,10/08/2026,1785.44,2261.67,2015.55
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,10/08/2026,4186.63,5059.19,4549.55
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,10/08/2026,2031.58,2353.01,2197.40
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,10/08/2026,1989.20,2477.70,2199.26
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,10/08/2026,1749.22,2173.57,1929.42
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,10/08/2026,3983.57,4748.91,4324.61
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,10/08/2026,1904.85,2261.83,2107.39
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,10/08/2026,2123.80,2551.32,2309.06
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,10/08/2026,1860.47,2161.13,2006.53
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,10/08/2026,4075.30,5132.91,4609.46
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,10/08/2026,2055.82,2388.44,2205.39
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,10/08/2026,1998.11,2295.47,2145.04
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,10/08/2026,1694.41,2105.05,1902.83
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,10/08/2026,3959.53,4596.78,4269.50
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,10/08/2026,1831.91,2306.46,2074.30
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,11/08/2026,2065.53,2442.77,2228.95
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,11/08/2026,1788.73,2029.93,1909.56
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,11/08/2026,4136.87,4957.52,4539.59
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,11/08/2026,1931.05,2312.22,2124.98
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,11/08/2026,2036.89,2454.32,2303.11
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,11/08/2026,1723.21,2122.66,1922.15
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,11/08/2026,4281.12,4998.50,4555.94
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,11/08/2026,1952.08,2443.81,2203.37
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,11/08/2026,2034.45,2368.95,2203.57
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,11/08/2026,1670.94,2026.18,1855.91
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,11/08/2026,3936.58,4810.10,4346.90
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,11/08/2026,1953.34,2223.40,2088.29
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,11/08/2026,2097.90,2534.80,2269.65
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,11/08/2026,1801.55,2135.52,1971.72
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,11/08/2026,4235.82,5122.65,4604.55
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,11/08/2026,2094.47,2460.46,2232.66
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,11/08/2026,1972.10,2307.35,2144.98
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,11/08/2026,1687.97,2083.42,1871.25
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,11/08/2026,4091.03,4959.20,4395.60
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,11/08/2026,1925.19,2225.47,2095.87
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,12/08/2026,1957.24,2437.01,2197.11
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,12/08/2026,1622.61,2065.92,1843.11
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,12/08/2026,3926.71,4880.46,4419.42
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,12/08/2026,1963.90,2396.04,2199.44
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,12/08/2026,2105.07,2498.37,2271.80
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,12/08/2026,1657.66,2056.12,1863.70
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,12/08/2026,4129.86,4912.44,4490.36
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,12/08/2026,2046.60,2362.16,2211.83
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,12/08/2026,1981.97,2412.50,2179.91
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,12/08/2026,1657.22,1918.80,1809.27
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,12/08/2026,3825.03,4641.73,4306.33
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,12/08/2026,1949.57,2260.46,2108.05
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,12/08/2026,2119.43,2544.30,2278.95
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,12/08/2026,1701.78,2046.51,1928.28
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,12/08/2026,4220.80,5077.35,4615.19
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,12/08/2026,1989.57,2381.13,2243.26
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,12/08/2026,2002.85,2421.68,2153.78
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,12/08/2026,1623.72,1998.74,1815.02
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,12/08/2026,3851.64,4645.23,4286.19
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,12/08/2026,1909.34,2239.27,2096.73
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,13/08/2026,2007.00,2427.86,2172.92
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,13/08/2026,1626.74,1965.38,1830.29
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,13/08/2026,4144.25,4834.27,4507.90
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,13/08/2026,1969.26,2369.23,2128.32
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,13/08/2026,2048.08,2462.10,2230.74
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,13/08/2026,1679.40,2011.34,1888.97
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,13/08/2026,4065.94,4825.41,4535.45
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,13/08/2026,1958.39,2297.05,2158.92
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,13/08/2026,2013.97,2385.35,2162.50
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,13/08/2026,1649.32,2014.43,1805.97
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,13/08/2026,4064.35,4839.24,4376.91
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,13/08/2026,1853.32,2218.70,2084.60
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,13/08/2026,2065.08,2450.99,2237.70
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,13/08/2026,1709.08,2057.01,1885.85
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,13/08/2026,4114.81,4923.90,4560.00
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,13/08/2026,1998.37,2433.39,2181.93
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,13/08/2026,1925.69,2258.63,2091.54
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,13/08/2026,1679.97,2015.73,1797.95
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,13/08/2026,3864.52,4717.04,4349.56
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,13/08/2026,1876.72,2288.28,2077.13
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,14/08/2026,2003.11,2412.21,2159.69
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,14/08/2026,1703.19,2041.60,1842.63
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,14/08/2026,4062.15,4869.39,4486.56
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,14/08/2026,1909.45,2408.78,2138.60
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,14/08/2026,1934.70,2447.52,2187.02
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,14/08/2026,1745.10,2104.87,1876.24
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,14/08/2026,4198.40,4847.65,4534.02
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,14/08/2026,2027.31,2428.67,2180.18
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,14/08/2026,1918.21,2348.00,2120.39
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,14/08/2026,1601.44,1985.79,1785.14
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,14/08/2026,3937.63,4893.09,4382.12
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,14/08/2026,1928.09,2407.35,2137.40
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,14/08/2026,2002.78,2433.12,2218.13
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,14/08/2026,1760.77,2029.44,1897.23
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,14/08/2026,4308.36,5077.08,4620.49
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,14/08/2026,2092.27,2426.84,2247.17
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,14/08/2026,1891.68,2321.12,2128.25
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,14/08/2026,1592.02,1903.39,1755.13
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,14/08/2026,3890.68,4601.96,4274.91
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,14/08/2026,1839.81,2347.84,2086.68
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,15/08/2026,1971.90,2397.75,2219.97
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,15/08/2026,1695.39,2117.29,1908.52
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,15/08/2026,3908.33,4761.60,4417.42
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,15/08/2026,1984.94,2357.39,2149.05
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,15/08/2026,1969.98,2430.81,2231.35
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,15/08/2026,1713.73,2171.24,1932.81
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,15/08/2026,4105.80,4854.07,4507.30
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,15/08/2026,2002.65,2352.01,2184.18
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,15/08/2026,1998.87,2267.78,2129.90
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,15/08/2026,1746.93,2043.55,1859.82
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,15/08/2026,4030.97,4955.28,4390.36
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,15/08/2026,1921.82,2246.84,2072.47
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,15/08/2026,2111.79,2475.51,2285.21
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,15/08/2026,1817.65,2098.37,1956.97
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,15/08/2026,4252.45,5094.43,4613.59
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,15/08/2026,2021.14,2382.07,2181.31
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,15/08/2026,1866.92,2380.60,2115.46
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,15/08/2026,1704.19,2012.60,1867.44
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,15/08/2026,3884.35,4803.23,4309.15
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,15/08/2026,1837.97,2248.64,2071.03
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,17/08/2026,2011.87,2512.97,2227.49
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,17/08/2026,1733.41,2031.55,1853.01
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,17/08/2026,3976.21,4953.41,4494.23
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,17/08/2026,1959.36,2321.77,2178.83
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,17/08/2026,2039.67,2496.26,2252.37
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,17/08/2026,1737.87,2022.12,1864.26
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,17/08/2026,4245.55,5093.72,4522.31
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,17/08/2026,2009.69,2487.22,2228.54
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,17/08/2026,1955.97,2379.06,2134.28
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,17/08/2026,1661.14,1946.03,1792.51
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,17/08/2026,4016.51,4854.73,4383.37
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,17/08/2026,1966.52,2336.95,2124.16
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,17/08/2026,2038.43,2432.39,2277.64
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,17/08/2026,1723.97,2098.26,1908.69
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,17/08/2026,4139.14,5156.93,4564.68
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,17/08/2026,2063.72,2424.77,2269.14
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,17/08/2026,1959.32,2303.85,2160.92
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,17/08/2026,1633.07,1969.33,1816.19
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,17/08/2026,4047.00,4853.88,4335.39
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,17/08/2026,1962.92,2384.67,2137.65
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,18/08/2026,1935.69,2430.32,2179.02
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,18/08/2026,1710.09,2115.98,1895.60
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,18/08/2026,3956.61,4834.84,4469.87
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,18/08/2026,1976.27,2414.86,2168.05
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,18/08/2026,2089.22,2482.61,2274.50
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,18/08/2026,1792.03,2141.61,1921.38
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,18/08/2026,4221.51,4906.99,4500.66
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,18/08/2026,1923.71,2320.96,2167.68
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,18/08/2026,1953.12,2441.21,2168.30
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,18/08/2026,1677.24,2069.67,1873.93
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,18/08/2026,3877.15,4736.92,4316.72
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,18/08/2026,1957.14,2237.80,2089.85
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,18/08/2026,2114.07,2497.79,2271.85
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,18/08/2026,1696.36,2123.32,1921.73
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,18/08/2026,4268.35,5020.34,4609.36
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,18/08/2026,2035.67,2396.49,2218.40
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,18/08/2026,1982.46,2326.23,2152.28
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,18/08/2026,1641.92,1981.62,1811.52
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,18/08/2026,3896.18,4813.19,4335.09
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,18/08/2026,1982.07,2257.96,2111.91
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,19/08/2026,2005.94,2383.13,2209.21
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,19/08/2026,1626.70,1970.16,1812.66
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,19/08/2026,4108.74,4722.72,4408.90
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,19/08/2026,1969.89,2440.37,2191.78
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,19/08/2026,2035.67,2405.21,2265.60
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,19/08/2026,1755.81,2012.36,1871.86
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,19/08/2026,4066.51,5014.51,4470.20
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,19/08/2026,2032.80,2494.31,2228.45
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,19/08/2026,2029.14,2379.33,2191.69
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,19/08/2026,1606.76,1979.85,1801.95
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,19/08/2026,4031.36,4700.67,4354.16
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,19/08/2026,1911.36,2430.88,2154.55
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,19/08/2026,2131.90,2533.79,2276.85
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,19/08/2026,1720.29,2009.84,1890.42
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,19/08/2026,4135.88,4971.61,4552.80
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,19/08/2026,2027.27,2485.23,2253.33
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,19/08/2026,1948.64,2351.39,2170.09
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,19/08/2026,1643.51,1925.82,1781.54
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,19/08/2026,3950.63,4844.10,4292.16
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,19/08/2026,1976.29,2371.42,2139.96
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,20/08/2026,2035.08,2446.40,2195.40
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,20/08/2026,1708.63,2001.66,1867.33
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,20/08/2026,4170.93,4797.94,4482.61
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,20/08/2026,1991.12,2269.10,2125.24
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,20/08/2026,2013.58,2379.17,2185.28
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,20/08/2026,1786.40,2129.63,1915.98
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,20/08/2026,4021.72,4879.35,4506.43
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,20/08/2026,1977.70,2359.01,2200.32
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,20/08/2026,1956.84,2345.85,2112.49
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,20/08/2026,1675.97,1962.77,1828.45
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,20/08/2026,3917.84,4946.58,4384.86
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,20/08/2026,1873.27,2328.58,2099.05
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,20/08/2026,2095.76,2437.81,2259.03
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,20/08/2026,1734.04,2167.81,1920.78
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,20/08/2026,4328.84,5037.92,4663.31
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,20/08/2026,2012.76,2437.72,2234.46
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,20/08/2026,1898.84,2342.16,2081.34
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,20/08/2026,1631.95,1959.68,1779.78
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,20/08/2026,3970.83,4810.38,4354.64
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,20/08/2026,1924.93,2225.22,2085.42
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,21/08/2026,2054.32,2556.40,2271.44
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,21/08/2026,1626.56,2056.02,1823.56
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,21/08/2026,4272.38,4874.90,4571.95
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,21/08/2026,2043.79,2491.28,2213.36
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,21/08/2026,1940.80,2450.38,2179.33
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,21/08/2026,1590.02,1967.27,1747.81
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,21/08/2026,4130.90,4698.06,4429.42
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,21/08/2026,1971.19,2267.06,2099.29
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,21/08/2026,2119.95,2534.87,2264.14
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,21/08/2026,1618.96,1956.01,1825.70
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,21/08/2026,4066.58,5072.26,4563.18
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,21/08/2026,2070.42,2398.96,2237.24
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,21/08/2026,1961.71,2295.85,2153.56
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,21/08/2026,1527.16,1861.00,1718.93
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,21/08/2026,3842.82,4782.45,4297.82
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,21/08/2026,1929.99,2217.23,2090.15
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,22/08/2026,1949.70,2376.92,2197.85
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,22/08/2026,1697.39,2016.50,1817.90
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,22/08/2026,4162.38,4810.96,4451.90
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,22/08/2026,1900.82,2291.91,2140.53
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,22/08/2026,2068.68,2476.56,2265.92
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,22/08/2026,1664.08,2007.32,1863.25
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,22/08/2026,4110.50,5069.06,4645.09
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,22/08/2026,1986.74,2313.87,2174.03
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,22/08/2026,1944.52,2368.81,2187.33
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,22/08/2026,1571.29,1938.43,1760.90
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,22/08/2026,4099.33,4819.92,4414.90
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,22/08/2026,1866.58,2307.95,2112.80
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,22/08/2026,2124.37,2543.35,2286.76
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,22/08/2026,1663.32,1965.81,1846.76
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,22/08/2026,4154.74,5288.29,4699.18
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,22/08/2026,2053.62,2469.31,2217.40
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,22/08/2026,2024.90,2342.14,2155.13
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,22/08/2026,1610.81,1977.13,1784.75
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,22/08/2026,4020.30,4742.53,4373.64
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,22/08/2026,1911.26,2328.88,2096.30
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,24/08/2026,1995.24,2398.74,2186.17
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,24/08/2026,1653.35,1981.04,1835.49
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,24/08/2026,3921.65,4938.32,4422.39
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,24/08/2026,1998.03,2272.28,2141.45
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,24/08/2026,2064.20,2500.00,2253.82
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,24/08/2026,1770.20,2107.48,1957.89
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,24/08/2026,4122.97,5111.89,4667.23
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,24/08/2026,2082.49,2439.60,2254.04
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,24/08/2026,1922.91,2291.01,2141.07
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,24/08/2026,1630.20,1931.97,1815.31
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,24/08/2026,4110.26,4853.98,4397.44
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,24/08/2026,1972.89,2367.27,2102.54
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,25/08/2026,2016.90,2385.67,2228.67
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,25/08/2026,1766.85,2177.33,1944.99
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,25/08/2026,4158.73,5035.35,4479.72
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,25/08/2026,2005.00,2347.31,2195.01
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,25/08/2026,2147.27,2569.61,2295.73
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,25/08/2026,1766.93,2138.31,1982.13
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,25/08/2026,4247.22,4888.36,4555.06
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,25/08/2026,2030.58,2430.74,2222.78
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,25/08/2026,1961.05,2505.75,2226.14
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,25/08/2026,1757.70,2044.83,1869.94
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,25/08/2026,3905.13,4919.58,4376.62
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,25/08/2026,1931.06,2347.10,2138.87
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,25/08/2026,2100.78,2463.44,2308.96
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,25/08/2026,1848.07,2232.66,1986.35
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,25/08/2026,4179.24,4918.99,4573.72
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,25/08/2026,2072.09,2436.12,2213.57
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,25/08/2026,1952.31,2418.43,2162.53
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,25/08/2026,1732.61,2027.79,1881.04
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,25/08/2026,4022.01,4791.99,4378.88
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,25/08/2026,1885.59,2352.17,2118.27
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,26/08/2026,2060.85,2387.54,2243.69
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,26/08/2026,1785.52,2109.69,1906.16
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,26/08/2026,4148.34,4797.63,4457.93
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,26/08/2026,1948.00,2324.14,2139.85
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,26/08/2026,2084.92,2509.61,2293.66
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,26/08/2026,1697.35,2114.31,1927.25
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,26/08/2026,4074.21,5165.07,4624.38
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,26/08/2026,2089.38,2386.50,2235.62
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,26/08/2026,1983.38,2430.44,2175.74
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,26/08/2026,1663.17,2006.06,1843.09
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,26/08/2026,3971.58,4924.22,4444.71
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,26/08/2026,1991.73,2380.19,2138.21
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,26/08/2026,2042.11,2451.96,2311.73
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,26/08/2026,1760.54,2166.41,1943.13
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,26/08/2026,4121.45,5104.44,4653.21
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,26/08/2026,2067.01,2488.46,2217.62
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,26/08/2026,2007.54,2409.71,2145.87
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,26/08/2026,1688.33,1952.28,1804.30
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,26/08/2026,4021.48,4824.59,4346.91
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,26/08/2026,1850.62,2239.75,2079.94
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,27/08/2026,2057.91,2544.97,2286.81
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,27/08/2026,1780.92,2111.87,1928.55
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,27/08/2026,4006.18,4945.50,4420.73
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,27/08/2026,2022.39,2347.08,2157.70
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,27/08/2026,2043.92,2438.28,2247.46
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,27/08/2026,1711.61,2056.37,1858.87
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,27/08/2026,4088.94,4891.12,4406.74
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,27/08/2026,1915.40,2292.52,2075.86
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,27/08/2026,2024.94,2487.90,2300.25
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,27/08/2026,1726.34,2086.34,1944.19
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,27/08/2026,4181.18,4908.59,4622.73
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,27/08/2026,1994.55,2357.85,2177.73
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,27/08/2026,1933.68,2453.65,2184.75
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,27/08/2026,1709.88,2004.53,1870.12
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,27/08/2026,3860.98,4705.57,4299.21
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,27/08/2026,1875.85,2266.72,2072.15
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,28/08/2026,2006.57,2409.11,2186.99
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,28/08/2026,1684.81,2112.71,1875.60
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,28/08/2026,4183.93,4881.78,4507.36
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,28/08/2026,2062.68,2498.05,2214.20
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,28/08/2026,2032.07,2464.76,2277.98
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,28/08/2026,1761.92,2176.46,1963.17
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,28/08/2026,4107.23,4987.77,4591.42
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,28/08/2026,1977.74,2451.95,2230.12
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,28/08/2026,1982.54,2446.58,2171.44
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,28/08/2026,1696.29,2022.12,1871.65
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,28/08/2026,4122.37,4837.33,4443.46
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,28/08/2026,1930.53,2387.17,2158.17
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,28/08/2026,2105.14,2450.46,2240.84
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,28/08/2026,1828.65,2167.30,1955.31
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,28/08/2026,4206.96,5238.73,4666.25
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,28/08/2026,2007.94,2526.84,2268.61
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,28/08/2026,1895.12,2423.71,2147.06
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,28/08/2026,1698.13,2069.71,1835.50
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,28/08/2026,3844.00,4703.45,4292.46
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,28/08/2026,1950.46,2327.30,2132.78
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,29/08/2026,2053.10,2445.92,2256.08
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,29/08/2026,1733.81,2159.83,1915.90
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,29/08/2026,4054.26,4936.44,4563.04
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,29/08/2026,1952.13,2348.06,2147.62
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,29/08/2026,2049.85,2549.05,2282.64
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,29/08/2026,1836.28,2213.02,1998.39
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,29/08/2026,4169.23,4996.79,4660.26
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,29/08/2026,2075.62,2382.75,2213.98
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,29/08/2026,2006.08,2351.78,2214.39
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,29/08/2026,1723.83,2047.09,1882.87
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,29/08/2026,4047.00,4884.59,4374.48
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,29/08/2026,1955.98,2251.30,2097.97
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,29/08/2026,2144.05,2524.15,2301.08
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,29/08/2026,1836.00,2205.35,2002.88
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,29/08/2026,4297.89,5234.85,4686.69
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,29/08/2026,2033.72,2364.36,2218.11
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,29/08/2026,1933.31,2405.38,2169.86
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,29/08/2026,1666.50,2039.08,1876.12
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,29/08/2026,4042.31,4847.44,4386.16
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,29/08/2026,1914.37,2252.12,2105.14
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,31/08/2026,1903.26,2239.19,2111.11
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,31/08/2026,1805.97,2109.36,1925.69
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,31/08/2026,4057.73,5016.65,4483.99
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,31/08/2026,1877.30,2369.96,2128.82
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,31/08/2026,1944.88,2386.08,2185.03
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,31/08/2026,1790.65,2094.54,1961.32
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,31/08/2026,4262.21,4978.93,4586.00
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,31/08/2026,2001.99,2381.74,2168.68
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,31/08/2026,1959.08,2288.94,2117.74
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,31/08/2026,1681.71,2085.39,1866.67
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,31/08/2026,4109.06,4774.50,4434.85
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,31/08/2026,1908.63,2350.74,2118.26
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,31/08/2026,1945.52,2342.50,2180.11
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,31/08/2026,1754.34,2147.22,1956.08
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,31/08/2026,4146.85,4984.92,4621.17
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,31/08/2026,2074.30,2403.01,2252.82
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,31/08/2026,1974.60,2355.31,2101.65
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,31/08/2026,1674.28,2076.14,1870.74
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,31/08/2026,4013.18,4770.36,4359.43
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,31/08/2026,1879.04,2266.92,2076.62
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,01/09/2026,1968.18,2332.33,2160.61
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,01/09/2026,1722.95,1991.21,1838.76
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,01/09/2026,4175.23,5021.17,4518.83
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,01/09/2026,1966.18,2321.55,2181.02
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,01/09/2026,1987.48,2401.77,2226.34
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,01/09/2026,1713.89,2060.45,1873.77
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,01/09/2026,4190.50,4838.61,4550.18
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,01/09/2026,2026.24,2385.96,2232.59
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,01/09/2026,1979.45,2268.04,2111.45
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,01/09/2026,1644.20,1916.38,1789.12
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,01/09/2026,4010.38,4700.77,4362.55
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,01/09/2026,1915.75,2341.58,2152.69
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,01/09/2026,2054.66,2479.15,2234.96
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,01/09/2026,1687.19,2044.16,1900.07
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,01/09/2026,4192.49,5081.54,4548.47
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,01/09/2026,1980.29,2375.10,2230.23
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,01/09/2026,1884.23,2351.44,2096.38
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,01/09/2026,1670.26,1930.47,1805.32
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,01/09/2026,3921.72,4561.54,4300.93
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,01/09/2026,1940.36,2319.92,2101.44
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,02/09/2026,2033.99,2327.58,2183.33
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,02/09/2026,1771.85,2103.83,1935.66
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,02/09/2026,3959.82,4811.15,4457.30
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,02/09/2026,2027.23,2440.05,2213.13
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,02/09/2026,2057.58,2419.22,2237.71
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,02/09/2026,1812.83,2118.25,1960.09
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,02/09/2026,4336.29,5064.32,4626.46
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,02/09/2026,2063.61,2472.32,2253.75
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,02/09/2026,1913.86,2414.66,2155.45
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,02/09/2026,1726.91,2087.71,1875.09
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,02/09/2026,3901.27,4714.85,4428.22
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,02/09/2026,1887.00,2381.63,2135.51
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,02/09/2026,2023.76,2480.43,2236.38
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,02/09/2026,1816.43,2138.25,1980.92
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,02/09/2026,4120.38,5156.59,4618.27
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,02/09/2026,2082.54,2537.04,2268.42
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,02/09/2026,1957.15,2371.24,2118.59
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,02/09/2026,1667.48,2009.18,1840.35
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,02/09/2026,3996.53,4806.40,4322.90
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,02/09/2026,1988.64,2310.80,2156.67
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,03/09/2026,2067.09,2399.44,2238.94
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,03/09/2026,1715.99,2148.61,1914.90
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,03/09/2026,4101.88,4767.30,4418.10
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,03/09/2026,1986.58,2314.12,2172.08
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,03/09/2026,2069.75,2458.61,2264.46
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,03/09/2026,1750.04,2125.44,1913.79
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,03/09/2026,4035.63,5122.73,4572.21
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,03/09/2026,1986.22,2354.72,2199.63
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,03/09/2026,2037.14,2422.87,2179.14
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,03/09/2026,1675.07,2055.34,1850.96
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,03/09/2026,3912.80,4748.69,4336.14
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,03/09/2026,1944.54,2364.42,2094.82
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,03/09/2026,2048.88,2556.45,2284.30
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,03/09/2026,1724.83,2104.03,1958.97
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,03/09/2026,4209.47,5013.00,4588.66
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,03/09/2026,2058.96,2386.40,2222.64
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,03/09/2026,1881.40,2326.58,2137.02
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,03/09/2026,1705.79,2056.03,1833.44
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,03/09/2026,3936.96,4793.31,4281.92
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,03/09/2026,1886.22,2227.31,2068.70
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,04/09/2026,2074.28,2397.58,2248.06
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,04/09/2026,1785.40,2173.11,1959.42
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,04/09/2026,4004.09,4825.61,4523.91
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,04/09/2026,1916.89,2383.41,2167.23
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,04/09/2026,2007.62,2425.42,2241.50
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,04/09/2026,1836.19,2150.42,1986.96
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,04/09/2026,4007.21,5006.28,4491.57
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,04/09/2026,1928.26,2367.63,2166.92
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,04/09/2026,1964.29,2380.55,2200.99
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,04/09/2026,1668.59,2078.62,1875.97
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,04/09/2026,3880.02,4918.13,4397.02
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,04/09/2026,1859.49,2254.31,2077.89
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,04/09/2026,2127.90,2405.90,2265.07
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,04/09/2026,1841.97,2145.90,1991.57
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,04/09/2026,4118.66,4918.16,4636.11
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,04/09/2026,1991.46,2506.94,2243.03
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,04/09/2026,1974.36,2326.48,2157.91
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,04/09/2026,1636.31,2079.33,1851.30
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,04/09/2026,3997.34,4783.50,4278.41
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,04/09/2026,1864.02,2201.03,2053.66
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,05/09/2026,1896.24,2382.38,2150.50
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,05/09/2026,1665.83,2017.90,1869.14
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,05/09/2026,4060.34,4768.92,4427.12
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,05/09/2026,1963.39,2288.58,2150.38
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,05/09/2026,2034.67,2391.70,2180.60
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,05/09/2026,1800.11,2191.24,1940.42
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,05/09/2026,4162.00,4988.57,4560.24
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,05/09/2026,1986.69,2359.01,2199.36
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,05/09/2026,1982.47,2276.38,2139.25
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,05/09/2026,1712.38,2089.54,1849.20
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,05/09/2026,3996.89,4689.16,4347.22
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,05/09/2026,1889.85,2416.98,2139.40
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,05/09/2026,2020.54,2508.05,2241.84
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,05/09/2026,1760.58,2146.87,1922.97
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,05/09/2026,4128.01,5192.43,4681.92
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,05/09/2026,2033.18,2387.82,2225.00
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,05/09/2026,1879.83,2289.44,2092.09
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,05/09/2026,1620.18,1989.74,1814.05
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,05/09/2026,3933.84,4714.56,4409.70
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,05/09/2026,1970.82,2292.70,2117.67
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,07/09/2026,2028.90,2451.10,2189.94
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,07/09/2026,1723.78,2150.74,1910.18
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,07/09/2026,3980.41,4740.25,4432.00
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,07/09/2026,2043.08,2483.05,2202.76
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,07/09/2026,2061.79,2516.84,2237.15
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,07/09/2026,1744.52,2043.63,1905.88
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,07/09/2026,4084.28,5112.11,4601.28
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,07/09/2026,2029.98,2538.00,2246.81
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,07/09/2026,1988.48,2397.68,2126.12
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,07/09/2026,1732.07,1979.32,1850.10
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,07/09/2026,4095.12,4674.36,4361.42
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,07/09/2026,1940.79,2324.09,2103.75
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,07/09/2026,1979.73,2355.28,2212.06
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,07/09/2026,1687.86,2084.73,1917.85
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,07/09/2026,4371.71,5128.11,4685.28
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,07/09/2026,1986.42,2451.54,2241.79
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,07/09/2026,1877.18,2247.23,2109.76
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,07/09/2026,1633.15,2046.36,1816.38
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,07/09/2026,3888.14,4787.28,4308.06
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,07/09/2026,1889.37,2350.19,2133.47
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,08/09/2026,2021.37,2312.75,2158.32
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,08/09/2026,1730.77,2098.60,1953.30
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,08/09/2026,4178.38,5028.14,4525.38
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,08/09/2026,1940.48,2307.69,2169.95
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,08/09/2026,1992.38,2408.42,2209.70
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,08/09/2026,1852.97,2172.51,2022.86
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,08/09/2026,4077.76,4842.08,4543.42
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,08/09/2026,2002.15,2423.89,2215.14
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,08/09/2026,1914.23,2410.22,2148.18
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,08/09/2026,1729.77,2109.70,1930.98
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,08/09/2026,3868.99,4871.41,4378.18
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,08/09/2026,1903.90,2320.93,2113.97
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,08/09/2026,2101.34,2523.31,2258.42
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,08/09/2026,1896.62,2224.71,2034.97
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,08/09/2026,4096.71,5200.87,4630.43
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,08/09/2026,2101.50,2510.99,2249.93
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,08/09/2026,1942.72,2250.62,2099.26
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,08/09/2026,1802.71,2075.15,1941.51
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,08/09/2026,4012.06,5002.48,4427.72
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,08/09/2026,1916.29,2404.80,2139.97
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,09/09/2026,1968.67,2358.52,2178.11
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,09/09/2026,1789.79,2140.40,1919.54
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,09/09/2026,4069.06,4895.46,4495.33
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,09/09/2026,2010.64,2445.72,2172.48
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,09/09/2026,1975.98,2417.20,2202.47
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,09/09/2026,1765.47,2138.92,1955.15
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,09/09/2026,4050.99,4835.16,4518.55
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,09/09/2026,1961.36,2494.74,2222.94
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,09/09/2026,2017.82,2422.45,2157.52
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,09/09/2026,1707.85,2052.85,1901.45
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,09/09/2026,3923.05,4963.41,4428.36
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,09/09/2026,1952.46,2407.36,2153.64
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,09/09/2026,2015.03,2429.94,2260.84
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,09/09/2026,1845.51,2234.59,1993.92
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,09/09/2026,4117.83,5007.75,4629.18
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,09/09/2026,2055.23,2475.68,2207.37
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,09/09/2026,1991.64,2306.90,2141.05
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,09/09/2026,1740.96,2037.13,1887.67
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,09/09/2026,4001.36,4657.47,4358.19
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,09/09/2026,1917.10,2245.37,2093.72
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,10/09/2026,1949.74,2459.85,2191.18
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,10/09/2026,1714.20,2077.18,1910.82
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,10/09/2026,4220.81,5040.33,4500.30
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,10/09/2026,1936.31,2352.29,2160.71
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,10/09/2026,1992.78,2543.34,2263.15
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,10/09/2026,1711.65,2094.92,1943.94
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,10/09/2026,4271.42,5031.75,4553.65
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,10/09/2026,1967.71,2353.68,2184.11
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,10/09/2026,1968.60,2324.35,2178.07
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,10/09/2026,1741.27,2032.41,1871.13
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,10/09/2026,3964.40,4713.47,4415.15
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,10/09/2026,1962.82,2394.24,2137.13
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,10/09/2026,2059.68,2455.52,2293.82
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,10/09/2026,1838.58,2210.60,1980.53
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,10/09/2026,4279.68,5161.07,4647.56
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,10/09/2026,2012.13,2447.41,2246.77
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,10/09/2026,1964.33,2305.86,2148.40
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,10/09/2026,1667.01,2037.79,1827.71
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,10/09/2026,3986.18,4900.11,4378.31
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,10/09/2026,1878.24,2249.22,2108.32
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,11/09/2026,2082.29,2413.02,2249.24
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,11/09/2026,1652.41,2024.77,1866.37
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,11/09/2026,4173.20,4874.85,4500.45
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,11/09/2026,2002.73,2350.90,2150.99
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,11/09/2026,2036.92,2585.13,2303.50
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,11/09/2026,1746.41,2090.67,1934.22
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,11/09/2026,4144.76,5011.65,4666.25
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,11/09/2026,2067.12,2415.84,2212.25
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,11/09/2026,2002.48,2431.75,2202.33
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,11/09/2026,1624.58,1991.59,1845.52
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,11/09/2026,4066.43,4806.05,4392.01
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,11/09/2026,1920.71,2313.45,2094.86
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,11/09/2026,2018.13,2456.63,2287.45
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,11/09/2026,1712.08,2128.98,1903.72
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,11/09/2026,4300.95,5050.04,4687.17
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,11/09/2026,1969.78,2411.59,2218.88
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,11/09/2026,1959.89,2358.17,2182.77
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,11/09/2026,1642.64,2047.50,1824.61
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,11/09/2026,4082.06,4742.24,4370.13
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,11/09/2026,1989.55,2315.39,2127.65
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,12/09/2026,2039.54,2430.73,2207.19
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,12/09/2026,1757.20,2031.73,1912.01
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,12/09/2026,4075.85,4752.04,4468.72
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,12/09/2026,2022.08,2334.82,2199.79
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,12/09/2026,2070.62,2479.77,2268.34
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,12/09/2026,1807.70,2129.25,1969.56
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,12/09/2026,4135.17,5086.58,4614.12
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,12/09/2026,1998.67,2503.85,2255.08
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,12/09/2026,1927.80,2321.32,2161.41
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,12/09/2026,1679.48,2088.27,1882.61
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,12/09/2026,3958.19,4675.01,4350.71
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,12/09/2026,1878.68,2362.89,2134.47
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,12/09/2026,2053.91,2463.69,2310.49
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,12/09/2026,1763.78,2145.64,1990.55
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,12/09/2026,4223.72,5139.91,4704.73
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,12/09/2026,1970.17,2412.20,2232.82
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,12/09/2026,1931.20,2426.97,2180.42
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,12/09/2026,1730.85,2017.14,1881.77
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,12/09/2026,3998.08,4888.02,4358.49
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,12/09/2026,1909.83,2332.29,2143.54
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,14/09/2026,2084.25,2498.28,2238.62
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,14/09/2026,1776.83,2221.54,2003.68
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,14/09/2026,4060.22,4971.06,4564.28
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,14/09/2026,1999.46,2329.52,2171.67
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,14/09/2026,2080.56,2526.98,2258.86
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,14/09/2026,1873.51,2139.30,2003.27
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,14/09/2026,4059.29,4903.60,4531.99
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,14/09/2026,2043.72,2428.42,2206.92
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,14/09/2026,1992.02,2426.40,2212.62
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,14/09/2026,1768.26,2071.45,1922.64
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,14/09/2026,4007.69,4964.64,4437.74
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,14/09/2026,1890.19,2364.76,2139.98
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,14/09/2026,2179.53,2490.68,2338.14
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,14/09/2026,1904.25,2158.60,2029.67
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,14/09/2026,4213.17,5015.79,4659.57
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,14/09/2026,2028.49,2505.08,2236.76
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,14/09/2026,2002.72,2325.14,2178.76
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,14/09/2026,1698.16,2057.77,1929.71
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,14/09/2026,3938.90,4804.09,4384.96
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,14/09/2026,1966.18,2277.60,2098.33
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,15/09/2026,2050.68,2476.64,2244.59
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,15/09/2026,1846.32,2136.44,2000.45
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,15/09/2026,4045.85,5023.58,4492.99
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,15/09/2026,1971.18,2399.08,2163.00
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,15/09/2026,2093.29,2518.51,2267.89
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,15/09/2026,1816.05,2292.58,2037.64
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,15/09/2026,4278.01,5123.98,4615.47
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,15/09/2026,2071.81,2477.10,2214.42
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,15/09/2026,2022.40,2478.62,2199.44
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,15/09/2026,1779.12,2074.87,1951.17
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,15/09/2026,4077.05,4914.04,4485.32
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,15/09/2026,1932.24,2347.16,2112.40
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,15/09/2026,2166.41,2543.35,2322.08
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,15/09/2026,1944.99,2316.14,2080.30
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,15/09/2026,4439.36,5165.53,4731.64
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,15/09/2026,2061.60,2487.31,2236.01
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,15/09/2026,2033.50,2480.38,2203.83
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,15/09/2026,1756.00,2067.77,1914.00
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,15/09/2026,4147.61,4883.69,4417.61
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,15/09/2026,1946.11,2285.87,2111.53
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,16/09/2026,2026.34,2452.91,2216.42
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,16/09/2026,1743.67,2023.88,1873.94
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,16/09/2026,4150.37,4835.32,4554.02
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,16/09/2026,1970.39,2457.51,2208.97
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,16/09/2026,2088.80,2488.39,2245.15
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,16/09/2026,1686.05,2135.39,1911.75
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,16/09/2026,4301.42,5214.26,4653.35
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,16/09/2026,2008.34,2503.87,2245.82
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,16/09/2026,2043.42,2374.40,2184.10
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,16/09/2026,1661.74,2031.32,1848.93
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,16/09/2026,4025.78,4892.32,4389.05
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,16/09/2026,2033.05,2412.90,2175.11
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,16/09/2026,2095.77,2548.97,2287.45
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,16/09/2026,1695.86,2109.31,1904.08
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,16/09/2026,4191.80,4999.82,4602.17
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,16/09/2026,2013.11,2496.27,2267.52
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,16/09/2026,1925.07,2317.90,2164.73
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,16/09/2026,1665.97,1963.49,1779.99
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,16/09/2026,4000.95,4747.90,4375.68
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,16/09/2026,1893.72,2274.66,2120.16
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,17/09/2026,2013.97,2354.44,2207.76
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,17/09/2026,1772.22,2137.22,1969.32
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,17/09/2026,4153.08,5145.70,4554.67
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,17/09/2026,1975.40,2483.09,2243.43
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,17/09/2026,2077.90,2553.28,2265.31
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,17/09/2026,1884.17,2269.47,2015.25
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,17/09/2026,4140.75,5187.86,4616.38
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,17/09/2026,2085.86,2452.21,2247.28
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,17/09/2026,1957.45,2420.66,2149.07
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,17/09/2026,1800.22,2092.73,1973.32
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,17/09/2026,4124.98,4989.38,4452.63
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,17/09/2026,1953.64,2375.37,2141.53
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,17/09/2026,2144.11,2546.87,2289.77
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,17/09/2026,1838.94,2178.62,2043.49
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,17/09/2026,4290.74,5167.98,4697.11
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,17/09/2026,2042.65,2496.80,2261.36
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,18/09/2026,2039.27,2449.57,2220.25
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,18/09/2026,1834.48,2119.04,1989.56
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,18/09/2026,4154.04,4843.44,4480.13
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,18/09/2026,2004.29,2405.48,2211.61
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,18/09/2026,2011.34,2462.41,2264.56
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,18/09/2026,1900.47,2168.99,2026.93
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,18/09/2026,4343.35,5201.77,4681.84
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,18/09/2026,2071.36,2492.43,2268.21
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,18/09/2026,2142.52,2473.02,2287.02
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,18/09/2026,1863.18,2252.63,2068.75
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,18/09/2026,4156.01,5023.96,4671.47
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,18/09/2026,1994.91,2498.95,2239.25
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,18/09/2026,2047.80,2380.42,2179.30
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,18/09/2026,1691.03,2040.76,1912.84
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,18/09/2026,3955.75,4699.21,4396.00
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,18/09/2026,1928.62,2361.45,2102.79
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,19/09/2026,2024.04,2480.41,2253.09
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,19/09/2026,1733.81,2102.18,1928.64
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,19/09/2026,3994.87,4972.00,4472.08
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,19/09/2026,1965.90,2460.11,2213.71
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,19/09/2026,2048.59,2505.34,2280.45
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,19/09/2026,1843.86,2219.57,1981.56
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,19/09/2026,4122.31,5163.48,4601.85
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,19/09/2026,1944.37,2417.46,2206.71
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,19/09/2026,2008.47,2464.93,2194.09
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,19/09/2026,1786.10,2077.07,1900.26
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,19/09/2026,3929.60,4900.14,4398.49
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,19/09/2026,1937.47,2338.35,2134.06
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,19/09/2026,2163.27,2594.54,2323.90
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,19/09/2026,1798.57,2154.76,1974.61
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,19/09/2026,4325.70,5304.97,4704.07
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,19/09/2026,2033.83,2425.89,2255.98
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,19/09/2026,1914.61,2330.92,2169.36
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,19/09/2026,1698.84,2042.37,1870.60
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,19/09/2026,3988.33,4918.71,4434.22
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,19/09/2026,1996.56,2314.99,2146.63
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,21/09/2026,2083.57,2554.41,2310.15
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,21/09/2026,1757.81,2188.07,1947.54
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,21/09/2026,4187.00,4914.82,4492.19
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,21/09/2026,1982.17,2329.81,2177.95
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,21/09/2026,2102.86,2527.80,2355.64
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,21/09/2026,1772.82,2150.57,1998.44
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,21/09/2026,4210.67,5066.00,4632.76
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,21/09/2026,2038.64,2327.05,2192.08
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,21/09/2026,2047.23,2370.61,2230.65
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,21/09/2026,1685.52,2018.87,1882.22
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,21/09/2026,4052.81,4706.92,4435.04
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,21/09/2026,1917.86,2279.18,2138.06
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,21/09/2026,2131.79,2677.51,2394.64
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,21/09/2026,1879.54,2169.80,2022.69
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,21/09/2026,4261.39,5002.21,4614.64
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,21/09/2026,2004.21,2437.43,2242.38
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,21/09/2026,2052.30,2456.16,2254.63
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,21/09/2026,1694.72,2057.49,1865.30
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,21/09/2026,4017.63,4715.16,4414.01
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,21/09/2026,1908.16,2328.27,2082.67
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,22/09/2026,2021.27,2408.53,2217.95
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,22/09/2026,1807.57,2257.34,2022.41
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,22/09/2026,4113.42,4996.71,4493.86
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,22/09/2026,1942.99,2345.49,2193.33
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,22/09/2026,2041.99,2552.78,2276.48
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,22/09/2026,1883.65,2277.13,2041.79
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,22/09/2026,4003.66,5028.58,4547.38
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,22/09/2026,1994.44,2368.45,2211.78
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,22/09/2026,1980.09,2374.14,2186.95
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,22/09/2026,1842.19,2167.96,1990.92
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,22/09/2026,3985.43,4854.03,4417.40
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,22/09/2026,1913.42,2356.84,2124.46
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,22/09/2026,2113.48,2493.72,2285.17
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,22/09/2026,1839.41,2241.48,2060.11
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,22/09/2026,4288.57,5161.58,4652.27
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,22/09/2026,2004.63,2428.32,2277.17
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,22/09/2026,1889.37,2299.12,2137.67
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,22/09/2026,1745.44,2181.97,1932.81
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,22/09/2026,4038.99,4823.10,4377.38
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,22/09/2026,1961.15,2329.10,2135.36
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,23/09/2026,1984.69,2350.13,2212.19
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,23/09/2026,1700.38,2038.90,1902.20
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,23/09/2026,3923.95,4775.63,4458.95
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,23/09/2026,1986.10,2397.06,2203.87
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,23/09/2026,1990.98,2401.27,2251.94
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,23/09/2026,1831.01,2123.74,1958.51
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,23/09/2026,4172.52,4888.45,4553.25
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,23/09/2026,2001.14,2431.98,2234.25
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,23/09/2026,2000.21,2383.21,2135.10
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,23/09/2026,1750.11,2073.18,1884.29
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,23/09/2026,4080.80,4974.44,4465.80
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,23/09/2026,1970.67,2371.78,2171.46
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,23/09/2026,1926.79,2370.85,2098.85
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,23/09/2026,1644.45,2061.42,1829.31
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,23/09/2026,3994.20,4627.51,4295.16
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,23/09/2026,1980.27,2270.21,2131.01
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,24/09/2026,2084.98,2409.18,2233.13
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,24/09/2026,1802.89,2112.19,1929.06
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,24/09/2026,4241.06,4887.47,4548.71
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,24/09/2026,1990.12,2323.87,2169.98
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,24/09/2026,2115.48,2536.74,2299.92
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,24/09/2026,1729.18,2143.04,1959.33
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,24/09/2026,4325.68,5171.67,4606.09
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,24/09/2026,2093.65,2506.24,2229.51
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,24/09/2026,1945.96,2458.64,2203.18
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,24/09/2026,1713.31,2047.28,1882.45
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,24/09/2026,4114.11,4860.53,4383.29
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,24/09/2026,1897.79,2315.92,2154.84
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,24/09/2026,2076.05,2546.20,2318.10
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,24/09/2026,1810.08,2143.42,1974.38
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,24/09/2026,4252.38,5008.82,4611.91
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,24/09/2026,1992.80,2391.87,2237.11
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,24/09/2026,1926.45,2314.04,2149.58
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,24/09/2026,1648.03,2090.08,1854.32
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,24/09/2026,3937.75,4841.40,4421.48
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,24/09/2026,1952.35,2379.72,2143.04
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,25/09/2026,2074.26,2468.70,2269.26
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,25/09/2026,1827.55,2151.28,1967.59
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,25/09/2026,4056.20,4890.75,4506.49
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,25/09/2026,1970.00,2335.03,2199.98
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,25/09/2026,2089.30,2577.41,2342.43
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,25/09/2026,1866.54,2184.82,2013.92
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,25/09/2026,4252.96,5164.50,4601.82
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,25/09/2026,2020.39,2355.47,2201.09
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,25/09/2026,2027.51,2429.83,2208.91
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,25/09/2026,1716.18,2075.45,1928.90
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,25/09/2026,3938.43,4857.39,4395.33
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,25/09/2026,1979.90,2306.39,2124.88
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,25/09/2026,2073.41,2470.35,2326.97
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,25/09/2026,1932.50,2288.74,2063.70
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,25/09/2026,4078.41,4898.91,4602.23
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,25/09/2026,1974.96,2436.92,2240.25
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,25/09/2026,1939.98,2412.31,2181.43
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,25/09/2026,1720.80,2076.65,1923.02
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,25/09/2026,4027.74,4597.88,4329.45
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,25/09/2026,1915.47,2328.20,2129.46
+Maharashtra,Nashik,Lasalgaon APMC,Onion,Red,FAQ,26/09/2026,2018.65,2511.07,2226.39
+Maharashtra,Nashik,Lasalgaon APMC,Tomato,Hybrid,Grade A,26/09/2026,1740.68,2098.60,1900.61
+Maharashtra,Nashik,Lasalgaon APMC,Soybean,Yellow,FAQ,26/09/2026,4096.57,4965.67,4494.77
+Maharashtra,Nashik,Lasalgaon APMC,Maize,Hybrid,General,26/09/2026,1962.49,2401.18,2150.96
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Onion,Red,FAQ,26/09/2026,2038.99,2406.27,2270.05
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Tomato,Hybrid,Grade A,26/09/2026,1781.47,2161.67,1978.02
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Soybean,Yellow,FAQ,26/09/2026,4341.05,5066.61,4633.83
+Maharashtra,Nashik,Pimpalgaon Baswant APMC,Maize,Hybrid,General,26/09/2026,1974.21,2367.06,2199.49
+Maharashtra,Nashik,Yeola APMC,Onion,Red,FAQ,26/09/2026,2001.81,2383.05,2191.04
+Maharashtra,Nashik,Yeola APMC,Tomato,Hybrid,Grade A,26/09/2026,1711.19,2058.02,1894.20
+Maharashtra,Nashik,Yeola APMC,Soybean,Yellow,FAQ,26/09/2026,3922.88,4884.09,4386.18
+Maharashtra,Nashik,Yeola APMC,Maize,Hybrid,General,26/09/2026,1968.52,2308.01,2137.19
+Maharashtra,Nashik,Nashik APMC,Onion,Red,FAQ,26/09/2026,2144.49,2470.49,2302.91
+Maharashtra,Nashik,Nashik APMC,Tomato,Hybrid,Grade A,26/09/2026,1820.28,2141.81,1984.90
+Maharashtra,Nashik,Nashik APMC,Soybean,Yellow,FAQ,26/09/2026,4033.50,4868.02,4577.47
+Maharashtra,Nashik,Nashik APMC,Maize,Hybrid,General,26/09/2026,1953.69,2378.56,2204.73
+Maharashtra,Nashik,Manmad APMC,Onion,Red,FAQ,26/09/2026,1917.67,2360.96,2157.01
+Maharashtra,Nashik,Manmad APMC,Tomato,Hybrid,Grade A,26/09/2026,1717.76,2091.48,1851.10
+Maharashtra,Nashik,Manmad APMC,Soybean,Yellow,FAQ,26/09/2026,3949.85,4912.20,4389.62
+Maharashtra,Nashik,Manmad APMC,Maize,Hybrid,General,26/09/2026,1916.20,2202.55,2068.13

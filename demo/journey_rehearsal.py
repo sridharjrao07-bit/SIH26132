@@ -63,10 +63,14 @@ def step(label: str, cond: bool, detail: str = "") -> bool:
 
 
 def mint_token(base: str, role: str = "farmer") -> str | None:
-    code, body = call(base, "GET", f"/__dev/token?role={role}")
-    if code == 200 and isinstance(body, dict) and body.get("token"):
-        return body["token"]
-    return None
+    import jwt, time
+    from app.config import get_settings
+    secret = get_settings().supabase_jwt_secret
+    if role == "admin":
+        uid = "4743ad60-bcc3-48a8-8cab-accf949f8e1d"
+    else:
+        uid = "f5a747f4-7a0c-4559-9738-4bb923d8b932"
+    return jwt.encode({'sub': uid, 'role': 'authenticated', 'aud': 'authenticated', 'exp': int(time.time())+3600}, secret, algorithm='HS256')
 
 
 def main() -> int:
