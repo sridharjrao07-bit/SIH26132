@@ -1,0 +1,9 @@
+commodity,state,market_area,price_date,retail_price_per_qtl,wholesale_price_per_qtl,unit,source,source_ref,note
+Onion,Maharashtra,,2026-09-26,5392.0,,quintal,data_gov_in,dca/onion/IN/2026-09-26,All-India average retail onion Rs53.92/kg 16-Sep-2026 (Dept of Consumer Affairs via Business Today 2026-09-16); carried to 26-Sep as the latest published Maharashtra-relevant anchor. REPLACE via live adapter.
+Onion,Andhra Pradesh,,2026-09-26,5137.0,4699.23,quintal,data_gov_in,dca/onion/AP/2026-09-26,DCA state row. Retail 51.37 INR/kg -> 5137/quintal. Wholesale 4699.23/quintal.
+Onion,Assam,,2026-09-26,5583.0,4945.0,quintal,data_gov_in,dca/onion/AS/2026-09-26,DCA state row. Retail 55.83 INR/kg -> 5583/quintal. Wholesale 4945/quintal.
+Onion,Arunachal Pradesh,,2026-09-26,6133.0,4833.33,quintal,data_gov_in,dca/onion/AR/2026-09-26,DCA state row. Retail 61.33 INR/kg -> 6133/quintal. Wholesale 4833.33/quintal.
+Onion,Andaman and Nicobar Islands,,2026-09-26,9167.0,8300.0,quintal,data_gov_in,dca/onion/AN/2026-09-26,DCA state row. Retail 91.67 INR/kg -> 9167/quintal. Wholesale 8300/quintal. Island premium - not representative.
+Onion,Punjab,,2026-09-26,,4812.0,quintal,data_gov_in,dca/onion/PB/2026-09-26,DCA wholesale-only row. Retail not published for this state/date.
+Onion,Chhattisgarh,,2026-09-26,,4933.33,quintal,data_gov_in,dca/onion/CT/2026-09-26,DCA wholesale-only row.
+Onion,Maharashtra,,2025-10-25,,1652.63,quintal,data_gov_in,dca/onion/MH/2025-10-25,DCA Maharashtra wholesale. Historical - retained to show the seasonal swing.
