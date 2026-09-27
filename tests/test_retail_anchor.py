@@ -221,3 +221,115 @@ def test_states_do_not_contaminate_each_other_on_the_same_date():
     assert out[0].wholesale_price_per_qtl == pytest.approx(4945.0)
     assert out[0].retail_price_per_qtl == pytest.approx(5583.0)
     assert "Assam" in (out[0].source_ref or "")
+
+
+# ── The live path, which nothing had ever actually asserted ──────────────────
+#
+# The one existing test above accepted origin in ("live", "snapshot"), which is
+# vacuous for the live branch: it passes whether or not the live path works at
+# all. Everything below the loader therefore went unverified -- exactly the gap
+# Task 2 of the handoff is about. These tests mock the HTTP layer only, so they
+# prove the plumbing (adapter -> normalise -> kg->quintal -> loader returns
+# "live") and leave only the real API's response unverified.
+
+
+def _stub_fetch(monkeypatch, rows):
+    """Make DcaRetailAdapter.fetch_retail return fixed rows, no network.
+
+    Patch ``ingestion.dca_retail.DcaRetailAdapter``, not the attribute on
+    ``ingestion.retail_loader``: the loader imports the adapter *inside* the
+    function, so a module attribute on the loader is shadowed by that local
+    import and the patch would silently do nothing -- which reads as "the live
+    path is broken" rather than "the test is wrong".
+    """
+    import ingestion.dca_retail as dca
+
+    class _Stub:
+        def __init__(self, *a, **k):
+            pass
+
+        async def fetch_retail(self, **kwargs):
+            return rows
+
+    monkeypatch.setattr(dca, "DcaRetailAdapter", _Stub, raising=False)
+
+
+def test_loader_reports_live_when_the_feed_answers(monkeypatch):
+    """A successful live fetch must say 'live', not quietly fall back."""
+    from datetime import date as _date
+
+    import ingestion.retail_loader as rl
+    from ingestion.dca_retail import RetailPriceRecord
+
+    monkeypatch.setenv("DATA_GOV_IN_API_KEY", "test-key-not-a-placeholder")
+    _stub_fetch(
+        monkeypatch,
+        [
+            RetailPriceRecord(
+                commodity="Onion",
+                state="Maharashtra",
+                price_date=_date(2026, 9, 26),
+                retail_price_per_qtl=5392.0,
+                source_ref="dca/onion/MH/2026-09-26",
+            )
+        ],
+    )
+    rows, origin = rl.load_retail_prices("Onion", "Maharashtra")
+    assert origin == "live", f"expected the live branch, got {origin!r}"
+    assert len(rows) == 1
+    assert rows[0].retail_price_per_qtl == 5392.0
+
+
+def test_loader_falls_back_when_live_returns_nothing(monkeypatch):
+    """An empty live result is a failure, not a zero-row success."""
+    import ingestion.retail_loader as rl
+
+    monkeypatch.setenv("DATA_GOV_IN_API_KEY", "test-key-not-a-placeholder")
+    _stub_fetch(monkeypatch, [])
+    rows, origin = rl.load_retail_prices("Onion", "Maharashtra")
+    assert origin == "snapshot", f"empty live rows must fall back, got {origin!r}"
+    assert rows, "the snapshot must still carry the anchor"
+
+
+def test_loader_falls_back_when_live_raises(monkeypatch):
+    """A raising adapter must not propagate; the demo must still run."""
+    import ingestion.retail_loader as rl
+    from ingestion.base import SourceFetchError
+
+    monkeypatch.setenv("DATA_GOV_IN_API_KEY", "test-key-not-a-placeholder")
+    import ingestion.dca_retail as dca
+
+    class _Boom:
+        def __init__(self, *a, **k):
+            pass
+
+        async def fetch_retail(self, **kwargs):
+            raise SourceFetchError("simulated network failure")
+
+    monkeypatch.setattr(dca, "DcaRetailAdapter", _Boom, raising=False)
+    rows, origin = rl.load_retail_prices("Onion", "Maharashtra")
+    assert origin == "snapshot"
+    assert rows
+
+
+def test_loader_does_not_treat_the_placeholder_as_a_real_key(monkeypatch):
+    """The documented placeholder must not send a request that cannot succeed."""
+    import ingestion.retail_loader as rl
+
+    called = []
+    import ingestion.dca_retail as dca
+
+    class _Spy:
+        def __init__(self, *a, **k):
+            called.append(k)
+
+        async def fetch_retail(self, **kwargs):
+            called.append(kwargs)
+            return []
+
+    monkeypatch.setenv("DATA_GOV_IN_API_KEY", "placeholder")
+    monkeypatch.setattr(dca, "DcaRetailAdapter", _Spy, raising=False)
+    rows, origin = rl.load_retail_prices("Onion", "Maharashtra")
+    assert not called, "the placeholder key must skip the live fetch entirely"
+    assert origin == "snapshot"
+    assert rows
