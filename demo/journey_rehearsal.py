@@ -72,6 +72,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="http://127.0.0.1:8000")
     ap.add_argument("--token", default=None, help="real farmer JWT for a live backend")
+    ap.add_argument("--admin-token", default=None, help="real admin JWT for live backend SMS test")
     ap.add_argument("--lang", default="mr")
     args = ap.parse_args()
     base = args.base.rstrip("/")
@@ -192,7 +193,16 @@ def main() -> int:
     # ── SMS (live only — the mock does not implement /sms/simulate) ───────────
     # ── SMS (admin simulates an inbound 'PYAJ'; the mock supports this too) ───
     print("\nSMS — reply-to-price (admin simulates inbound 'PYAJ')")
-    admin = {"Authorization": f"Bearer {mint_token(base, 'admin') or token}"}
+    admin_jwt = args.admin_token or mint_token(base, 'admin')
+    if not admin_jwt:
+        import os
+        if os.getenv("SUPABASE_JWT_SECRET"):
+            try:
+                from demo.mint_admin_token import mint_admin_token
+                admin_jwt = mint_admin_token()
+            except Exception:
+                pass
+    admin = {"Authorization": f"Bearer {admin_jwt or token}"}
     code, sms = call(base, "POST", "/api/v1/sms/simulate", body={"sender": "919876543210", "message": "PYAJ"}, headers=admin)
     step("POST /sms/simulate replies with modal + verdict (admin)",
          code == 200 and isinstance(sms, dict) and sms.get("status") == "replied",
