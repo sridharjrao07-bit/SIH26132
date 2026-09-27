@@ -1,7 +1,7 @@
 [project]
 name = "krishi-bazaar"
 version = "2.0.0"
-description = "SIH26132 market linkage and price discovery API (backend only)"
+description = "DirectLink — SIH26033 farmer-to-consumer disintermediation engine and API"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 license = { text = "MIT" }
@@ -11,7 +11,7 @@ license = { text = "MIT" }
 target-version = "py312"
 line-length = 100
 src = ["app", "direct", "events", "ingestion", "forecasting", "notifications", "tests", "demo", "scripts"]
-exclude = [".venv", "venv", "build", "dist", "docs/archive"]
+exclude = [".venv", "venv", "build", "dist", "docs/archive", "legacy"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]

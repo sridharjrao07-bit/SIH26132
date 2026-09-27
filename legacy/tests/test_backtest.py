@@ -21,7 +21,6 @@ from forecasting.backtest import (
     NaiveLastWeekSameDay,
     run_backtest,
 )
-
 from tests.conftest import (
     ADMIN_USER_ID,
     COMMODITY_ID_ONION,

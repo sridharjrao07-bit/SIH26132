@@ -39,26 +39,6 @@ The API verifies that JWT itself. It does **not** forward it to PostgREST (hoste
 
 | Method | Path | Summary |
 |---|---|---|
-| POST | `/api/v1/admin/alert-check/run` | Trigger Alert Check |
-| GET | `/api/v1/admin/buyers` | Admin List Buyers |
-| POST | `/api/v1/admin/buyers` | Admin Create Buyer |
-| POST | `/api/v1/admin/buyers/rescore` | Admin Rescore Buyers |
-| PATCH | `/api/v1/admin/buyers/{buyer_id}/verify` | Admin Verify Buyer |
-| GET | `/api/v1/admin/events` | Admin List Events |
-| POST | `/api/v1/admin/events/ingest` | Admin Events Ingest |
-| POST | `/api/v1/admin/forecast/backtest` | Trigger Forecast Backtest |
-| POST | `/api/v1/admin/forecast/run` | Trigger Forecast |
-| GET | `/api/v1/admin/grievances` | Admin List Grievances |
-| PATCH | `/api/v1/admin/grievances/{grievance_id}` | Admin Update Grievance |
-| POST | `/api/v1/admin/offers/expire` | Admin Expire Offers |
-| GET | `/api/v1/alerts/` | List Alerts |
-| POST | `/api/v1/alerts/` | Create Alert |
-| DELETE | `/api/v1/alerts/{alert_id}` | Delete Alert |
-| PATCH | `/api/v1/alerts/{alert_id}` | Update Alert |
-| GET | `/api/v1/buyers/` | List Buyers |
-| POST | `/api/v1/buyers/register` | Register Buyer |
-| GET | `/api/v1/buyers/{buyer_id}/supply` | Buyer Supply |
-| PATCH | `/api/v1/buyers/{buyer_id}/verify` | Verify Buyer |
 | GET | `/api/v1/commodities/` | Get Commodities |
 | GET | `/api/v1/direct/config` | Direct Config |
 | POST | `/api/v1/direct/fair-price` | Fair Price |
@@ -69,49 +49,19 @@ The API verifies that JWT itself. It does **not** forward it to PostgREST (hoste
 | GET | `/api/v1/direct/plans/{plan_id}` | Get Plan |
 | POST | `/api/v1/direct/rupee` | Consumer Rupee |
 | GET | `/api/v1/direct/trace/{token}` | Trace Order |
-| GET | `/api/v1/forecasts` | Get Forecasts |
-| GET | `/api/v1/forecasts/summary` | Get Forecasts Summary |
-| GET | `/api/v1/grievances/` | List Grievances |
-| POST | `/api/v1/grievances/` | Create Grievance |
-| GET | `/api/v1/logistics/` | List Logistics |
-| GET | `/api/v1/logistics/bookings` | List Bookings |
-| POST | `/api/v1/logistics/bookings` | Create Booking |
-| PATCH | `/api/v1/logistics/bookings/{booking_id}` | Update Booking |
 | GET | `/api/v1/lots/` | List Lots |
 | POST | `/api/v1/lots/` | Create Lot |
 | POST | `/api/v1/lots/aggregate` | Aggregate Lots |
 | GET | `/api/v1/lots/{lot_id}` | Get Lot |
-| GET | `/api/v1/lots/{lot_id}/advice` | Lot Advice |
 | PATCH | `/api/v1/lots/{lot_id}/grade` | Grade Lot |
 | GET | `/api/v1/lots/{lot_id}/ledger` | Get Lot Ledger |
-| GET | `/api/v1/lots/{lot_id}/matches` | Match Buyers |
 | PATCH | `/api/v1/lots/{lot_id}/withdraw` | Withdraw Lot |
 | GET | `/api/v1/markets/` | Get Markets |
 | GET | `/api/v1/markets/nearby` | Get Nearby Markets |
 | GET | `/api/v1/me/` | Get Me |
 | PATCH | `/api/v1/me/` | Update Me |
-| GET | `/api/v1/offers/` | List Offers |
-| POST | `/api/v1/offers/` | Create Offer |
-| PATCH | `/api/v1/offers/{offer_id}` | Update Offer |
-| GET | `/api/v1/payments/` | List Payments |
-| POST | `/api/v1/payments/` | Create Payment |
-| PATCH | `/api/v1/payments/{payment_id}/disputed` | Mark Disputed |
-| PATCH | `/api/v1/payments/{payment_id}/failed` | Mark Failed |
-| PATCH | `/api/v1/payments/{payment_id}/paid` | Mark Paid |
 | GET | `/api/v1/prices/historical` | Get Historical Prices |
 | GET | `/api/v1/prices/latest` | Get Latest Prices |
-| GET | `/api/v1/sale-window/` | Sale Window |
-| POST | `/api/v1/sms/simulate` | Simulate Inbound |
-| POST | `/api/v1/sms/webhook` | Handle Sms Webhook |
-| GET | `/api/v1/storage/bookings` | List Bookings |
-| POST | `/api/v1/storage/bookings` | Book Storage |
-| PATCH | `/api/v1/storage/bookings/{booking_id}` | Update Booking |
-| GET | `/api/v1/storage/facilities` | List Facilities |
-| GET | `/dashboard` | Get Dashboard |
-| GET | `/dashboard/api/forecast-stats` | Get Forecast Stats |
-| GET | `/dashboard/api/ingestion-logs` | Get Ingestion Logs |
-| DELETE | `/dashboard/session` | Dashboard Logout |
-| POST | `/dashboard/session` | Dashboard Session |
 | GET | `/health` | Health Check |
 | GET | `/metrics` | Metrics |
 | GET | `/readyz` | Readyz |

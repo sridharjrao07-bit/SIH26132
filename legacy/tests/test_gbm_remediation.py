@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from forecasting.backtest import run_backtest
-
 from tests.conftest import COMMODITY_ID_ONION, MARKET_ID_LASALGAON, FakeSupabase
 from tests.test_backtest import _make_price_rows, _trended_series
 

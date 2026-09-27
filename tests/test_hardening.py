@@ -95,45 +95,6 @@ def test_list_lots_invalid_status_is_422(override_supabase, fake_supabase):
     assert resp.status_code == 422
 
 
-def test_grievance_for_foreign_lot_is_404(override_supabase, fake_supabase):
-    fake_supabase.seed(
-        "lots",
-        [{"id": "lot-x", "user_id": "someone-else", "fpo_id": None, "status": "open"}],
-    )
-    resp = client.post(
-        "/api/v1/grievances/",
-        json={"category": "quality", "description": "wet bags at the gate", "lot_id": "lot-x"},
-        headers=farmer_headers(),
-    )
-    assert resp.status_code == 404
-
-
-def test_sms_webhook_bad_json_after_hmac_is_400(override_supabase, fake_supabase, monkeypatch):
-    import hashlib
-    import hmac
-    import time
-
-    from app.routers import sms as sms_mod
-
-    monkeypatch.setenv("INBOUND_HMAC_SECRET", "harden-secret")
-    sms_mod.reset_verifier_for_tests()
-    body = b"not-json"
-    ts = str(time.time())
-    sig = hmac.new(b"harden-secret", body + ts.encode(), hashlib.sha256).hexdigest()
-    resp = client.post(
-        "/api/v1/sms/webhook",
-        content=body,
-        headers={
-            "Content-Type": "application/json",
-            "X-Signature": sig,
-            "X-Timestamp": ts,
-        },
-    )
-    assert resp.status_code == 400
-    assert resp.json()["detail"] == "invalid json"
-    sms_mod.reset_verifier_for_tests()
-
-
 def test_empty_post_lots_is_422_not_500(override_supabase, fake_supabase):
     resp = client.post("/api/v1/lots/", json={}, headers=farmer_headers())
     assert resp.status_code == 422

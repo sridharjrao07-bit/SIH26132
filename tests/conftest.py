@@ -1499,8 +1499,14 @@ class RlsFakeSupabase(FakeSupabase):
 def override_supabase(fake_supabase):
     from app.deps import get_supabase, get_supabase_as_user, get_supabase_service_role
     from app.main import app
-    from app.routers import sms as sms_mod
     from fastapi import Header
+
+    # The SMS router moved to legacy/ with the rest of the SIH26132 alert
+    # system. Its outbound cap is only reset when the module is still wired in.
+    try:
+        from app.routers import sms as sms_mod
+    except ImportError:  # pragma: no cover - depends on what is retained
+        sms_mod = None
 
     def _mock_get_as_user(authorization: str = Header(None)):
         from app.auth import decode_access_token
@@ -1513,10 +1519,12 @@ def override_supabase(fake_supabase):
     app.dependency_overrides[get_supabase_service_role] = lambda: RlsFakeSupabase(fake_supabase, uid=None, is_service_role=True)
     app.dependency_overrides[get_supabase_as_user] = _mock_get_as_user
 
-    sms_mod.reset_outbound_cap()
+    if sms_mod is not None:
+        sms_mod.reset_outbound_cap()
     yield
     app.dependency_overrides.clear()
-    sms_mod.reset_outbound_cap()
+    if sms_mod is not None:
+        sms_mod.reset_outbound_cap()
 
 @pytest.fixture
 def validator(fake_supabase):

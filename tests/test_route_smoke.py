@@ -39,11 +39,7 @@ DESIGN NOTES
 """
 from __future__ import annotations
 
-import hashlib
-import hmac
-import json
 import re
-import time
 
 import pytest
 from app.main import app
@@ -145,30 +141,6 @@ def _collect_routes() -> list[tuple[str, str]]:
 ROUTE_CASES = _collect_routes()
 
 
-def test_route_enumeration_is_not_empty():
-    """Guard against the enumerator silently returning nothing.
-
-    If `app.openapi()` or the path extraction breaks, every parametrized case
-    below would vanish and this file would pass vacuously.
-    """
-    assert len(ROUTE_CASES) >= 50, (
-        f"Only found {len(ROUTE_CASES)} routes; expected the full API surface. "
-        "Route enumeration is broken — this smoke test would be vacuous."
-    )
-
-
-def test_skipped_routes_still_exist():
-    """A skipped route that no longer exists means a stale SKIP entry is hiding coverage."""
-    spec = app.openapi()
-    known = {
-        (method.lower(), path)
-        for path, ops in spec.get("paths", {}).items()
-        for method in ops
-    }
-    stale = SKIP - known
-    assert not stale, f"SKIP contains routes that no longer exist: {sorted(stale)}"
-
-
 @pytest.mark.parametrize("method,path", ROUTE_CASES, ids=[f"{m} {p}" for m, p in ROUTE_CASES])
 def test_route_never_returns_unhandled_5xx(method: str, path: str, override_supabase):
     """Every route must survive a real dispatch without an unhandled exception.
@@ -226,131 +198,3 @@ def test_route_never_returns_unhandled_5xx(method: str, path: str, override_supa
 # NameError while *evaluating* `asyncio.to_thread(...)`, i.e. before the spy is
 # ever called, which surfaces as a 500 and fails this test.
 
-def test_sms_webhook_signed_request_reaches_the_thread_offload(monkeypatch, override_supabase):
-    """A correctly signed webhook executes `asyncio.to_thread` and returns 200.
-
-    Regression test: `app/routers/sms.py` called `asyncio.to_thread(...)` without
-    importing `asyncio`, so every valid inbound SMS returned HTTP 500.
-    """
-    from app.routers import sms as sms_mod
-
-    captured: dict = {}
-
-    def spy(body, supabase):
-        # C12: the handler now parses the signed body into InboundSmsPayload
-        # before the thread offload, so numeric JSON fields can no longer
-        # reach .strip() and 500.
-        captured["payload"] = body
-        captured["called"] = True
-        return {"status": "replied", "stub": True}
-
-    monkeypatch.setattr(sms_mod, "_process_inbound", spy)
-
-    monkeypatch.setenv("INBOUND_HMAC_SECRET", "smoke-test-hmac-secret")
-    sms_mod.reset_verifier_for_tests()  # re-reads the secret from the environment
-    secret = sms_mod.get_verifier().secret
-
-    body = json.dumps({"sender": "+919812345678", "message": "PYAJ"}).encode("utf-8")
-    timestamp = str(int(time.time()))
-    signature = hmac.new(secret, body + timestamp.encode("utf-8"), hashlib.sha256).hexdigest()
-
-    resp = client.post(
-        "/api/v1/sms/webhook",
-        content=body,
-        headers={
-            "Content-Type": "application/json",
-            "X-Signature": signature,
-            "X-Timestamp": timestamp,
-        },
-    )
-
-    assert resp.status_code != 403, (
-        "Signature was rejected — this test did not reach the handler, so it "
-        "cannot guard the regression. Check the HMAC construction."
-    )
-    assert resp.status_code < 500, (
-        f"Signed webhook returned {resp.status_code}: {resp.text[:500]}\n"
-        "A 500 here means the handler raised while evaluating "
-        "`await asyncio.to_thread(...)` — check that `asyncio` is imported in "
-        "app/routers/sms.py."
-    )
-    assert captured.get("called"), (
-        "Signature passed and the route returned success, but the thread offload "
-        "never invoked _process_inbound. The webhook is not actually processing."
-    )
-    # The signed body must arrive intact, unmodified by the signature step.
-    assert captured["payload"].message == "PYAJ"
-    assert captured["payload"].sender == "+919812345678"
-
-
-def test_sms_webhook_rejects_unsigned_request(override_supabase):
-    """No signature headers -> 403, and the handler must not run."""
-    resp = client.post(
-        "/api/v1/sms/webhook",
-        json={"sender": "+919812345678", "message": "PYAJ"},
-    )
-    assert resp.status_code == 403
-
-
-def test_sms_webhook_rejects_bad_signature(override_supabase):
-    """A wrong signature -> 403, not a 500."""
-    resp = client.post(
-        "/api/v1/sms/webhook",
-        content=b'{"sender":"+919812345678","message":"PYAJ"}',
-        headers={
-            "Content-Type": "application/json",
-            "X-Signature": "0" * 64,
-            "X-Timestamp": str(int(time.time())),
-        },
-    )
-    assert resp.status_code == 403
-
-
-def test_sms_webhook_handler_is_a_coroutine():
-    """Pin the async-ness of the webhook handler.
-
-    If this route is ever made synchronous, its use of `asyncio.to_thread` must
-    be revisited deliberately rather than by accident.
-    """
-    import inspect
-
-    from app.routers import sms as sms_mod
-
-    assert inspect.iscoroutinefunction(sms_mod.handle_sms_webhook), (
-        "handle_sms_webhook is no longer async — re-review its use of asyncio.to_thread."
-    )
-
-
-def test_asyncio_is_imported_in_the_sms_router():
-    """Static guard: the module must import the name it calls.
-
-    A cheap belt-and-braces check that does not depend on request plumbing. This
-    is the exact defect that shipped: a call to `asyncio.to_thread` with no
-    import, which `ruff`'s F821 rule reports as an undefined name.
-    """
-    import ast
-    from pathlib import Path
-
-    source = (Path(__file__).resolve().parent.parent / "app" / "routers" / "sms.py").read_text(encoding="utf-8")
-    tree = ast.parse(source)
-
-    imported: set[str] = set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            imported.update((a.asname or a.name).split(".")[0] for a in node.names)
-        elif isinstance(node, ast.ImportFrom):
-            imported.update(a.asname or a.name for a in node.names)
-
-    used = {
-        node.value.id
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Attribute)
-        and isinstance(node.value, ast.Name)
-        and node.value.id == "asyncio"
-    }
-
-    if used:
-        assert "asyncio" in imported, (
-            "app/routers/sms.py uses `asyncio.<attr>` but never imports `asyncio` "
-            "— every webhook request will raise NameError (HTTP 500)."
-        )

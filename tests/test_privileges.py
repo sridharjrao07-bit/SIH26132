@@ -14,11 +14,10 @@ KNOWN_VIOLATIONS = {
         ('review_event', 'backend-team', '2026-10-01'),
     ],
     "vacuous_test": [
-        ('tests/test_backend_audit.py:/api/v1/does-not-exist', 'qa-team', '2026-10-01'), 
-        ('tests/test_marketplace.py:/docs', 'qa-team', '2026-10-01'), 
-        ('tests/test_openapi_contract.py:/openapi.json', 'qa-team', '2026-10-01'), 
-        ('tests/test_rls_guard.py:/api/v1/grievances/grievance-fpo-1/resolved', 'qa-team', '2026-10-01'), 
-        ('tests/test_sms.py:/test', 'qa-team', '2026-10-01')
+        # test_marketplace.py, test_rls_guard.py and test_sms.py moved to
+        # legacy/ with the SIH26132 feature set; their entries are retired.
+        ('tests/test_backend_audit.py:/api/v1/does-not-exist', 'qa-team', '2026-10-01'),
+        ('tests/test_openapi_contract.py:/openapi.json', 'qa-team', '2026-10-01'),
     ]
 }
 
@@ -146,6 +145,8 @@ def test_dead_control_check():
             
     check_ratchet("dead_control", violations)
 
+
+
 def test_vacuous_test_check():
     """Every path a test requests via client.<verb> must exist in app.openapi()."""
     violations = []
@@ -169,3 +170,4 @@ def test_vacuous_test_check():
                             violations.append(f"{rel_path}:{base_path}")
     
     check_ratchet("vacuous_test", violations)
+
