@@ -13,14 +13,14 @@ logger = structlog.get_logger()
 # A wrong 100× conversion (e.g. kg assumed as quintal) would silently corrupt the DB;
 # the sanity band is meant to catch bad *prices*, not bad *units*.
 UNIT_CONVERSIONS: Dict[str, float] = {
-    "quintal":  1.0,
-    "qtl":      1.0,
-    "100 kg":   1.0,
-    "kg":       100.0,
+    "quintal": 1.0,
+    "qtl": 1.0,
+    "100 kg": 1.0,
+    "kg": 100.0,
     "kilogram": 100.0,
-    "ton":      0.1,
-    "tonne":    0.1,
-    "mt":       0.1,
+    "ton": 0.1,
+    "tonne": 0.1,
+    "mt": 0.1,
 }
 
 # Max quantity is now loaded dynamically from config to handle mixed-unit sources.
@@ -35,9 +35,7 @@ class PriceValidator:
     """
 
     def __init__(
-        self,
-        commodity_id_map: Dict[str, str],
-        sanity_bands: Dict[str, Tuple[float, float]]
+        self, commodity_id_map: Dict[str, str], sanity_bands: Dict[str, Tuple[float, float]]
     ):
         """
         commodity_id_map : "{source}|{norm_source_key}" → commodity_id UUID
@@ -94,7 +92,7 @@ class PriceValidator:
         if err:
             log.warning("rejected", reason=err)
             return None, err
-            
+
         if norm_modal is not None and (not math.isfinite(norm_modal) or norm_modal <= 0):
             reason = f"invalid_price:modal({norm_modal})"
             log.warning("rejected", reason=reason)
@@ -159,7 +157,7 @@ class PriceValidator:
                 # Reject is logged and observable in the ingestion_log table under records_rejected
                 log.warning("rejected", reason=reason)
                 return None, reason
-                
+
             max_qty = get_settings().max_arrival_qty_qtl
             if arrival_qty > max_qty:
                 reason = f"invalid_quantity:arrival_qty({arrival_qty}) > MAX({max_qty})"
@@ -170,14 +168,14 @@ class PriceValidator:
         return {
             "commodity_id": commodity_id,
             "arrival_date": str(record.arrival_date),
-            "min_price":    norm_min,
-            "max_price":    norm_max,
-            "modal_price":  norm_modal,
-            "unit":         "quintal",   # always canonical — raw unit is in raw_payload
-            "arrival_qty":  arrival_qty,
-            "variety":      record.variety or "General",
-            "grade":        record.grade or "General",
-            "source":       record.source,
-            "source_ref":   source_ref,
-            "raw_payload":  record.raw_payload,
+            "min_price": norm_min,
+            "max_price": norm_max,
+            "modal_price": norm_modal,
+            "unit": "quintal",  # always canonical — raw unit is in raw_payload
+            "arrival_qty": arrival_qty,
+            "variety": record.variety or "General",
+            "grade": record.grade or "General",
+            "source": record.source,
+            "source_ref": source_ref,
+            "raw_payload": record.raw_payload,
         }, None

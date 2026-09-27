@@ -4,6 +4,7 @@ The score is not “highest bid wins”. SIH26132 is about *linkages*: a verifie
 buyer close enough to take the lot, who can pay and who actually wants the
 volume/grade. Distant high bids still rank, but locality dominates.
 """
+
 from math import atan2, cos, radians, sin, sqrt
 from typing import Optional
 
@@ -14,7 +15,10 @@ def haversine_km(lat1, lng1, lat2, lng2) -> Optional[float]:
     r = 6371.0
     dlat = radians(float(lat2) - float(lat1))
     dlng = radians(float(lng2) - float(lng1))
-    a = sin(dlat / 2) ** 2 + cos(radians(float(lat1))) * cos(radians(float(lat2))) * sin(dlng / 2) ** 2
+    a = (
+        sin(dlat / 2) ** 2
+        + cos(radians(float(lat1))) * cos(radians(float(lat2))) * sin(dlng / 2) ** 2
+    )
     return round(2 * r * atan2(sqrt(a), sqrt(1 - a)), 1)
 
 
@@ -131,8 +135,15 @@ def rank_buyers(lot: dict, profile: dict, buyers: list, limit: int = 10) -> list
 
 
 _LOT_PUBLIC = (
-    "id", "commodity_id", "market_id", "quantity_qtl", "grade",
-    "asking_price", "status", "harvest_date", "fpo_id",
+    "id",
+    "commodity_id",
+    "market_id",
+    "quantity_qtl",
+    "grade",
+    "asking_price",
+    "status",
+    "harvest_date",
+    "fpo_id",
 )
 
 
@@ -175,16 +186,20 @@ def score_lot_for_buyer(buyer: dict, lot: dict, market: Optional[dict] = None) -
         reasons.append("grade_match")
 
     row = {k: lot.get(k) for k in _LOT_PUBLIC}
-    row.update({
-        "score": round(score, 1),
-        "reasons": reasons,
-        "market_name": market.get("name"),
-        "market_district": market.get("district"),
-    })
+    row.update(
+        {
+            "score": round(score, 1),
+            "reasons": reasons,
+            "market_name": market.get("name"),
+            "market_district": market.get("district"),
+        }
+    )
     return row
 
 
-def rank_lots_for_buyer(buyer: dict, lots: list, markets_by_id: Optional[dict] = None, limit: int = 20) -> list:
+def rank_lots_for_buyer(
+    buyer: dict, lots: list, markets_by_id: Optional[dict] = None, limit: int = 20
+) -> list:
     markets_by_id = markets_by_id or {}
     ranked = []
     for lot in lots or []:

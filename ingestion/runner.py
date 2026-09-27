@@ -43,9 +43,9 @@ class IngestionRunner:
         try:
             # commodity_alias: normalize source_key for fuzzy matching
             resp = await asyncio.to_thread(
-                lambda: self.supabase.table("commodity_alias").select(
-                    "commodity_id, source, source_key"
-                ).execute()
+                lambda: self.supabase.table("commodity_alias")
+                .select("commodity_id, source, source_key")
+                .execute()
             )
             commodity_id_map: Dict[str, str] = {
                 f"{row['source']}|{_norm_key(row['source_key'])}": row["commodity_id"]
@@ -53,9 +53,11 @@ class IngestionRunner:
             }
 
             # FIX BLOCKER 3: correct column names are sanity_min / sanity_max
-            resp = await self._db(lambda: self.supabase.table("commodities").select(
-                "id, name_en, sanity_min, sanity_max"
-            ).execute())
+            resp = await self._db(
+                lambda: self.supabase.table("commodities")
+                .select("id, name_en, sanity_min, sanity_max")
+                .execute()
+            )
             sanity_bands: Dict[str, Tuple[float, float]] = {
                 row["id"]: (row["sanity_min"], row["sanity_max"])
                 for row in resp.data
@@ -63,9 +65,12 @@ class IngestionRunner:
             }
 
             # FIX BLOCKER 2: build market map from source_code AND name, both normalized
-            resp = await self._db(lambda: self.supabase.table("markets").select(
-                "id, name, source_code, district"
-            ).eq("district", district).execute())
+            resp = await self._db(
+                lambda: self.supabase.table("markets")
+                .select("id, name, source_code, district")
+                .eq("district", district)
+                .execute()
+            )
             market_map: Dict[str, str] = {}
             for row in resp.data:
                 for key in (row.get("source_code"), row.get("name")):
@@ -79,9 +84,12 @@ class IngestionRunner:
             # and return 0 results, burning API quota.
             source_fetch_keys: Dict[str, List[str]] = {}
             adapter_names = [a.source_name for a in self.adapters]
-            resp_aliases = await self._db(lambda: self.supabase.table("commodity_alias").select(
-                "source, source_key"
-            ).in_("source", adapter_names).execute())
+            resp_aliases = await self._db(
+                lambda: self.supabase.table("commodity_alias")
+                .select("source, source_key")
+                .in_("source", adapter_names)
+                .execute()
+            )
             for row in resp_aliases.data:
                 src = row["source"]
                 key = row["source_key"]
@@ -92,16 +100,16 @@ class IngestionRunner:
         except Exception as e:
             log.error("metadata_fetch_failed", error=str(e))
             self._log_run(
-                source="system", status="failed",
-                records_seen=0, records_written=0, records_rejected=0,
-                error_message=str(e)
+                source="system",
+                status="failed",
+                records_seen=0,
+                records_written=0,
+                records_rejected=0,
+                error_message=str(e),
             )
             return
 
-        validator = PriceValidator(
-            commodity_id_map=commodity_id_map,
-            sanity_bands=sanity_bands
-        )
+        validator = PriceValidator(commodity_id_map=commodity_id_map, sanity_bands=sanity_bands)
 
         # ── 2. Run each adapter independently ────────────────────────────────
         for adapter in self.adapters:
@@ -116,11 +124,15 @@ class IngestionRunner:
                 # (e.g. 'Soybean') may not exist in commodity_alias (API spells it 'Soyabean'),
                 # so every record would be rejected as unknown_commodity with no clear signal.
                 self._log_run(
-                    source=adapter.source_name, status="failed",
-                    records_seen=0, records_written=0, records_rejected=0,
+                    source=adapter.source_name,
+                    status="failed",
+                    records_seen=0,
+                    records_written=0,
+                    records_rejected=0,
                     error_message=(
                         f"no_aliases_for_source: add commodity_alias rows for source "
-                        f"'{adapter.source_name}' before enabling it"),
+                        f"'{adapter.source_name}' before enabling it"
+                    ),
                     filters={"district": district, "state": state},
                 )
                 adapter_log.error("no_aliases_for_source")
@@ -145,8 +157,12 @@ class IngestionRunner:
                         valid_dict, reason = validator.validate_and_normalize(raw)
                         if valid_dict is None:
                             rejected += 1
-                            adapter_log.debug("record_rejected", reason=reason,
-                                              market=raw.market_name, commodity=raw.commodity_name)
+                            adapter_log.debug(
+                                "record_rejected",
+                                reason=reason,
+                                market=raw.market_name,
+                                commodity=raw.commodity_name,
+                            )
                             continue
 
                         # Resolve market_id via normalized source_code / name
@@ -166,11 +182,13 @@ class IngestionRunner:
                     chunk_errors = 0
                     conflict = "market_id, commodity_id, arrival_date, variety, grade, source"
                     for i in range(0, len(all_valid_for_adapter), UPSERT_CHUNK):
-                        chunk = all_valid_for_adapter[i:i + UPSERT_CHUNK]
+                        chunk = all_valid_for_adapter[i : i + UPSERT_CHUNK]
                         try:
-                            await self._db(lambda c=chunk: self.supabase.table("prices").upsert(
-                                c, on_conflict=conflict
-                            ).execute())
+                            await self._db(
+                                lambda c=chunk: self.supabase.table("prices")
+                                .upsert(c, on_conflict=conflict)
+                                .execute()
+                            )
                             written += len(chunk)
                         except Exception as e:
                             chunk_errors += 1
@@ -186,8 +204,9 @@ class IngestionRunner:
                     status = "success" if (rejected == 0 and not fetch_errors) else "partial"
                     err_msg = "; ".join(fetch_errors) if fetch_errors else None
 
-                adapter_log.info("adapter_done",
-                                 seen=seen, written=written, rejected=rejected, ms=duration_ms)
+                adapter_log.info(
+                    "adapter_done", seen=seen, written=written, rejected=rejected, ms=duration_ms
+                )
 
                 # FIX BLOCKER 5: correct column names + lowercase status
                 self._log_run(
@@ -217,7 +236,7 @@ class IngestionRunner:
     def _log_run(
         self,
         source: str,
-        status: str,                  # lowercase: 'success'|'partial'|'failed'
+        status: str,  # lowercase: 'success'|'partial'|'failed'
         records_seen: int = 0,
         records_written: int = 0,
         records_rejected: int = 0,
@@ -227,15 +246,17 @@ class IngestionRunner:
     ):
         """Writes one audit row to ingestion_log using the correct column names."""
         try:
-            self.supabase.table("ingestion_log").insert({
-                "source":           source,
-                "status":           status,         # CHECK constraint is lowercase
-                "records_seen":     records_seen,
-                "records_written":  records_written,
-                "records_rejected": records_rejected,
-                "error_message":    error_message,
-                "filters":          filters,
-                "duration_ms":      duration_ms,
-            }).execute()
+            self.supabase.table("ingestion_log").insert(
+                {
+                    "source": source,
+                    "status": status,  # CHECK constraint is lowercase
+                    "records_seen": records_seen,
+                    "records_written": records_written,
+                    "records_rejected": records_rejected,
+                    "error_message": error_message,
+                    "filters": filters,
+                    "duration_ms": duration_ms,
+                }
+            ).execute()
         except Exception as e:
             logger.error("degraded_persistence", reason="audit_log_write_failed", error=str(e))

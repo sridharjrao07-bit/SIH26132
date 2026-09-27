@@ -18,7 +18,7 @@ class PriceResponse(BaseModel):
     grade: str = "General"
     source: str
     created_at: Optional[datetime] = None
-    
+
     # Extended fields (joined from markets/commodities)
     market_name: Optional[str] = None
     commodity_name_en: Optional[str] = None

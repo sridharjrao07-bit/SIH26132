@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Public API smoke against a running uvicorn. No .env, no JWT printed."""
+
 from __future__ import annotations
 
 import json

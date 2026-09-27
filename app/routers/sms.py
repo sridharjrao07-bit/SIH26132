@@ -85,7 +85,9 @@ def _rpc_rows(result) -> List[dict]:
 
 @router.post("/webhook")
 @limiter.limit(webhook_limit())
-async def handle_sms_webhook(request: Request, supabase: Client = Depends(get_supabase_service_role)):
+async def handle_sms_webhook(
+    request: Request, supabase: Client = Depends(get_supabase_service_role)
+):
     """
     Public webhook for inbound SMS.
     HMAC-SHA256 + timestamp + replay nonce, SlowAPI, per-sender outbound cap.
@@ -103,7 +105,9 @@ async def handle_sms_webhook(request: Request, supabase: Client = Depends(get_su
 
 
 @router.post("/simulate", dependencies=[Depends(require_role("admin"))])
-def simulate_inbound(payload: Dict[str, Any], supabase: Client = Depends(get_supabase_service_role)):
+def simulate_inbound(
+    payload: Dict[str, Any], supabase: Client = Depends(get_supabase_service_role)
+):
     """Admin-only endpoint to demonstrate the two-way webhook without real SMS provider"""
     body = _parse_inbound_payload(payload)
     return _process_inbound(body, supabase)
@@ -216,12 +220,15 @@ def _process_inbound(body: InboundSmsPayload, supabase: Client):
         return {"status": "no_data"}
 
     name = commodity.get(f"name_{lang}") or commodity.get("name_en", "")
-    advice = compute_sale_window(
-        supabase,
-        commodity_id,
-        origin_lat=user.get("lat"),
-        origin_lng=user.get("lng"),
-    ) or {}
+    advice = (
+        compute_sale_window(
+            supabase,
+            commodity_id,
+            origin_lat=user.get("lat"),
+            origin_lng=user.get("lng"),
+        )
+        or {}
+    )
     rec = advice.get("recommendation") or "wait"
     buyer_name = None
     uid = user.get("id")
@@ -230,14 +237,7 @@ def _process_inbound(body: InboundSmsPayload, supabase: Client):
         open_lots = [l for l in lots if l.get("status") in ("open", "offered")] or lots
         if open_lots:
             lot = max(open_lots, key=lambda l: float(l.get("quantity_qtl") or 0))
-            buyers = (
-                supabase.table("buyers")
-                .select("*")
-                .eq("verified", True)
-                .execute()
-                .data
-                or []
-            )
+            buyers = supabase.table("buyers").select("*").eq("verified", True).execute().data or []
             ranked = rank_buyers(lot, user, buyers)
             if ranked:
                 buyer_name = ranked[0].get("buyer_name")

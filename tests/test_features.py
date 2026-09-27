@@ -10,117 +10,165 @@ from forecasting.features import _compute_event_pressure
 def _live(d: dict) -> dict:
     return dict(d, provenance_mode="live")
 
+
 def test_event_pressure_hand_computed():
     # 2 events (up/moderate/0.8/age 1d; down/major/0.6/age 4d) → exact expected value
     target_date = date(2026, 9, 15)  # 1 day after the event date of 2026-09-14
     events = [
-        _live({
-            "event_date": "2026-09-14",
-            "direction": "up",
-            "magnitude": "moderate",
-            "confidence": 0.8
-        }),
-        _live({
-            "event_date": "2026-09-11",
-            "direction": "down",
-            "magnitude": "major",
-            "confidence": 0.6
-        })
+        _live(
+            {
+                "event_date": "2026-09-14",
+                "direction": "up",
+                "magnitude": "moderate",
+                "confidence": 0.8,
+            }
+        ),
+        _live(
+            {
+                "event_date": "2026-09-11",
+                "direction": "down",
+                "magnitude": "major",
+                "confidence": 0.6,
+            }
+        ),
     ]
-    
+
     # Event 1: sign(up)=+1, weight(moderate)=1.0, conf=0.8, age=1 -> 1.0 * 1.0 * 0.8 * exp(-0.3)
     # Event 2: sign(down)=-1, weight(major)=1.5, conf=0.6, age=4 -> -1.0 * 1.5 * 0.6 * exp(-1.2) = -0.9 * exp(-1.2)
     # Total: 0.8 * exp(-0.3) - 0.9 * exp(-1.2)
-    
+
     expected = 0.8 * math.exp(-0.3) - 0.9 * math.exp(-1.2)
     pressure, _ = _compute_event_pressure(target_date, events)
     assert abs(pressure - expected) < 1e-9
 
+
 def test_event_pressure_older_than_14d_excluded():
     target_date = date(2026, 9, 15)
     events = [
-        _live({
-            "event_date": "2026-08-30", # age 16 > 14
-            "direction": "up",
-            "magnitude": "major",
-            "confidence": 1.0
-        })
+        _live(
+            {
+                "event_date": "2026-08-30",  # age 16 > 14
+                "direction": "up",
+                "magnitude": "major",
+                "confidence": 1.0,
+            }
+        )
     ]
     pressure, _ = _compute_event_pressure(target_date, events)
     assert pressure == 0.0
 
+
 def test_event_pressure_commodity_mismatch_excluded():
     target_date = date(2026, 9, 15)
     events = [
-        _live({
-            "event_date": "2026-09-14",
-            "direction": "up",
-            "magnitude": "moderate",
-            "confidence": 0.8,
-            "commodity_id": "other-uuid"
-        }),
-        _live({
-            "event_date": "2026-09-14",
-            "direction": "down",
-            "magnitude": "major",
-            "confidence": 1.0,
-            "commodity_id": None
-        })
+        _live(
+            {
+                "event_date": "2026-09-14",
+                "direction": "up",
+                "magnitude": "moderate",
+                "confidence": 0.8,
+                "commodity_id": "other-uuid",
+            }
+        ),
+        _live(
+            {
+                "event_date": "2026-09-14",
+                "direction": "down",
+                "magnitude": "major",
+                "confidence": 1.0,
+                "commodity_id": None,
+            }
+        ),
     ]
     # First is excluded due to mismatch, second is included because it's None.
     # Second: sign(-1) * weight(1.5) * conf(1.0) * exp(-0.3) = -1.5 * exp(-0.3)
     pressure, _ = _compute_event_pressure(target_date, events, "target-uuid")
     assert abs(pressure - (-1.5 * math.exp(-0.3))) < 1e-9
 
+
 def test_event_pressure_clamped():
     target_date = date(2026, 9, 15)
     events = [
-        _live({"event_date": "2026-09-14", "direction": "up", "magnitude": "major", "confidence": 1.0}),
-        _live({"event_date": "2026-09-14", "direction": "up", "magnitude": "major", "confidence": 1.0}),
-        _live({"event_date": "2026-09-14", "direction": "up", "magnitude": "major", "confidence": 1.0}),
+        _live(
+            {"event_date": "2026-09-14", "direction": "up", "magnitude": "major", "confidence": 1.0}
+        ),
+        _live(
+            {"event_date": "2026-09-14", "direction": "up", "magnitude": "major", "confidence": 1.0}
+        ),
+        _live(
+            {"event_date": "2026-09-14", "direction": "up", "magnitude": "major", "confidence": 1.0}
+        ),
     ]
     # Each gives 1.5 * exp(-0.3) ~ 1.11, three give ~ 3.33 -> clamped to +2.0
     pressure, _ = _compute_event_pressure(target_date, events)
     assert pressure == 2.0
-    
+
     events_down = [
-        _live({"event_date": "2026-09-14", "direction": "down", "magnitude": "major", "confidence": 1.0}),
-        _live({"event_date": "2026-09-14", "direction": "down", "magnitude": "major", "confidence": 1.0}),
-        _live({"event_date": "2026-09-14", "direction": "down", "magnitude": "major", "confidence": 1.0}),
+        _live(
+            {
+                "event_date": "2026-09-14",
+                "direction": "down",
+                "magnitude": "major",
+                "confidence": 1.0,
+            }
+        ),
+        _live(
+            {
+                "event_date": "2026-09-14",
+                "direction": "down",
+                "magnitude": "major",
+                "confidence": 1.0,
+            }
+        ),
+        _live(
+            {
+                "event_date": "2026-09-14",
+                "direction": "down",
+                "magnitude": "major",
+                "confidence": 1.0,
+            }
+        ),
     ]
     # Each gives -1.5 * exp(-0.3) ~ -1.11 -> total ~ -3.33 -> clamped to -2.0
     pressure, _ = _compute_event_pressure(target_date, events_down)
     assert pressure == -2.0
 
+
 def test_event_pressure_publication_date_strict_pit():
     target_date = date(2026, 9, 14)
     events = [
-        _live({   # Excluded: publication date >= target_date
-            "event_date": "2026-09-10",
-            "publication_date": "2026-09-15",
-            "direction": "up",
-            "magnitude": "major",
-            "confidence": 1.0
-        }),
-        _live({   # Excluded: publication date is NULL and strict_pit=True
-            "event_date": "2026-09-10",
-            "direction": "up",
-            "magnitude": "major",
-            "confidence": 1.0
-        }),
-        _live({   # Included: publication date < target_date
-            "event_date": "2026-09-10",
-            "publication_date": "2026-09-13",
-            "direction": "up",
-            "magnitude": "major",
-            "confidence": 1.0
-        })
+        _live(
+            {  # Excluded: publication date >= target_date
+                "event_date": "2026-09-10",
+                "publication_date": "2026-09-15",
+                "direction": "up",
+                "magnitude": "major",
+                "confidence": 1.0,
+            }
+        ),
+        _live(
+            {  # Excluded: publication date is NULL and strict_pit=True
+                "event_date": "2026-09-10",
+                "direction": "up",
+                "magnitude": "major",
+                "confidence": 1.0,
+            }
+        ),
+        _live(
+            {  # Included: publication date < target_date
+                "event_date": "2026-09-10",
+                "publication_date": "2026-09-13",
+                "direction": "up",
+                "magnitude": "major",
+                "confidence": 1.0,
+            }
+        ),
     ]
-    
+
     # Only the third event is eligible
     # sign(up)=1.0 * weight(major)=1.5 * conf=1.0 * exp(-0.3 * 4)
     expected = 1.5 * math.exp(-0.3 * 4)
-    
+
     pressure, approx = _compute_event_pressure(target_date, events, strict_pit=True)
     assert abs(pressure - expected) < 1e-9
     assert approx is False
@@ -128,13 +176,17 @@ def test_event_pressure_publication_date_strict_pit():
 
 # ── momentum_14d point-in-time tests ─────────────────────────────────────────
 
+
 def _make_series(n: int, base_date: date, base_price: float = 1000.0):
     """Build a simple ascending price series with 1 obs per calendar day."""
     from datetime import timedelta
+
     return [
-        {"arrival_date": (base_date + timedelta(days=i)).isoformat(),
-         "modal_price": base_price + i,
-         "arrival_qty": 100}
+        {
+            "arrival_date": (base_date + timedelta(days=i)).isoformat(),
+            "modal_price": base_price + i,
+            "arrival_qty": 100,
+        }
         for i in range(n)
     ]
 
@@ -175,9 +227,11 @@ def test_momentum_14d_is_none_when_denominator_zero():
 
     base = date(2026, 9, 1)
     series = [
-        {"arrival_date": (base + timedelta(days=i)).isoformat(),
-         "modal_price": 0.0 if i == 0 else float(100 + i),
-         "arrival_qty": 100}
+        {
+            "arrival_date": (base + timedelta(days=i)).isoformat(),
+            "modal_price": 0.0 if i == 0 else float(100 + i),
+            "arrival_qty": 100,
+        }
         for i in range(20)
     ]
     rows = build_feature_matrix(series)
@@ -196,8 +250,7 @@ def test_district_price_uses_previous_day():
     # District prices indexed at the SAME day as series — they should NOT appear
     # at that row; instead they should appear on the NEXT row as the prev-day value.
     district = [
-        {"arrival_date": (base + timedelta(days=i)).isoformat(),
-         "mean_price": float(2000 + i)}
+        {"arrival_date": (base + timedelta(days=i)).isoformat(), "mean_price": float(2000 + i)}
         for i in range(5)
     ]
     rows = build_feature_matrix(series, district_prices=district)
@@ -219,10 +272,16 @@ def test_event_pressure_uses_strictly_lagged_events():
     base = date(2026, 9, 5)
     series = _make_series(3, base)
     # Event dated on base+1 — should NOT appear in row for base+1; only in base+2+
-    events = [_live({
-        "event_date": (base + timedelta(days=1)).isoformat(),
-        "direction": "up", "magnitude": "major", "confidence": 1.0,
-    })]
+    events = [
+        _live(
+            {
+                "event_date": (base + timedelta(days=1)).isoformat(),
+                "direction": "up",
+                "magnitude": "major",
+                "confidence": 1.0,
+            }
+        )
+    ]
     rows = build_feature_matrix(series, events=events)
     # Row for base+1 (index 1): event is on same date → must NOT be included
     assert rows[1].event_pressure == 0.0
@@ -231,6 +290,7 @@ def test_event_pressure_uses_strictly_lagged_events():
 
 
 # ── Provenance gate tests ─────────────────────────────────────────────────────
+
 
 def _base_event(event_date="2026-09-14", direction="up", magnitude="major", confidence=1.0):
     return {
@@ -291,7 +351,7 @@ def test_mixed_provenance_only_live_included():
     must not affect the score.
     """
     target_date = date(2026, 9, 15)
-    live_event    = _live(_base_event(magnitude="minor", confidence=0.6))
+    live_event = _live(_base_event(magnitude="minor", confidence=0.6))
     fixture_event = dict(_base_event(magnitude="major", confidence=1.0), provenance_mode="fixture")
     unknown_event = dict(_base_event(magnitude="major", confidence=1.0), provenance_mode="unknown")
 

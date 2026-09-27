@@ -14,6 +14,8 @@
     "i18n:check": "lingui extract --clean && lingui compile --strict"
   },
   "dependencies": {
+    "@fontsource/archivo": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
     "@fontsource/ibm-plex-sans": "^5.3.0",
     "@fontsource/ibm-plex-sans-devanagari": "^5.3.0",
     "@lingui/core": "^5.9.5",

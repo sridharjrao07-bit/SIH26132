@@ -37,7 +37,7 @@ function Lots({ me }: { me: Profile }) {
           <h1 className="text-lg font-semibold"><Trans>My produce for sale</Trans></h1>
           <p className="text-sm text-ink-2"><Trans>List a lot, get advice, and choose a buyer.</Trans></p>
         </div>
-        <Link to="/sell/new" className="tap inline-flex shrink-0 items-center rounded bg-ink px-4 font-semibold text-paper"><Trans>+ List produce</Trans></Link>
+        <Link to="/sell/new" className="tap inline-flex shrink-0 items-center rounded-lg bg-saffron px-4 font-semibold text-ink transition-all hover:-translate-y-0.5"><Trans>+ List produce</Trans></Link>
       </div>
       {lots.isPending ? <div className="p-4"><Block h={160} /></div>
         : lots.isError ? <div className="p-4"><ErrorNote error={lots.error} /></div>
@@ -61,7 +61,7 @@ function LotRow({ lot, pendingOffers }: { lot: Lot; pendingOffers: number }) {
   const qty = formatNumber(lot.quantity_qtl);
   return (
     <li className="rule-b">
-      <Link to="/sell/$lotId" params={{ lotId: lot.id }} className="tap flex items-center justify-between gap-3 px-4 py-3">
+      <Link to="/sell/$lotId" params={{ lotId: lot.id }} className="tap flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-card">
         <div className={lot.status === 'withdrawn' ? 'text-ink-2' : ''}>
           <p className="font-semibold">{crop} · <span className="tabular"><Trans>{qty} qtl</Trans></span></p>
           <p className="text-sm text-ink-2">

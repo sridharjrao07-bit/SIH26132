@@ -97,8 +97,9 @@ class Settings(BaseSettings):
     event_llm_api_key: str = Field(default="")
     event_llm_base_url: str = Field(default="")
     event_sources: str = Field(default="pib,news,bulletin")
-    events_source_mode: Literal["off", "live", "mock"] = Field(default="off")
+    events_source_mode: Literal["off", "live", "mock", "fixture"] = Field(default="off")
     backfill_days: int = Field(default=730)
+    bing_api_key: str = Field(default="")
 
     # ── Auth DB enforcement ───────────────────────────────────────────────────
     # "rls"  — per-request user-scoped Supabase client; RLS policies enforce

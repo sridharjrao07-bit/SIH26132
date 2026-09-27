@@ -8,6 +8,7 @@ from ingestion.validator import PriceValidator
 
 client = TestClient(app)
 
+
 def test_arrival_qty_validation(validator: PriceValidator):
     """
     Test that arrival quantity is validated correctly:
@@ -24,7 +25,7 @@ def test_arrival_qty_validation(validator: PriceValidator):
         modal_price=2000,
         unit="quintal",
         source="data_gov_in",
-        raw_payload={}
+        raw_payload={},
     )
 
     # 1. Valid arrival_qty
@@ -52,24 +53,30 @@ def test_arrival_qty_validation(validator: PriceValidator):
     assert res is None
     assert f"invalid_quantity:arrival_qty({max_qty + 1.0}) > MAX" in err
 
+
 def test_arrival_qty_api_surfacing(override_supabase, fake_supabase):
     """
     Test that arrival_qty is correctly surfaced in the prices API.
     """
-    fake_supabase.seed("prices", [{
-        "id": "price-1",
-        "market_id": "aaaa-0000-0000-0000",
-        "commodity_id": "cccc-0000-0000-0000",
-        "arrival_date": date.today().isoformat(),
-        "min_price": 1000,
-        "max_price": 2000,
-        "modal_price": 1500,
-        "arrival_qty": 750.5,
-        "variety": "General",
-        "grade": "General",
-        "source": "data_gov_in"
-    }])
-    
+    fake_supabase.seed(
+        "prices",
+        [
+            {
+                "id": "price-1",
+                "market_id": "aaaa-0000-0000-0000",
+                "commodity_id": "cccc-0000-0000-0000",
+                "arrival_date": date.today().isoformat(),
+                "min_price": 1000,
+                "max_price": 2000,
+                "modal_price": 1500,
+                "arrival_qty": 750.5,
+                "variety": "General",
+                "grade": "General",
+                "source": "data_gov_in",
+            }
+        ],
+    )
+
     resp = client.get("/api/v1/prices/latest")
     assert resp.status_code == 200
     data = resp.json()

@@ -35,7 +35,9 @@ function toSearch(query?: Query): string {
 }
 
 export function createApiClient(cfg: ApiClientConfig) {
-  const doFetch = cfg.fetchImpl ?? fetch;
+  // Lazily resolve fetch so test setups that override globalThis.fetch (e.g. swapping in
+  // undici for integration tests) are picked up even when the module was imported first.
+  const getFetch = () => cfg.fetchImpl ?? globalThis.fetch;
   const timeoutMs = cfg.timeoutMs ?? 15_000;
 
   async function request<S extends v.GenericSchema>(path: string, opts: RequestOptions<S>, retried = false): Promise<v.InferOutput<S>> {
@@ -52,7 +54,7 @@ export function createApiClient(cfg: ApiClientConfig) {
 
     let res: Response;
     try {
-      res = await doFetch(`${cfg.baseUrl}${path}${toSearch(opts.query)}`, {
+      res = await getFetch()(`${cfg.baseUrl}${path}${toSearch(opts.query)}`, {
         method: opts.method ?? 'GET',
         headers,
         body: opts.body === undefined ? undefined : JSON.stringify(opts.body),

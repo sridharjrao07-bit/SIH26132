@@ -10,7 +10,7 @@ export function Select({ label, value, onChange, children, className = '' }: {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="tap w-full appearance-none truncate rounded border border-rule bg-paper py-2 pr-8 pl-3 text-base font-semibold"
+        className="tap w-full appearance-none truncate rounded-lg border border-rule bg-card py-2 pr-8 pl-3 text-base font-semibold shadow-panel transition-colors hover:border-sell"
       >
         {children}
       </select>

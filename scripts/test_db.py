@@ -2,6 +2,7 @@
 
 Does not print secrets. Exit 1 if .env still has placeholders.
 """
+
 from __future__ import annotations
 
 import json

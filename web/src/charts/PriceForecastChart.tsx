@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import {
-  Area, Bar, ComposedChart, Line, ReferenceArea, ReferenceDot, ReferenceLine,
+  Area, Bar, Brush, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceDot, ReferenceLine,
   ResponsiveContainer, Tooltip, XAxis, YAxis, type TooltipProps,
 } from 'recharts';
 import { useLingui } from '@lingui/react/macro';
@@ -10,7 +10,7 @@ import { istToday, toDay } from '../domain/dates.ts';
 import type { Lang } from '../i18n/locales.ts';
 
 const C = {
-  ink: '#1A1916', ink2: '#57534A', rule: '#DDD6C8', forecast: '#2D5B88', arrivals: '#CBBFA9', paper: '#F7F4EE',
+  ink: 'var(--color-ink)', ink2: 'var(--color-ink-2)', rule: 'var(--color-rule)', forecast: 'var(--color-forecast)', arrivals: 'var(--color-arrivals)', paper: 'var(--color-card)',
 };
 const DAY = 86_400_000;
 
@@ -37,7 +37,7 @@ export function PointTooltip({ active, payload, lang }: TooltipProps<number, str
   if (!active || !p) return null;
   const day = formatDay(p.date, lang);
   return (
-    <div className="rounded border border-ink bg-paper px-2.5 py-2 text-xs shadow-none">
+    <div className="chart-tooltip diagonal-small px-3 py-2 text-xs shadow-panel">
       {p.kind === 'actual' ? (
         <>
           <div className="font-semibold">{day}</div>
@@ -82,6 +82,7 @@ export function PriceForecastChart({ series, lang, annotations = [], height = 22
       <div style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={points} syncId="pair" margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+            <CartesianGrid vertical={false} stroke={C.rule} strokeDasharray="2 5" />
             {forecastPts.length > 0 && (
               <ReferenceArea x1={forecastPts[0].x - DAY / 2} x2={forecastPts[forecastPts.length - 1].x + DAY / 2}
                 fill={C.forecast} fillOpacity={0.05} stroke="none" ifOverflow="extendDomain"
@@ -93,16 +94,16 @@ export function PriceForecastChart({ series, lang, annotations = [], height = 22
               tickFormatter={(v: number) => formatINR(v)} tick={{ fill: C.ink2, fontSize: 12, dy: -8 }} tickLine={false} axisLine={false}
             />
             <Area
-              dataKey="band" isAnimationActive={false} connectNulls={false} fill={C.forecast} fillOpacity={0.16}
+              dataKey="band" isAnimationActive connectNulls={false} fill={C.forecast} fillOpacity={0.16}
               // dormant: engine never emits 'low' today (F5)
               stroke={confidence === 'low' ? C.forecast : 'none'} strokeDasharray={confidence === 'low' ? '3 3' : undefined}
               activeDot={false}
             />
-            <Line dataKey="actual" isAnimationActive={false} stroke={C.ink} strokeWidth={2} dot={false} connectNulls={false}
+            <Line dataKey="actual" isAnimationActive animationDuration={800} stroke={C.ink} strokeWidth={2} dot={false} connectNulls={false}
               activeDot={{ r: 4, fill: C.ink, stroke: C.paper }} />
             <Line dataKey="bridge" isAnimationActive={false} connectNulls stroke={hasGap ? C.ink2 : C.forecast}
               strokeWidth={hasGap ? 1.5 : 2} strokeDasharray={hasGap ? '1 4' : '4 3'} dot={false} activeDot={false} />
-            <Line dataKey="predicted" isAnimationActive={false} stroke={C.forecast} strokeWidth={2} strokeDasharray="4 3"
+            <Line dataKey="predicted" isAnimationActive animationDuration={900} stroke={C.forecast} strokeWidth={2} strokeDasharray="4 3"
               dot={false} connectNulls={false} activeDot={{ r: 4, fill: C.forecast, stroke: C.paper }} />
             {todayX >= xDomain[0] && todayX <= xDomain[1] && (
               <ReferenceLine x={todayX} stroke={C.ink2} strokeWidth={1}
@@ -114,6 +115,8 @@ export function PriceForecastChart({ series, lang, annotations = [], height = 22
             ))}
             <Tooltip trigger="click" content={<PointTooltip lang={lang} />} cursor={{ stroke: C.ink2, strokeWidth: 1 }}
               isAnimationActive={false} />
+            {points.length > 18 && <Brush dataKey="x" height={20} travellerWidth={8} stroke={C.forecast} fill={C.paper}
+              tickFormatter={(x: number) => formatDay(new Date(x).toISOString(), lang)} />}
           </ComposedChart>
         </ResponsiveContainer>
       </div>
@@ -125,7 +128,7 @@ export function PriceForecastChart({ series, lang, annotations = [], height = 22
           <ComposedChart data={points} syncId="pair" margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
             {xAxis(false)}
             <YAxis hide domain={[0, 'dataMax']} />
-            <Bar dataKey="arrivals" fill={C.arrivals} isAnimationActive={false} maxBarSize={10} />
+            <Bar dataKey="arrivals" fill={C.arrivals} isAnimationActive animationDuration={700} maxBarSize={10} />
             <Tooltip content={() => null} cursor={{ fill: 'transparent' }} />
           </ComposedChart>
         </ResponsiveContainer>

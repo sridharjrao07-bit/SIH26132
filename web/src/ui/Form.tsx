@@ -13,7 +13,7 @@ export function Field({ label, hint, error, suffix, ...input }: InputHTMLAttribu
         <input
           {...input}
           aria-invalid={error ? true : undefined}
-          className={`tap w-full min-w-0 rounded border bg-paper px-3 text-base ${error ? 'border-ink' : 'border-rule'} ${input.className ?? ''}`}
+          className={`tap w-full min-w-0 rounded-lg border bg-card px-3 text-base transition-shadow focus:shadow-panel ${error ? 'border-ink' : 'border-rule'} ${input.className ?? ''}`}
         />
         {suffix && <span className="shrink-0 text-sm text-ink-2">{suffix}</span>}
       </span>
@@ -28,7 +28,7 @@ export function NativeSelect({ label, value, onChange, children }: { label: Reac
     <label className="block">
       <span className="text-sm font-semibold">{label}</span>
       <select value={value} onChange={(e) => onChange(e.target.value)}
-        className="tap mt-1 w-full rounded border border-rule bg-paper px-3 text-base">
+        className="tap mt-1 w-full rounded-lg border border-rule bg-card px-3 text-base transition-shadow focus:shadow-panel">
         {children}
       </select>
     </label>
@@ -37,10 +37,10 @@ export function NativeSelect({ label, value, onChange, children }: { label: Reac
 
 export function Button({ children, variant = 'primary', className = '', ...b }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'quiet' }) {
   const style = variant === 'primary'
-    ? 'bg-ink text-paper border border-ink'
-    : variant === 'secondary' ? 'border border-ink' : 'underline underline-offset-4';
+    ? 'bg-ink text-paper border border-ink hover:bg-sell-deep'
+    : variant === 'secondary' ? 'border border-ink bg-card hover:bg-paper-2' : 'underline underline-offset-4';
   return (
-    <button {...b} className={`tap rounded px-4 font-semibold disabled:opacity-60 ${style} ${className}`}>{children}</button>
+    <button {...b} className={`tap rounded-lg px-4 font-semibold transition-all hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0 ${style} ${className}`}>{children}</button>
   );
 }
 

@@ -27,6 +27,7 @@ import { HealthNotice } from '../trust/HealthNotice.tsx';
 import { ModelChip } from '../trust/ModelChip.tsx';
 import { AccuracyCard } from '../trust/AccuracyCard.tsx';
 import { ChartCaption } from './ChartCaption.tsx';
+import { TrendIndicator } from '../../ui/TrendIndicator.tsx';
 
 export const RANGES = [30, 90, 180, 365] as const;
 export type Range = (typeof RANGES)[number];
@@ -70,11 +71,15 @@ export function PairView({ pair, range, onPairChange, onRangeChange }: Props) {
   const crop = commodities.data?.find((c) => c.id === pair.commodityId);
   const head = forecast.data?.[0];
   const showForecastMeta = health === 'ok' || health === 'aging';
+  const changePct = last && prev ? ((last.modal - prev.modal) / prev.modal) * 100 : null;
+  const arrivalValues = daily.map((point) => point.arrivals).filter((value): value is number => value != null);
+  const averageArrivals = arrivalValues.length ? arrivalValues.reduce((total, value) => total + value, 0) / arrivalValues.length : null;
+  const spread = last?.min != null && last.max != null ? last.max - last.min : null;
 
   return (
-    <div className="lg:grid lg:grid-cols-[1fr_360px] lg:gap-x-0">
+    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_380px]">
       {/* PairSwitcher: sticky, one tap to change crop or mandi */}
-      <div className="rule-b sticky top-0 z-[5] flex gap-2 bg-paper px-4 py-2 lg:col-span-2">
+      <div className="sticky top-20 z-[5] col-span-full flex gap-2 border border-rule bg-card/95 p-2 shadow-panel backdrop-blur-xl diagonal-panel">
         <Select label={t`Crop`} value={pair.commodityId} onChange={(c) => onPairChange({ ...pair, commodityId: c })} className="w-[42%]">
           {(commodities.data ?? []).map((c) => <option key={c.id} value={c.id}>{cropName(c, lang)}</option>)}
         </Select>
@@ -83,9 +88,32 @@ export function PairView({ pair, range, onPairChange, onRangeChange }: Props) {
         </Select>
       </div>
 
-      <div className="lg:rule-b lg:border-r lg:border-rule">
+      <section className="col-span-full grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Selected market highlights">
+        <article className="glass-panel diagonal-panel metric-card p-4">
+          <p className="eyebrow">Spot price</p>
+          <p className="mt-3 font-mono text-2xl font-semibold">{last ? formatINR(last.modal) : '—'}</p>
+          <div className="mt-2"><TrendIndicator value={changePct} compact /></div>
+        </article>
+        <article className="glass-panel diagonal-panel metric-card p-4">
+          <p className="eyebrow">Daily spread</p>
+          <p className="mt-3 font-mono text-2xl font-semibold text-warn">{spread == null ? '—' : formatINR(spread)}</p>
+          <p className="mt-1 text-xs text-ink-2">min to max trading range</p>
+        </article>
+        <article className="glass-panel diagonal-panel metric-card p-4">
+          <p className="eyebrow">Average arrivals</p>
+          <p className="mt-3 font-mono text-2xl font-semibold text-signal">{averageArrivals == null ? '—' : Math.round(averageArrivals).toLocaleString('en-IN')}</p>
+          <p className="mt-1 text-xs text-ink-2">quintals per reported day</p>
+        </article>
+        <article className="glass-panel diagonal-panel metric-card p-4">
+          <p className="eyebrow">Forecast confidence</p>
+          <p className="mt-3 font-mono text-2xl font-semibold text-gain">{head?.confidence ?? '—'}</p>
+          <p className="mt-1 text-xs text-ink-2">{series?.horizonDays ?? 0}-day outlook</p>
+        </article>
+      </section>
+
+      <div className="grid min-w-0 content-start gap-3">
         {/* 1. PRICE */}
-        <Section>
+        <Section className="market-hero">
           {history.isPending ? (
             <div className="space-y-2"><Block h={16} w={120} /><Block h={44} w={200} /><Block h={16} w={220} /></div>
           ) : last ? (
@@ -115,7 +143,7 @@ export function PairView({ pair, range, onPairChange, onRangeChange }: Props) {
             <div role="tablist" aria-label={t`Range`} className="flex text-sm">
               {RANGES.map((r) => (
                 <button key={r} role="tab" aria-selected={range === r} onClick={() => onRangeChange(r)}
-                  className={`tap min-w-11 px-1.5 tabular ${range === r ? 'font-semibold underline underline-offset-4' : 'text-ink-2'}`}>
+                  className={`min-h-9 min-w-11 rounded-md px-2 tabular transition-colors ${range === r ? 'bg-ink font-semibold text-paper' : 'text-ink-2 hover:bg-paper-2'}`}>
                   {r === 365 ? t`1y` : t`${r}d`}
                 </button>
               ))}
@@ -156,7 +184,7 @@ export function PairView({ pair, range, onPairChange, onRangeChange }: Props) {
         </Section>
       </div>
 
-      <div>
+      <div className="grid content-start gap-3">
         {/* 3. VERDICT */}
         <Section title={<Trans>Advice</Trans>}>
           {sale.isPending ? <Block h={160} /> : sale.data ? <SaleWindowCard sale={sale.data} /> : <SaleWindowEmpty />}
@@ -173,7 +201,7 @@ export function PairView({ pair, range, onPairChange, onRangeChange }: Props) {
         </Section>
 
         <Section>
-          <button className="tap w-full rounded border border-ink px-4 font-semibold" onClick={() => navigate({ to: '/alerts' })}>
+          <button className="tap w-full rounded-lg bg-ink px-4 font-semibold text-paper transition-all hover:-translate-y-0.5 hover:bg-sell-deep" onClick={() => navigate({ to: '/alerts' })}>
             <Trans>Send me an SMS when the price changes</Trans>
           </button>
         </Section>

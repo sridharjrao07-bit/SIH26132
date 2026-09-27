@@ -1,0 +1,33 @@
+# Production dependencies — Krishi Bazaar API
+# Python 3.12 (pre-built wheels; do not pin pydantic 2.7 / FastAPI 0.111)
+# Install: pip install -r requirements.txt
+# Dev/test extras: pip install -r requirements-dev.txt
+
+# ── FastAPI ───────────────────────────────────────────────────────────────────
+fastapi==0.141.1
+starlette==1.3.1
+uvicorn[standard]==0.34.0
+python-multipart==0.0.32
+slowapi==0.1.9
+jinja2==3.1.6
+
+# ── Supabase / JWT ────────────────────────────────────────────────────────────
+supabase==2.4.3
+PyJWT==2.13.0
+
+# ── Scheduler ─────────────────────────────────────────────────────────────────
+apscheduler==3.10.4
+pytz==2026.3.post1
+
+# ── Ingestion ─────────────────────────────────────────────────────────────────
+httpx==0.27.2
+requests==2.34.2
+tenacity==9.0.0
+
+# ── Validation ────────────────────────────────────────────────────────────────
+pydantic==2.12.4
+pydantic-settings==2.7.0
+
+# ── Observability ─────────────────────────────────────────────────────────────
+structlog==24.4.0
+python-dotenv==1.2.2
