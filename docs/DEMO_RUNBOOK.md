@@ -1,4 +1,9 @@
-# Demo Runbook — Krishi Bazaar (judge demo)
+> **ARCHIVED — pre-pivot concept.** This runbook describes the Krishi Bazaar
+> PWA (frontend, mock API, sale windows), which is **not** what is being demoed.
+> Several scripts it references were moved to `legacy/demo/` in the pivot. For
+> the current demo use **[`DEMO_RUNBOOK_DIRECTLINK.md`](DEMO_RUNBOOK_DIRECTLINK.md)**.
+
+# Demo Runbook — Krishi Bazaar (judge demo) — archived
 
 One page to run the demo without surprises. Read the **TL;DR**, do the **pre-flight**
 the night before, then follow **Plan A (live)** or **Plan B (mock fallback)**.
