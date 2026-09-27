@@ -195,6 +195,14 @@ python scripts/apply_migrations.py --dry-run
 python scripts/apply_migrations.py
 ```
 
+The applier prefers the pure-Python `pg8000` driver and falls back to
+`psycopg2`. The driver is imported **lazily inside `_connect()`** on purpose:
+several tests import this script to enumerate migrations, and a module-level
+`import pg8000.dbapi` turns a missing optional driver into an import error that
+fails the whole test file. `scripts/exercise_rpc.py` exercises the write-path
+RPCs against a live database — that is the fastest way to run the acceptance
+checks above.
+
 **Acceptance criteria:**
 1. All 41 migrations apply cleanly in order (040 last).
 2. Re-running `apply_migrations.py` is a no-op, not an error.
