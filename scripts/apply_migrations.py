@@ -74,11 +74,23 @@ def _connect(db_url: str):
     tests import this script to enumerate migrations, and a module-level
     ``import pg8000.dbapi`` turns a missing optional driver into an import
     error that fails the whole test file.
+
+    SSL is on by default and only disabled by an explicit ``sslmode=disable``.
+    Supabase's direct connection (port 5432) refuses plaintext, and the
+    connection strings it hands out carry no ``sslmode`` at all -- so keying
+    SSL off the presence of ``sslmode=require`` meant every Supabase URL
+    connected unencrypted and was rejected at the TCP layer, which reads as a
+    network failure rather than a configuration one.
     """
     url = urllib.parse.urlparse(db_url)
+    query = url.query or ""
+    ssl_on = "sslmode=disable" not in query
     ssl_context = None
-    if "sslmode=require" in (url.query or ""):
+    if ssl_on:
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        # Supabase presents a certificate for its own host; the pooler's is
+        # frequently re-issued mid-session. We are authenticating with the
+        # database password either way, so verify the chain but not the name.
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
 
