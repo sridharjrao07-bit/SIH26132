@@ -501,5 +501,8 @@ uvicorn app.main:app --reload             # then open /docs
 
 Try `POST /api/v1/direct/rupee` with your own farm and retail prices. Supply
 both prices and the endpoint touches neither a database nor the network — it is
-a pure function, so you can check the arithmetic yourself, which is the point.
-Omit the retail price and it resolves the live government anchor for you.
+a pure function of the request body, so you can check the arithmetic yourself,
+which is the point — no query is issued and no network call is made. Omit the
+retail price and it resolves the live government anchor for you. (The process
+still needs well-formed `SUPABASE_*` values, because the dependency injects a
+client before the handler runs; it is never used on the supplied-price path.)

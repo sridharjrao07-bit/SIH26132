@@ -344,10 +344,14 @@ The economics endpoints — `/rupee`, `/fair-price`, `/config`, `/plan`,
 trade without touching the database. They do read, but only when a caller omits
 an input they could have supplied:
 
-* `retail_price` / `retail_price_per_qtl` are optional. Supply them and the
-  endpoint needs neither a database nor a network — that path is a pure
-  function, which is what makes the arithmetic checkable by hand. Omit them and
-  the live retail anchor is resolved instead
+* `retail_price` / `retail_price_per_qtl` are optional. Supply them and **no
+  query is issued and no network call is made** — the arithmetic is a pure
+  function of the request body, which is what makes it checkable by hand. (The
+  process still needs well-formed `SUPABASE_*` values in its environment,
+  because the FastAPI dependency constructs a client object before the handler
+  runs; it is simply never used. Note that `SUPABASE_ANON_KEY=placeholder` is
+  rejected by the Supabase SDK's key-shape check, so use any JWT-shaped dummy.)
+  Omit the price and the live retail anchor is resolved instead
   (`ingestion/retail_loader.py`, which itself falls back to the committed
   government snapshot).
 * `/plan` reads traditional chain shapes from `value_chain_profiles` when that
