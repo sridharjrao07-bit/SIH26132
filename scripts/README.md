@@ -7,6 +7,7 @@ Operator helpers. Not imported by the API.
 | Script | Purpose |
 |---|---|
 | `rehearse_demo.py` | **Run this first.** Runs the audit, the five-act demo, the migration linter, the test suite and ruff, then prints one PASS/FAIL line per step. `--fast` skips the suite. ~7 s. |
+| `verify_live_stack.py` | The credential-gated half: migrations, idempotency, seeded rows, the write-path RPCs, the live retail adapter. Needs `SUPABASE_DB_URL`, `DATA_GOV_IN_API_KEY`, `DCA_RETAIL_RESOURCE_ID`. See `docs/AGENT_LOOP_PROMPT.md`. |
 | `audit_numbers.py` | Re-derives every headline number from `data/` without importing the engine, and requires the two to reconcile. Also rejects implausible price anchors. `--data-dir` to point it at a copy. |
 | `check_migrations.py` | Static SQL linter over `db/migrations/`. Numbering, FK forward-references, `ON CONFLICT` targets vs cumulative unique constraints, `p_*` param parity vs `app/routers/direct.py`, re-runnable seeds. |
 
