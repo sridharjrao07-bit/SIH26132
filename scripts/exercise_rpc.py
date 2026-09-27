@@ -119,13 +119,26 @@ def main() -> int:
     )
 
     # ── 2. the contention test ──────────────────────────────────────────────
-    # Two independent connections, two distinct saved nodes, released onto the
-    # join at the same instant by a barrier. If the RPC incremented the counter
-    # instead of re-summing, or read it without FOR UPDATE, one join would be
-    # lost and committed_qtl would come back 20.0 rather than 60.0.
+    # Two independent connections, two FRESH nodes with DIFFERENT quantities,
+    # released onto the join at the same instant by a barrier.
+    #
+    # The distinct quantities matter. With equal quantities a lost update is
+    # coincidentally invisible: 20+20 read-stale twice still lands on 40, the
+    # same as the true sum. 30 and 40 make any lost increment show up as
+    # committed_qtl disagreeing with sum(members.qtl), which is the assertion.
     print("\n  contention: two sessions joining the same group simultaneously\n")
+    node_c = scalar(cur, "SELECT id FROM public.consumer_node_upsert('Exercise Contention C','rwa','Nashik')")
+    node_d = scalar(cur, "SELECT id FROM public.consumer_node_upsert('Exercise Contention D','rwa','Nashik')")
+    cur.execute(
+        "SELECT id FROM public.group_buy_create(%s, now() + interval '2 days', 200, 90)",
+        (onion,),
+    )
+    gb_race = scalar(cur, "SELECT id FROM public.group_buys ORDER BY created_at DESC LIMIT 1")
+    conn.commit()
+
     barrier = threading.Barrier(2)
     results: dict[str, object] = {}
+    quantities = {"C": 30.0, "D": 40.0}
 
     def joiner(tag: str, node_id) -> None:
         try:
@@ -133,35 +146,37 @@ def main() -> int:
             cu = c.cursor()
             as_user(cu, user_id)
             barrier.wait(timeout=30)
-            cu.execute("SELECT public.group_buy_join(%s, 20.0, %s)", (gb, node_id))
+            cu.execute(
+                "SELECT public.group_buy_join(%s, %s, %s)",
+                (gb_race, quantities[tag], node_id),
+            )
             results[tag] = cu.fetchone()[0]
             c.commit()
             c.close()
         except Exception as exc:  # noqa: BLE001 - reported, not swallowed
             results[tag] = exc
 
-    t1 = threading.Thread(target=joiner, args=("A", node_a))
-    t2 = threading.Thread(target=joiner, args=("B", node_b))
+    t1 = threading.Thread(target=joiner, args=("C", node_c))
+    t2 = threading.Thread(target=joiner, args=("D", node_d))
     t1.start()
     t2.start()
     t1.join(timeout=60)
     t2.join(timeout=60)
 
     both_ok = all(not isinstance(v, Exception) for v in results.values())
-    check("both concurrent joins succeeded", both_ok,
-          "" if both_ok else str(results))
+    check("both concurrent joins succeeded", both_ok, "" if both_ok else str(results))
 
     member_sum = scalar(
-        cur, "SELECT coalesce(sum(qtl),0) FROM public.group_buy_members WHERE group_buy_id=%s", (gb,)
+        cur,
+        "SELECT coalesce(sum(qtl),0) FROM public.group_buy_members WHERE group_buy_id=%s",
+        (gb_race,),
     )
-    committed = scalar(cur, "SELECT committed_qtl FROM public.group_buys WHERE id=%s", (gb,))
-    # node_a already joined 20 qtl above and its join is an upsert, so the true
-    # total is 20 (A) + 20 (B) = 40, not 60.
-    expected = 40.0
+    committed = scalar(cur, "SELECT committed_qtl FROM public.group_buys WHERE id=%s", (gb_race,))
+    expected = quantities["C"] + quantities["D"]  # 70.0, no earlier joins on this group
     check(
         "committed_qtl equals the true sum, not one join's value",
         committed is not None and abs(float(committed) - expected) < 1e-9,
-        f"committed={committed} expected={expected} members={member_sum}",
+        f"committed={committed} expected={expected}",
     )
     check(
         "committed_qtl agrees with the members table",
