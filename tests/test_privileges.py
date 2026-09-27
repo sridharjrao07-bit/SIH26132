@@ -78,7 +78,10 @@ def test_migration_coverage():
         assert re.match(r"^\d{3}[a-z]?_.*\.sql$", name), f"Invalid migration name: {name}"
 
     # Count ratchet — bump when a migration is intentionally added.
-    EXPECTED_MIGRATIONS = 37
+    # 40 = migrations 001..039 plus 003b (the out-of-band letter-suffixed grant
+    # patch).  The number is deliberately literal: a migration that appears
+    # without anyone bumping this is exactly what the ratchet exists to catch.
+    EXPECTED_MIGRATIONS = 40
     assert len(sql_files) == EXPECTED_MIGRATIONS, (
         f"Expected {EXPECTED_MIGRATIONS} migrations, found {len(sql_files)}"
     )

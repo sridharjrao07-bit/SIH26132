@@ -3,8 +3,10 @@ conftest.py — shared fixtures for the Krishi Bazaar ingestion test suite.
 """
 from __future__ import annotations
 
+import base64 as _base64
 import os
 import time
+import uuid as _uuid
 from datetime import date, datetime, timezone
 from typing import Any, List, Optional
 
@@ -202,6 +204,27 @@ class FakeSupabase:
                     return _ExecuteResult(data=store._rpc_publish_extracted_events_v2(params))
                 if fn_name == "report_extraction_failure":
                     return _ExecuteResult(data=store._rpc_report_extraction_failure(params))
+                # SIH26033 direct channel
+                if fn_name == "direct_plan_commit":
+                    return _ExecuteResult(data=store._rpc_direct_plan_commit(params))
+                if fn_name == "direct_plan_get":
+                    return _ExecuteResult(data=store._rpc_direct_plan_get(params))
+                if fn_name == "direct_order_trace":
+                    return _ExecuteResult(data=store._rpc_direct_order_trace(params))
+                if fn_name == "direct_impact":
+                    return _ExecuteResult(data=store._rpc_direct_impact(params))
+                if fn_name == "consumer_node_upsert":
+                    return _ExecuteResult(data=store._rpc_consumer_node_upsert(params))
+                if fn_name == "group_buy_create":
+                    return _ExecuteResult(data=store._rpc_group_buy_create(params))
+                if fn_name == "group_buy_join":
+                    return _ExecuteResult(data=store._rpc_group_buy_join(params))
+                if fn_name == "group_buy_leave":
+                    return _ExecuteResult(data=store._rpc_group_buy_leave(params))
+                if fn_name == "group_buy_release":
+                    return _ExecuteResult(data=store._rpc_group_buy_release(params))
+                if fn_name == "retail_price_record":
+                    return _ExecuteResult(data=store._rpc_retail_price_record(params))
                 raise AssertionError(f"FakeSupabase: unhandled rpc '{fn_name}'")
 
         return _RpcQuery()
@@ -321,6 +344,309 @@ class FakeSupabase:
 
     def _rpc_report_extraction_failure(self, params: dict) -> dict:
         return {"status": "reported"}
+
+    # ── SIH26033 direct channel ──────────────────────────────────────────────
+    # These emulate the 038/039 SECURITY DEFINER RPCs closely enough to test
+    # the router against them.  Crucially they reproduce the *invariants* the
+    # SQL enforces — mutual gain on every allocation, no overselling, idempotent
+    # commit — because a double that accepts anything would make the router
+    # tests vacuous.
+
+    def _direction_tables(self) -> None:
+        for name in (
+            "direct_plans",
+            "direct_allocations",
+            "direct_shipments",
+            "direct_orders",
+            "consumer_nodes",
+            "group_buys",
+            "group_buy_members",
+            "retail_prices",
+        ):
+            self._data.setdefault(name, [])
+
+    def _rpc_direct_plan_commit(self, params: dict) -> dict:
+        """Idempotent on plan_id; rejects any allocation that is not mutual-gain."""
+        self._direction_tables()
+        plan_id = params.get("p_plan_id")
+        if not plan_id:
+            raise AssertionError("direct_plan_commit: p_plan_id is required")
+
+        allocations = params.get("p_allocations") or []
+        for a in allocations:
+            # Mirrors chk_mutual_gain on public.direct_allocations.
+            if float(a.get("farmer_gain_rs", 0)) < 0:
+                raise AssertionError(f"chk_mutual_gain: negative farmer_gain on {a.get('allocation_id')}")
+            if float(a.get("consumer_saving_rs", 0)) < 0:
+                raise AssertionError(f"chk_mutual_gain: negative consumer_saving on {a.get('allocation_id')}")
+            # Mirrors chk_delivered_le_farm.
+            if float(a.get("delivered_qtl", 0)) > float(a.get("farm_qtl", 0)) + 1e-9:
+                raise AssertionError(f"chk_delivered_le_farm on {a.get('allocation_id')}")
+
+        existing = [r for r in self._data["direct_plans"] if r.get("plan_id") == plan_id]
+        if existing:
+            # Idempotent replay: return the tokens minted the first time.
+            tokens = [
+                o["trace_token"]
+                for o in self._data["direct_orders"]
+                if o.get("plan_id") == plan_id
+            ]
+            return {
+                "plan_id": plan_id,
+                "id": existing[0]["id"],
+                "status": existing[0]["status"],
+                "allocations": len(tokens),
+                "shipments": len(params.get("p_shipments") or []),
+                "trace_tokens": tokens,
+                "already_committed": True,
+            }
+
+        row = {
+            "id": str(_uuid.uuid4()),
+            "plan_id": plan_id,
+            "commodity_id": params.get("p_commodity_id"),
+            "district": params.get("p_district") or "Nashik",
+            "status": "committed",
+            "generated_by": params.get("_test_user_id"),
+            "config": params.get("p_config") or {},
+            "impact": params.get("p_impact") or {},
+            "calibrations": params.get("p_calibrations") or {},
+            "notes": params.get("p_notes") or {},
+        }
+        self._data["direct_plans"].append(row)
+        tokens = []
+
+        for a in allocations:
+            self._data["direct_allocations"].append({**a, "plan_id": plan_id})
+        for sh in params.get("p_shipments") or []:
+            self._data["direct_shipments"].append({**sh, "plan_id": plan_id})
+
+        # One traceable order per allocation, mirroring the server-side loop in
+        # public.direct_plan_commit.  Tokens are minted once and handed back,
+        # because direct_orders has no SELECT grant for the caller to re-read.
+        for a in allocations:
+            token = _base64.urlsafe_b64encode(
+                _uuid.uuid4().bytes + _uuid.uuid4().bytes[:3]
+            ).decode()[:16]
+            tokens.append(token)
+            self._data["direct_orders"].append(
+                {
+                    "id": str(_uuid.uuid4()),
+                    "plan_id": plan_id,
+                    "allocation_id": a.get("allocation_id"),
+                    "trace_token": token,
+                    "farmer_price_per_qtl": a.get("farm_price_per_qtl"),
+                    "mandi_price_per_qtl": a.get("mandi_price_per_qtl"),
+                    "saving_rs": a.get("consumer_saving_rs"),
+                    "consumer_price_per_qtl": a.get("consumer_price_per_qtl"),
+                    "retail_reference_per_qtl": a.get("retail_reference_per_qtl"),
+                    "farmer_share_rs": a.get("farmer_share_rs"),
+                    "logistics_share_rs": a.get("logistics_share_rs"),
+                    "platform_share_rs": a.get("platform_share_rs"),
+                    "qtl": a.get("delivered_qtl"),
+                }
+            )
+        return {
+            "plan_id": plan_id,
+            "id": row["id"],
+            "status": "committed",
+            "allocations": len(allocations),
+            "shipments": len(params.get("p_shipments") or []),
+            "trace_tokens": tokens,
+            "already_committed": False,
+        }
+
+    def _rpc_direct_plan_get(self, params: dict):
+        self._direction_tables()
+        plan_id = params.get("p_plan_id")
+        rows = [r for r in self._data["direct_plans"] if r.get("plan_id") == plan_id]
+        if not rows:
+            return []
+        plan = dict(rows[0])
+        plan["allocations"] = [
+            a for a in self._data["direct_allocations"] if a.get("plan_id") == plan_id
+        ]
+        plan["shipments"] = [
+            s for s in self._data["direct_shipments"] if s.get("plan_id") == plan_id
+        ]
+        return [plan]
+
+    def _rpc_direct_order_trace(self, params: dict):
+        self._direction_tables()
+        token = params.get("p_token")
+        rows = [r for r in self._data["direct_orders"] if r.get("trace_token") == token]
+        if not rows:
+            return []
+        o = rows[0]
+        # Scalar jsonb, matching `returns jsonb` in 039, and redacted: no
+        # coordinates, no names, no phone — exactly what the SQL function
+        # hands to an anonymous caller holding a QR code.
+        return {
+            "trace_token": o["trace_token"],
+            "commodity": o.get("commodity"),
+            "district": o.get("district"),
+            "quantity_qtl": o["qtl"],
+            "status": "confirmed",
+            "consumer": {
+                "price_per_qtl": o["consumer_price_per_qtl"],
+                "retail_reference_per_qtl": o["retail_reference_per_qtl"],
+                "saving_rs": o.get("saving_rs"),
+            },
+            "farmer": {
+                "price_per_qtl": o.get("farmer_price_per_qtl"),
+                "mandi_price_per_qtl": o.get("mandi_price_per_qtl"),
+            },
+            "consumer_rupee": {
+                "farmer_share_rs": o["farmer_share_rs"],
+                "logistics_share_rs": o["logistics_share_rs"],
+                "platform_share_rs": o["platform_share_rs"],
+                "total_rs": (o["consumer_price_per_qtl"] or 0) * (o["qtl"] or 0),
+            },
+        }
+
+    def _rpc_direct_impact(self, params: dict) -> dict:
+        self._direction_tables()
+        commodity = params.get("p_commodity_id")
+        district = params.get("p_district")
+        committed = {
+            r["plan_id"] for r in self._data["direct_plans"]
+            if r.get("status") == "committed"
+            and (commodity is None or str(r.get("commodity_id", "")) == str(commodity))
+            and (district is None or r.get("district") == district)
+        }
+        allocs = [a for a in self._data["direct_allocations"] if a.get("plan_id") in committed]
+        total = lambda key: sum(float(a.get(key) or 0) for a in allocs)  # noqa: E731
+        # Scalar jsonb, matching `returns jsonb` in 039: the aggregate always
+        # produces exactly one row, even with no committed plans.
+        return {
+            "plans": len(committed),
+            "allocations": len(allocs),
+            "farm_qtl": sum(float(a.get("farm_qtl") or 0) for a in allocs),
+            "farmer_gain_rs": total("farmer_gain_rs"),
+            "consumer_saving_rs": total("consumer_saving_rs"),
+            "surplus_rs": total("surplus_rs"),
+            "freight_rs": total("freight_rs"),
+            "platform_fee_rs": total("platform_fee_rs"),
+        }
+
+    def _rpc_consumer_node_upsert(self, params: dict) -> dict:
+        self._direction_tables()
+        node_id = params.get("p_node_id")
+        if node_id:
+            for n in self._data["consumer_nodes"]:
+                if n.get("id") == node_id:
+                    n.update(
+                        name=params.get("p_name"),
+                        kind=params.get("p_kind"),
+                        district=params.get("p_district"),
+                        updated_at="now",
+                    )
+                    return n
+            return None
+        row = {
+            "id": str(_uuid.uuid4()),
+            "user_id": params.get("_test_user_id"),
+            "name": params.get("p_name"),
+            "kind": params.get("p_kind"),
+            "district": params.get("p_district"),
+        }
+        self._data["consumer_nodes"].append(row)
+        return row
+
+    def _rpc_group_buy_create(self, params: dict) -> dict:
+        self._direction_tables()
+        row = {
+            "id": str(_uuid.uuid4()),
+            "organiser_id": params.get("_test_user_id"),
+            "commodity_id": params.get("p_commodity_id"),
+            "district": params.get("p_district") or "Nashik",
+            "target_qtl": float(params.get("p_target_qtl") or 0),
+            "min_load_qtl": float(params.get("p_min_load_qtl") or 50),
+            "committed_qtl": 0.0,
+            "deadline": params.get("p_deadline"),
+            "status": "open",
+            "released_plan_id": None,
+        }
+        self._data["group_buys"].append(row)
+        return row
+
+    def _rpc_group_buy_join(self, params: dict) -> dict:
+        self._direction_tables()
+        gid = params.get("p_group_buy_id")
+        gb = next((g for g in self._data["group_buys"] if g.get("id") == gid), None)
+        if gb is None:
+            raise AssertionError("group_buy_join: unknown group buy")
+        if gb.get("status") != "open":
+            raise AssertionError("group_buy_join: group is not open")
+        qtl = float(params.get("p_qtl") or 0)
+        if gb["target_qtl"] > 0 and gb["committed_qtl"] + qtl > gb["target_qtl"] + 1e-9:
+            raise AssertionError("group_buy_join: exceeds target")
+        row = {
+            "id": str(_uuid.uuid4()),
+            "group_buy_id": gid,
+            "consumer_node_id": params.get("p_consumer_node_id"),
+            "user_id": params.get("_test_user_id"),
+            "qtl": qtl,
+        }
+        self._data["group_buy_members"].append(row)
+        # Re-derived, not incremented — the same discipline as the SQL.
+        gb["committed_qtl"] = sum(
+            float(m.get("qtl") or 0)
+            for m in self._data["group_buy_members"]
+            if m.get("group_buy_id") == gid
+        )
+        return row
+
+    def _rpc_group_buy_leave(self, params: dict) -> int:
+        self._direction_tables()
+        gid = params.get("p_group_buy_id")
+        node = params.get("p_consumer_node_id")
+        before = len(self._data["group_buy_members"])
+        self._data["group_buy_members"] = [
+            m for m in self._data["group_buy_members"]
+            if not (m.get("group_buy_id") == gid and m.get("consumer_node_id") == node)
+        ]
+        removed = before - len(self._data["group_buy_members"])
+        for g in self._data["group_buys"]:
+            if g.get("id") == gid:
+                g["committed_qtl"] = sum(
+                    float(m.get("qtl") or 0)
+                    for m in self._data["group_buy_members"]
+                    if m.get("group_buy_id") == gid
+                )
+        return removed
+
+    def _rpc_group_buy_release(self, params: dict) -> dict:
+        self._direction_tables()
+        gid = params.get("p_group_buy_id")
+        gb = next((g for g in self._data["group_buys"] if g.get("id") == gid), None)
+        if gb is None:
+            raise AssertionError("group_buy_release: unknown group buy")
+        if gb.get("status") != "open":
+            raise AssertionError("group_buy_release: group is not open")
+        if gb["committed_qtl"] + 1e-9 < gb["min_load_qtl"]:
+            raise AssertionError(
+                f"group_buy_release: {gb['committed_qtl']} qtl below min_load_qtl "
+                f"{gb['min_load_qtl']}"
+            )
+        gb["status"] = "released"
+        gb["released_plan_id"] = params.get("p_plan_id")
+        return gb
+
+    def _rpc_retail_price_record(self, params: dict) -> dict:
+        self._direction_tables()
+        row = {
+            "id": str(_uuid.uuid4()),
+            "commodity_id": params.get("p_commodity_id"),
+            "district": params.get("p_district") or "Nashik",
+            "market_area": params.get("p_market_area") or "",
+            "price_date": params.get("p_price_date"),
+            "retail_price": float(params.get("p_retail_price") or 0),
+            "unit": params.get("p_unit") or "quintal",
+            "source": params.get("p_source") or "manual",
+        }
+        self._data["retail_prices"].append(row)
+        return row
 
     def _rpc_lots_for_buyer_supply(self, params: dict) -> list:
         """Emulate lots_for_buyer_supply SECURITY DEFINER: open/offered lots, commodity filter."""
@@ -1142,17 +1468,24 @@ class RlsFakeSupabase(FakeSupabase):
                 return _ExecuteResult(data=[])
             return _ExecuteResult(data=[])
 
+        # Ownership columns used by the RLS policies across the schema.  The
+        # direct-channel tables (039) name theirs differently, so a plan is
+        # owned by its `generated_by` and a group buy by its `organiser_id`.
+        owner_columns = (
+            "user_id", "buyer_id", "fpo_id",
+            "generated_by",      # direct_plans / direct_shipments (via plan)
+            "organiser_id",      # group_buys
+            "farmer_id",         # direct_orders, direct_allocations
+        )
+
         def owns(r):
             if self._uid == ADMIN_USER_ID:
                 return True
             if table == "user_profiles" and r.get("id") == self._uid:
                 return True
-            if r.get("user_id") == self._uid:
-                return True
-            if r.get("buyer_id") == self._uid:
-                return True
-            if r.get("fpo_id") == self._uid:
-                return True
+            for col in owner_columns:
+                if r.get(col) == self._uid:
+                    return True
             return False
 
         if op == "select" or op is None:

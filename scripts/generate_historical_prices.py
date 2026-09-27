@@ -35,7 +35,6 @@ import csv
 import math
 import os
 import random
-import sys
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 

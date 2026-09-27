@@ -11,6 +11,7 @@ from app.routers import (
     buyers_router,
     commodities_router,
     dashboard_router,
+    direct_router,
     forecasts_router,
     grievances_router,
     intelligence_router,
@@ -83,10 +84,12 @@ def create_app() -> FastAPI:
         title="Krishi Bazaar API",
         version="2.0.0",
         description=(
-            "Market linkage and price discovery API (SIH26132). "
-            "Mandi prices, forecasts, sale-window advice, lots, buyer matching, "
-            "offers, payments and grievances."
-        ),
+        "Market linkage and price discovery API (SIH26132 / SIH26033). "
+        "Mandi prices, forecasts, sale-window advice, lots, buyer matching, "
+        "offers, payments and grievances — plus the SIH26033 direct channel: "
+        "value-chain margin attribution, fair farm-gate discovery, surplus-"
+        "optimal farm-to-consumer allocation and truck-load consolidation."
+    ),
         lifespan=lifespan,
         docs_url=None if production else "/docs",
         redoc_url=None if production else "/redoc",
@@ -184,6 +187,7 @@ def create_app() -> FastAPI:
     app.include_router(logistics_router)
     app.include_router(storage_router)
     app.include_router(matching_router)
+    app.include_router(direct_router)
     app.include_router(profile_router)
     app.include_router(intelligence_router)
 
