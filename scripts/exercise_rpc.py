@@ -75,7 +75,10 @@ def as_user(cur, user_id: str) -> None:
 
 
 def scalar(cur, sql: str, params=None):
-    cur.execute(sql, params)
+    if params is None:
+        cur.execute(sql)
+    else:
+        cur.execute(sql, params)
     row = cur.fetchone()
     return None if row is None else row[0]
 
