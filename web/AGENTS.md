@@ -31,6 +31,17 @@ With neither running the suite still passes (45 passed, 12 skipped) — the inte
 
 `API_TARGET` decides which server the dev preview proxies to, so point it at whichever one you want to look at. `directLive.integration.test.tsx` uses its own `DIRECT_API_BASE` client rather than the shared one, so it never depends on `API_TARGET`.
 
+### Use `localhost:5173` in the browser, not `127.0.0.1:5173`
+
+The backend's CORS allowlist defaults to `http://localhost:3000,http://localhost:5173`
+(`app/config.py`, overridable with `CORS_ORIGIN`). `127.0.0.1:5173` is **not** in
+it, so a browser opened on `http://127.0.0.1:5173` gets its `/api` calls rejected
+by CORS even though the server is healthy and `curl` to the same address works.
+Open `http://localhost:5173/direct` instead.
+
+`curl` is unaffected — it sends no `Origin` header — which is exactly why this is
+easy to miss: the endpoint works from the shell and fails from the browser.
+
 ### Why `directLive.integration.test.tsx` exists
 
 The unit tests in `direct.test.tsx` stub `fetch`, so they can only assert the shape the client *sends*. They cannot catch a field the backend *requires* but the client never sends — a stub accepts anything. That is exactly how `/plan` and `/group-buy` shipped broken: the client sent `lots[].lot_id`, `demand` (singular), and `commodity`/`window`/`target_qtl`, none of which the backend accepts, and every unit test still passed. Only a real request surfaces a 422.
