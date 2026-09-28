@@ -55,7 +55,7 @@ begin
     if found then
         return true;
     end if;
-    
+
     return false;
 end;
 $$;
@@ -74,7 +74,7 @@ declare
 begin
     delete from public.job_locks
     where job_key = p_job_key and holder = p_holder;
-    
+
     get diagnostics released = row_count;
     return released > 0;
 end;

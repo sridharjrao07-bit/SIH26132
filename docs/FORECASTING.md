@@ -4,7 +4,7 @@ This document details the architecture and operational constraints of the Krishi
 
 ## 1. Core Philosophy: The LLM Role
 
-**The LLM never predicts a number.** 
+**The LLM never predicts a number.**
 
 The engine uses classical statistical models and Gradient Boosting Machines (GBMs) for numerical time-series forecasting. The LLM's role is strictly confined to **event extraction**. It reads unstructured text (news articles, government reports) and extracts structured intelligence—specifically, market events like supply gluts or policy changes that may exert upward or downward pressure on prices. These events are transformed into categorical or numerical features (e.g., `event_pressure = -1, 0, or 1`) and fed into the downstream quantitative models.
 
@@ -21,7 +21,7 @@ This separation ensures that environments unable to compile native ML extensions
 
 ## 3. Walk-Forward Backtesting and Kill-Gates
 
-Because agricultural data can be sparse or noisy, the engine implements a strict walk-forward backtesting harness to measure real-world out-of-sample accuracy. 
+Because agricultural data can be sparse or noisy, the engine implements a strict walk-forward backtesting harness to measure real-world out-of-sample accuracy.
 
 To protect users from spurious predictions driven by insufficient data, the engine enforces progressive "Kill-Gates":
 
@@ -41,7 +41,7 @@ Before training, the model strictly enforces variance checks using Gaussian elim
 ## 5. Global GBM Status
 
 The Gradient Boosting model (`GlobalGBM`) has been refactored to remove global state and adhere to strict walk-forward boundaries.
-**Current Status**: 
+**Current Status**:
 - **Evaluation Status**: `BLOCKED` (Phase 6). The current smoke test database lacks sufficient history (requires 57+ days for training/calibration) to produce valid out-of-sample predictions.
 - **Automatic-Selection Status**: **Disabled**. Because the model cannot currently be verified against baseline models in the backtest harness, the engine will safely fall back to baselines (e.g., Naive or Moving Average) and will not automatically promote GBM.
 - **Explicit-Selection Availability**: **Available**. Users may still explicitly select the `gbm` model via API parameters, but its accuracy is currently unverified.

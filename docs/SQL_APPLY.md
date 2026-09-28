@@ -52,27 +52,27 @@ After deployment, verify the state by running these probes as the `postgres` use
 ```sql
 -- 1. Verify review_status is a valid ENUM type
 SELECT column_name, data_type, udt_name
-FROM information_schema.columns 
+FROM information_schema.columns
 WHERE table_name = 'events' AND column_name = 'review_status';
 -- Expected: data_type='USER-DEFINED', udt_name='review_state'
 
 -- 2. Verify legacy reviews were reconciled
-SELECT review_status, count(*) 
-FROM events 
-WHERE reviewed_by IS NOT NULL 
+SELECT review_status, count(*)
+FROM events
+WHERE reviewed_by IS NOT NULL
 GROUP BY review_status;
 -- Expected: If historical reviews existed, they should be in 'legacy_reviewed'.
 
 -- 3. Verify RPC existence and security definitions
-SELECT p.proname, p.prosecdef 
-FROM pg_proc p 
-JOIN pg_namespace n ON p.pronamespace = n.oid 
-WHERE n.nspname = 'public' 
+SELECT p.proname, p.prosecdef
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'public'
   AND p.proname IN ('claim_source_document', 'review_event', 'publish_extracted_events_v2');
 
 -- 4. Verify view security
-SELECT grantee, privilege_type 
-FROM information_schema.role_table_grants 
+SELECT grantee, privilege_type
+FROM information_schema.role_table_grants
 WHERE table_name = 'live_events_published';
 -- Expected: service_role has SELECT, public does NOT.
 ```

@@ -33,7 +33,7 @@ The core API is split across several domain-specific routers inside `app/routers
 
 - **`profile.py` & `buyers.py`**: Handles user identity. Includes a self-service registration flow for institutional buyers that dictates they remain restricted until an Admin explicitly verifies them.
 - **`lots.py` & `offers.py`**: The fundamental marketplace. Farmers list inventory (`lots`), and buyers submit bids (`offers`).
-- **`payments.py` & `grievances.py`**: Workflows tracking the post-matching financial lifecycle and dispute resolution process. 
+- **`payments.py` & `grievances.py`**: Workflows tracking the post-matching financial lifecycle and dispute resolution process.
 - **`matching.py`**: Geospatial proximity search (`GET /markets/nearby`) uses the PostgreSQL `earthdistance` extension via RPC; logistics assignment itself is not distance-routed.
 - **`storage.py`** / **`logistics.py`**: Manage warehouse and transport bookings as first-class resources. All writes go through the `storage_booking_*` / `logistics_booking_*` SECURITY DEFINER RPCs (migration 036), which enforce ownership, lot state and capacity under row locks — the API layer no longer does check-then-insert.
 - **`prices.py` & `forecasts.py`**: Exposes real-time ingestion data and AI-driven 7-day predictive pricing.
@@ -61,6 +61,6 @@ A lightweight, dependency-free statistical inference engine executing in pure Py
 
 ### C. Notification Engine (`notifications/`)
 A scalable worker evaluating threshold limits to send alerts.
-- **`alert_checker.py`**: Scans the database for user-defined triggers (e.g., "SMS me when Onion prices in Nashik cross ₹2,000/qtl"). 
+- **`alert_checker.py`**: Scans the database for user-defined triggers (e.g., "SMS me when Onion prices in Nashik cross ₹2,000/qtl").
 - **`sale_window.py`**: Evaluates optimal sale windows based on the latest forecasting engine outputs.
 - **`sms_gateway.py`**: A generic abstraction layer designed to plug into enterprise gateways like Twilio or NIC SMS.

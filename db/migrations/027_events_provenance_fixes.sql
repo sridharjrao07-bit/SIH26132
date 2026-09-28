@@ -294,7 +294,7 @@ $$;
 -- review_status semantics; this intermediate version must simply be creatable.
 DROP VIEW IF EXISTS public.live_events_published;
 CREATE VIEW public.live_events_published AS
-    SELECT 
+    SELECT
         e.id,
         e.source_document_id,
         e.event_hash,
@@ -318,7 +318,7 @@ CREATE VIEW public.live_events_published AS
       AND e.reviewed_by IS NULL;
 
 CREATE OR REPLACE VIEW public.sale_window_headlines AS
-    SELECT 
+    SELECT
         e.headline,
         e.event_date,
         e.commodity_id,

@@ -6,9 +6,9 @@
 -- data. If a mandi stops reporting data, the engine will eventually refuse to
 -- predict (returning 'insufficient_data'), but older predictions that were
 -- previously written for future dates would remain as 'ok'.
--- 
+--
 -- This function identifies predictions that were generated more than `hours_old`
--- ago and marks them as 'stale'. This ensures farmers don't make decisions 
+-- ago and marks them as 'stale'. This ensures farmers don't make decisions
 -- based on predictions that haven't incorporated recent real-world price movements.
 --
 -- The scheduler/backend can call this via Supabase RPC after each run or daily.
@@ -27,7 +27,7 @@ begin
     set status = 'stale'
     where status = 'ok'
       and generated_at < now() - (hours_old || ' hours')::interval;
-      
+
     get diagnostics stale_count = row_count;
     return stale_count;
 end;
@@ -38,5 +38,5 @@ revoke execute on function public.mark_stale_forecasts(integer) from public, ano
 grant  execute on function public.mark_stale_forecasts(integer) to service_role;
 grant  execute on function public.mark_stale_forecasts(integer) to authenticated;
 
-comment on function public.mark_stale_forecasts is 
+comment on function public.mark_stale_forecasts is
 'Marks forecasts as stale if they were generated more than hours_old ago (default 24). Prevents surfacing outdated predictions if ingestion stops.';

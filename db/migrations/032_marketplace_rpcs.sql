@@ -734,4 +734,3 @@ grant execute on function public.buyer_verify(uuid) to authenticated, service_ro
 comment on function public.buyer_verify is
     'SECURITY DEFINER. Sets buyers.verified = true. Restricted to admin role. '
     'Runs under service_role so trg_guard_buyer_self_verify allows the update.';
-

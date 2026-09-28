@@ -1,7 +1,7 @@
 -- db/migrations/028_events_provenance_review_fixes.sql
 
 -- 1. Review Status Schema
-DO $$ 
+DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'review_state') THEN
         CREATE TYPE public.review_state AS ENUM ('pending', 'approved', 'rejected', 'legacy_reviewed');
@@ -12,9 +12,9 @@ ALTER TABLE public.events
     ADD COLUMN IF NOT EXISTS review_status public.review_state DEFAULT 'pending' NOT NULL;
 
 -- 2. Backfill historical reviews
-UPDATE public.events 
-SET review_status = 'legacy_reviewed' 
-WHERE reviewed_by IS NOT NULL 
+UPDATE public.events
+SET review_status = 'legacy_reviewed'
+WHERE reviewed_by IS NOT NULL
   AND review_status = 'pending';
 
 -- 3. Atomic Claim RPC (Return snapshot and allow content sync)
@@ -252,11 +252,11 @@ BEGIN
     WHERE id = p_doc_id
     FOR UPDATE;
 
-    IF FOUND 
-       AND v_status = 'extracting' 
-       AND v_db_token IS NOT NULL 
-       AND p_claim_token IS NOT NULL 
-       AND v_db_token IS NOT DISTINCT FROM p_claim_token 
+    IF FOUND
+       AND v_status = 'extracting'
+       AND v_db_token IS NOT NULL
+       AND p_claim_token IS NOT NULL
+       AND v_db_token IS NOT DISTINCT FROM p_claim_token
     THEN
         UPDATE public.source_documents
         SET extraction_status = 'failed',
@@ -334,7 +334,7 @@ DROP VIEW IF EXISTS public.sale_window_headlines;
 DROP VIEW IF EXISTS public.live_events_published;
 
 CREATE VIEW public.live_events_published AS
-    SELECT 
+    SELECT
         e.id,
         e.source_document_id,
         e.event_hash,
@@ -360,7 +360,7 @@ CREATE VIEW public.live_events_published AS
       AND e.review_status NOT IN ('rejected', 'legacy_reviewed');
 
 CREATE VIEW public.sale_window_headlines AS
-    SELECT 
+    SELECT
         e.headline,
         e.event_date,
         e.commodity_id,

@@ -4,7 +4,7 @@ This repo is the **backend only**. Serve the UI from another origin and point it
 
 ## Base URL
 
-Local: `http://127.0.0.1:8000`  
+Local: `http://127.0.0.1:8000`
 Set `CORS_ORIGIN` in `.env` to the frontend origin(s), comma-separated:
 
 ```
