@@ -48,5 +48,3 @@ if (g.__nativeResponse) globalThis.Response = g.__nativeResponse as typeof Respo
 
 i18n.load({ mr: mr as never, en: en as never });
 i18n.activate('mr');
-
-
