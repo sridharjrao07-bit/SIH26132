@@ -1,9 +1,10 @@
 # Krishi Bazaar — web
 
-Farmer-facing PWA for SIH26132: mandi prices, the forecast band, and Sell / Hold / Wait advice,
-plus SMS price alerts and a form-driven marketplace (list produce, lot advice, buyers, offers,
-payment status, transport/storage booking, complaints, the lot ledger, buyer registration and
-supply, FPO pooling). Mobile-first at 360px, Marathi by default, built for weak connections.
+Farmer-facing PWA for SIH26132: mandi prices, the forecast band, Sell / Hold / Wait advice,
+and DirectLink's consumer-rupee breakdown, plus the authenticated marketplace (list produce,
+lot advice, buyers, offers, payment status, transport/storage booking, complaints, the lot
+ledger, buyer registration and supply, and FPO pooling). Mobile-first at 360px, Marathi by
+default, built for weak connections.
 
 ## Screens
 
@@ -13,11 +14,13 @@ supply, FPO pooling). Mobile-first at 360px, Marathi by default, built for weak 
 | `/` | Today: price, verdict, forecast band, other mandis | no |
 | `/c/$crop/m/$market` | Pair detail with ranges 7d–1y | no |
 | `/bhav` | Price board | no |
-| `/forecasts/about` | How forecasts work, accuracy (pending until G6) | no |
-| `/alerts` | Create, pause and delete SMS alerts | yes |
+| `/direct` | Where your consumer rupee goes; direct-trade comparison | no |
 | `/sell`, `/sell/new`, `/sell/$lotId` | My lots, list produce, lot detail (advice, buyers, offers, payment, transport/storage, complaints, ledger, withdraw), FPO pooling | yes |
-| `/buy` | Buyer registration, "waiting for verification", supply + make offer | yes |
 | `/account` | Profile (name, phone, district, SMS language), sign out | yes |
+
+Retired paths such as `/forecasts/about`, `/alerts`, and `/buy` intentionally render
+the application's custom not-found page. The active navigation is Today, Prices,
+Direct, Sell, and Account.
 
 The design record lives in [`../docs/frontend/`](../docs/frontend/) (`01…05`); backend gap tickets in [`../docs/tickets/`](../docs/tickets/).
 The API contract is [`../frontend_handoff/API_CONTRACT.md`](../frontend_handoff/API_CONTRACT.md).
@@ -25,12 +28,46 @@ Backend gaps are G5–G7 (plus G12 below). Frontend tickets are G1, G2, G3, G8, 
 
 ## Run
 
+For the public price and marketplace screens, use the mock API on port 8000:
+
 ```bash
 cd web
 npm ci
-npm run mock          # ../frontend_handoff/mock/mock_api.py on :8000 (override with MOCK_API=...)
-npm run dev           # http://localhost:5173, with /api proxied to API_TARGET (default :8000)
+npm run mock          # ../frontend_handoff/mock/mock_api.py on :8000
+npm run dev           # http://localhost:5173, with /api proxied to API_TARGET
 ```
+
+For the live DirectLink surface, run the real FastAPI app on port 8001 as well.
+Use `http://localhost:5173` in the browser; the default backend CORS allowlist does
+not include the numeric origin `http://127.0.0.1:5173`.
+
+```bash
+# terminal 1, from web/
+npm run mock
+
+# terminal 2, from the repository root (requires the project .venv)
+PORT=8001 bash web/scripts/dev-backend.sh
+
+# terminal 3, from web/
+DIRECT_API_BASE=http://127.0.0.1:8001 REQUIRE_MOCK=1 REQUIRE_DIRECT_API=1 npm test
+```
+
+On Windows PowerShell, start the backend with the same dummy development values:
+
+```powershell
+$env:RUN_SCHEDULER='0'; $env:RATE_LIMIT_ENABLED='0'; $env:APP_ENV='development'
+$env:SUPABASE_URL='https://placeholder.supabase.co'
+$env:SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIn0.abcdefghijklmnopqrstuvwxyz1234567890'
+$env:SUPABASE_SERVICE_ROLE_KEY=$env:SUPABASE_ANON_KEY
+$env:SUPABASE_JWT_SECRET='ci-placeholder-jwt-secret-32b-min'
+$env:DATA_GOV_IN_API_KEY='placeholder-not-a-real-key'
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8001
+```
+
+To point the browser at that backend rather than the mock, set
+`VITE_API_BASE_URL=http://127.0.0.1:8001` before starting Vite, or use the
+same-origin proxy with `API_TARGET=http://127.0.0.1:8001`. The DirectLink live
+tests use `DIRECT_API_BASE` independently of the browser proxy.
 
 The browser only calls `/api/...` on its own origin. Point `API_TARGET` at the real FastAPI for staging.
 
@@ -45,7 +82,7 @@ The browser only calls `/api/...` on its own origin. Point `API_TARGET` at the r
 
 | script | what it does |
 | --- | --- |
-| `npm test` | vitest: domain rules, trust states, chart ticks/tooltip, the full farmer journey (list → offer → accept → pay → sold → ledger), alerts, and a render of every signed-in screen against the mock (integration tests skip if the mock is down locally; CI sets `REQUIRE_MOCK=1` so they fail instead) |
+| `npm test` | vitest: domain rules, trust states, chart ticks/tooltip, DirectLink response contracts and real-backend integration, the full farmer journey (list → offer → accept → pay → sold → ledger), and signed-in screen renders against the mock. Set `REQUIRE_MOCK=1` and `REQUIRE_DIRECT_API=1` so integration tests fail instead of silently skipping. |
 | `npm run build` | typecheck and production build (the Lingui vite plugin compiles `.po` on import) |
 | `npm run i18n:extract` | refresh the catalogs after changing copy |
 | `npm run i18n:check` | fails if any mr/hi string is missing |
