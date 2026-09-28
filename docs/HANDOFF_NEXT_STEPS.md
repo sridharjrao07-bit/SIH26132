@@ -177,14 +177,34 @@ failure is in the new migrations or a side effect of the retirement.
 
 ## TODO, in priority order
 
-### P0 — Validate the database layer (highest risk)
+### P0 — Validate the database layer — **CLOSED, verified by execution**
 
-**Migrations 038, 039 and 040 have never executed against a real Postgres.**
-They are written but entirely unverified. This is the single largest risk in
-the project: everything else has been tested, this has not.
+42 migrations applied against a real Postgres, and re-running was a no-op (the
+idempotency check that most often gets skipped). `value_chain_profiles` holds 3
+rows with 5 stages each, all active; `retail_prices` is populated with a readable
+anchor. `scripts/exercise_rpc.py` passed 15 of its then-16 checks, the only
+failure being the live retail feed blocked on an external 503.
 
-There is no Postgres in the sandbox this was built in, so this could not be
-done. It needs a real Supabase project or a local Postgres 16.
+Running it found four real bugs in the script, all now fixed and all derived from
+reading the SQL rather than guessing: a transaction-scoped `set_config` dropped
+by an intervening `commit()`; `group_buy_create(30, 90)` rejected by a
+deliberate database invariant; `direct_order_trace` asserted the opposite of its
+documented NULL contract; and `direct_impact` searched for a `"totals"` key the
+function never builds.
+
+**Still open under P0:** the traceability round trip. `direct_plan_commit` mints
+`trace_tokens`, but nothing had ever traced a *real* one back — the only test was
+that an unknown token returns NULL, which is a negative test and would pass even
+if the function were a stub. That is now covered: commit a plan with one
+allocation, take a minted token, and assert it comes back with the consumer's
+rupee and the farmer's counterfactual attached. It has not yet been executed
+against a database.
+
+The original text, kept because the reasoning still applies:
+
+> **Migrations 038, 039 and 040 have never executed against a real Postgres.**
+> They are written but entirely unverified. This is the single largest risk in
+> the project: everything else has been tested, this has not.
 
 ```bash
 export SUPABASE_DB_URL="postgresql://postgres:<pw>@db.<ref>.supabase.co:5432/postgres"
@@ -274,7 +294,22 @@ your run:**
 and its `ON CONFLICT` target matches `uq_retail_price_record` from 038 — which
 depends on 002 having seeded an `onion` commodity row (it has).
 
-### P1 — Live retail adapter: fail-fast bounds added (code done, **offline fallback verified**, live run still unverified)
+### P1 — Live retail adapter — **BLOCKED on an external outage**
+
+The code, the fail-fast bounds and the snapshot fallback are all verified, and
+four tests now cover the live branch that previously had none (the one existing
+test accepted either origin and so was vacuous). The remaining item is not
+fixable from here: data.gov.in returned **503 Service Temporarily Unavailable**
+on the last attempt, so `origin` came back `'snapshot'`. The fallback behaved
+correctly, which is the designed outcome.
+
+Re-run `python scripts/verify_live_stack.py` when the service recovers; check 15
+will flip to PASS on its own. If it still returns `'snapshot'` with no 503 in the
+log, the key or the resource id is wrong rather than the service being down.
+
+Original text, kept for the reasoning:
+
+> ### P1 — Live retail adapter: fail-fast bounds added (code done, **offline fallback verified**, live run still unverified)
 
 `ingestion/dca_retail.py` previously used a 30 s read timeout with tenacity
 backoff. One unreachable host therefore cost ~65 s **per page**, and
@@ -310,7 +345,15 @@ python -c "from ingestion.retail_loader import latest_retail_price; \
            print(latest_retail_price('Onion','Maharashtra'))"
 ```
 
-### P2 — Engine wired to the database (code done, **API boot verified**, live run still unverified)
+### P2 — Engine wired to the database — **CLOSED**
+
+`direct_plan_commit` (including idempotency on `plan_id`), `direct_impact`,
+`direct_order_trace` and the `group_buy_join` contention check have all now
+executed against a real database.
+
+Original text, kept for the reasoning:
+
+> ### P2 — Engine wired to the database (code done, **API boot verified**, live run still unverified)
 
 Both hardcoded-in-Python dependencies are now overridable from Postgres.
 

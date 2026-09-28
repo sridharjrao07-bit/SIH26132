@@ -283,6 +283,91 @@ def main() -> int:
         # documented contract.
         check("direct_order_trace returns NULL for an unknown token rather than erroring",
               trace is None, f"got {type(trace).__name__}: {str(trace)[:80]}")
+
+        # ── 5. the round trip: a committed plan's token traces back ─────────
+        # This is the "traceable settlement" pillar, and until now nothing had
+        # proven it end to end. The check above only proves an unknown token
+        # returns NULL -- a negative test. A token minted by a real commit has
+        # to come back with the consumer's rupee and the farmer's counterfactual
+        # attached, or the QR code on the crate is decoration.
+        try:
+            lot_id = scalar(
+                cur,
+                "SELECT l.id FROM public.lots l "
+                "JOIN public.commodities c ON c.id = l.commodity_id "
+                "WHERE lower(c.name_en) = 'onion' AND l.status = 'available' "
+                "ORDER BY l.created_at LIMIT 1",
+            )
+            if lot_id is None:
+                check("an available onion lot exists to commit against", False,
+                      "no lot found; seed data may be missing")
+            else:
+                trace_plan = "TR-" + os.urandom(4).hex()
+                alloc = {
+                    "allocation_id": "A0-0",
+                    "lot_id": str(lot_id),
+                    "farm_qtl": 10.0,
+                    "delivered_qtl": 9.8,
+                    "distance_km": 62.0,
+                    "farmer_price_per_qtl": 3663.0,
+                    "mandi_price_per_qtl": 2226.39,
+                    "farmer_gain_rs": 14366.10,
+                    "consumer_price_per_qtl": 3890.0,
+                    "retail_reference_per_qtl": 5392.0,
+                    "consumer_saving_rs": 15020.0,
+                    "surplus_rs": 29386.10,
+                    "freight_rs": 1120.0,
+                    "platform_fee_rs": 390.0,
+                    "farmer_share_rs": 36630.0,
+                }
+                as_user(cur, user_id)
+                cur.execute(
+                    "SELECT public.direct_plan_commit(%s, %s, 'Nashik', %s, %s, %s, %s, %s)",
+                    (
+                        trace_plan, onion, json.dumps({"alpha": 0.5}),
+                        json.dumps({}), json.dumps({}), json.dumps([]),
+                        json.dumps([alloc]),
+                    ),
+                )
+                committed_trace = cur.fetchone()[0]
+                conn.commit()
+                tokens = (committed_trace or {}).get("trace_tokens") or []
+                check("a committed plan mints a trace token", bool(tokens),
+                      f"{len(tokens)} token(s)")
+
+                if tokens:
+                    as_user(cur, user_id)
+                    cur.execute("SELECT public.direct_order_trace(%s)", (tokens[0],))
+                    back = cur.fetchone()[0]
+                    conn.commit()
+                    ok = (
+                        isinstance(back, dict)
+                        and back.get("trace_token") == tokens[0]
+                        and isinstance(back.get("consumer"), dict)
+                        and back["consumer"].get("price_per_qtl") == 3890.0
+                        and isinstance(back.get("farmer"), dict)
+                        and back["farmer"].get("mandi_price_per_qtl") == 2226.39
+                    )
+                    check(
+                        "the token traces back with the rupee and the counterfactual",
+                        ok,
+                        "consumer={} farmer={}".format(
+                            back.get("consumer") if isinstance(back, dict) else None,
+                            back.get("farmer") if isinstance(back, dict) else None,
+                        ),
+                    )
+
+                    # A wrong-case token must still resolve: the function upper-cases.
+                    as_user(cur, user_id)
+                    cur.execute("SELECT public.direct_order_trace(%s)", (tokens[0].lower(),))
+                    lowered = cur.fetchone()[0]
+                    conn.commit()
+                    check("the token resolves case-insensitively",
+                          isinstance(lowered, dict)
+                          and lowered.get("trace_token") == tokens[0])
+        except Exception as exc:  # noqa: BLE001
+            conn.rollback()
+            check("traceability round trip runs", False, str(exc))
     except Exception as exc:  # noqa: BLE001
         conn.rollback()
         check("direct_order_trace runs", False, str(exc))
