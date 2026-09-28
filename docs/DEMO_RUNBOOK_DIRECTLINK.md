@@ -189,7 +189,7 @@ counterfactual is stored alongside the actual — ₹2,110 → ₹3,558 at the m
 | App won't start, `data_gov_in_api_key Field required` | no default for that field | set it to any placeholder string |
 | App won't start, `Invalid API key` | anon key is not JWT-shaped | use the dummy JWT in §2 |
 | `503` on `/api/v1/direct/impact` | no real Supabase | expected; that endpoint needs the DB. Use `/rupee` and `/config` instead |
-| Retail line says `[snapshot]` | `DATA_GOV_IN_API_KEY` or `DCA_RETAIL_RESOURCE_ID` unset | expected offline; the committed snapshot is used and the numbers are identical |
+| Retail line says `[snapshot]` | `DATA_GOV_IN_API_KEY` or `DCA_RETAIL_RESOURCE_ID` unset | expected offline; the committed snapshot is used and the numbers are identical. Set `RETAIL_ANCHOR_SOURCE=snapshot` to skip the attempt and print `[committed snapshot]` instead |
 | `403` on every authed call | `SUPABASE_JWT_SECRET` mismatch | match the project secret |
 | Audit reports an anchor problem | a CSV changed | read the message; it names the bound that was breached |
 

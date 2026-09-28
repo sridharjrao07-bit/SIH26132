@@ -294,7 +294,14 @@ your run:**
 and its `ON CONFLICT` target matches `uq_retail_price_record` from 038 — which
 depends on 002 having seeded an `onion` commodity row (it has).
 
-### P1 — Live retail adapter — **BLOCKED on an external outage**
+### P1 — Live retail adapter — **BLOCKED on an external outage, demo unblocked**
+
+`RETAIL_ANCHOR_SOURCE=snapshot` reads the committed DCA CSV directly and skips
+the network entirely. The snapshot is verbatim Department of Consumer Affairs
+data, so the numbers are identical to the live feed; what the flag removes is a
+round trip that can only fail and a provenance line that reads like a fault. Use
+it for the demo. It raises rather than inventing an anchor if the CSV is empty,
+and two tests cover both halves of that.
 
 The code, the fail-fast bounds and the snapshot fallback are all verified, and
 four tests now cover the live branch that previously had none (the one existing
