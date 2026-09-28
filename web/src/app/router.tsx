@@ -1,5 +1,6 @@
 import { createRootRoute, createRoute, createRouter, lazyRouteComponent } from '@tanstack/react-router';
 import { AppShell } from './AppShell.tsx';
+import { NotFoundPage } from '../features/direct/NotFoundPage.tsx';
 import { TodayPage } from '../features/today/TodayPage.tsx';
 import { PairDetailPage } from '../features/price-detail/PairDetailPage.tsx';
 import { RANGES, type Range } from '../features/price-detail/PairView.tsx';
@@ -10,7 +11,7 @@ const rangeSearch = (s: Record<string, unknown>): { range?: Range } => {
   return (RANGES as readonly number[]).includes(r) && r !== 30 ? { range: r as Range } : {};
 };
 
-const root = createRootRoute({ component: AppShell });
+const root = createRootRoute({ component: AppShell, notFoundComponent: NotFoundPage });
 const today = createRoute({ getParentRoute: () => root, path: '/', component: TodayPage, validateSearch: rangeSearch });
 const pair = createRoute({ getParentRoute: () => root, path: '/c/$crop/m/$market', component: PairDetailPage, validateSearch: rangeSearch });
 const board = createRoute({

@@ -648,6 +648,10 @@ msgstr "Make offer"
 msgid "Mandi"
 msgstr "Mandi"
 
+#: src/features/direct/NotFoundPage.tsx:30
+msgid "Mandi board"
+msgstr "Mandi board"
+
 #: src/features/trust/AsOfStamp.tsx:18
 msgid "Mandi price of {day}"
 msgstr "Mandi price of {day}"
@@ -1170,6 +1174,10 @@ msgstr "Sell"
 msgid "Sell / Hold / Wait is decided by the server from mandi arrivals, nearby storage and the forecast. The app shows the advice exactly as the server gives it."
 msgstr "Sell / Hold / Wait is decided by the server from mandi arrivals, nearby storage and the forecast. The app shows the advice exactly as the server gives it."
 
+#: src/features/direct/NotFoundPage.tsx:38
+msgid "Sell your produce"
+msgstr "Sell your produce"
+
 #: src/features/sell/LotDetailPage.tsx:31
 #: src/features/sell/LotsPage.tsx:22
 #: src/features/sell/NewLotPage.tsx:20
@@ -1288,6 +1296,10 @@ msgstr "The forecast is out of date, so it is hidden. Waiting for new mandi data
 msgid "The gap between what a farmer is paid and what a consumer pays is not all profit. Some of it is real work — packing, freight, storage. The engine separates the two, stage by stage."
 msgstr "The gap between what a farmer is paid and what a consumer pays is not all profit. Some of it is real work — packing, freight, storage. The engine separates the two, stage by stage."
 
+#: src/features/direct/NotFoundPage.tsx:19
+msgid "The link may be old, or the address may have a typo. These are the pages that work:"
+msgstr "The link may be old, or the address may have a typo. These are the pages that work:"
+
 #: src/features/sell/LotDetailPage.tsx:346
 msgid "The offer stays open for 48 hours."
 msgstr "The offer stays open for 48 hours."
@@ -1323,6 +1335,10 @@ msgstr "This lot was not found."
 msgid "This mandi has not reported a price for this crop in the last 15 days. Try a nearby mandi below."
 msgstr "This mandi has not reported a price for this crop in the last 15 days. Try a nearby mandi below."
 
+#: src/features/direct/NotFoundPage.tsx:16
+msgid "This page does not exist"
+msgstr "This page does not exist"
+
 #: src/charts/PriceForecastChart.tsx:110
 msgid "today"
 msgstr "today"
@@ -1330,6 +1346,10 @@ msgstr "today"
 #: src/app/AppShell.tsx:53
 msgid "Today"
 msgstr "Today"
+
+#: src/features/direct/NotFoundPage.tsx:26
+msgid "Today's prices"
+msgstr "Today's prices"
 
 #. placeholder {0}: formatINR(f.predicted_price)
 #: src/features/board/BoardPage.tsx:104
@@ -1424,6 +1444,7 @@ msgid "Where the consumer's ₹{0} goes"
 msgstr "Where the consumer's ₹{0} goes"
 
 #: src/features/direct/DirectPage.tsx:62
+#: src/features/direct/NotFoundPage.tsx:34
 #: src/features/price-detail/PairView.tsx:204
 msgid "Where your rupee goes"
 msgstr "Where your rupee goes"
