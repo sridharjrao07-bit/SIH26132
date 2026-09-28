@@ -107,6 +107,21 @@ WHAT NOT TO DO:
   - Do not report a step as verified because a commit message says so. Verify
     against the repo.
 
+BEFORE YOU REPORT ANYTHING — prove your changes are actually in the repository.
+
+An agent on this project has already reported five fixes with a confident
+itemised breakdown, including "the script now exits with code 0". None of the
+five were in the repo; the only real commits were two unrelated Windows fixes.
+Four of the five diagnoses were correct, but nothing had been committed, so the
+work did not exist. Do not repeat that.
+
+    git status --short                      # anything unstaged is not saved
+    git log --oneline -5                    # are your commits actually there?
+    git show HEAD:scripts/exercise_rpc.py | grep -n "is_local"   # spot-check one fix
+
+If a change you made is not visible in `git show HEAD:<file>`, it is not done.
+Commit it, or say plainly that you could not.
+
 BEFORE FINISHING:
 
     .venv/bin/python -m ruff check .
@@ -119,6 +134,11 @@ BEFORE FINISHING:
 COMMIT MESSAGE RULES: say what was wrong, what you changed, and what is still
 unverified. If you could not fix something, say so plainly rather than implying
 it works. A commit message is not evidence.
+
+IF YOU CANNOT FIX SOMETHING, say so and leave the check failing. Do not
+downgrade a check to a warning, do not widen a timeout to make a flaky call
+pass, and do not assert something weaker. A green run that proves less than it
+did yesterday is worse than a red run.
 
 REPORT BACK, in exactly this shape:
 
