@@ -648,6 +648,10 @@ msgstr "ऑफर द्या"
 msgid "Mandi"
 msgstr "बाजार"
 
+#: src/features/direct/NotFoundPage.tsx:30
+msgid "Mandi board"
+msgstr "बाजार पट्टी"
+
 #: src/features/trust/AsOfStamp.tsx:18
 msgid "Mandi price of {day}"
 msgstr "{day} चा बाजारभाव"
@@ -1170,6 +1174,10 @@ msgstr "विक्री"
 msgid "Sell / Hold / Wait is decided by the server from mandi arrivals, nearby storage and the forecast. The app shows the advice exactly as the server gives it."
 msgstr "विका / थांबा हा सल्ला सर्व्हर बाजारातील आवक, जवळची साठवण आणि अंदाज यांवरून ठरवतो. ॲप तो सल्ला जसाच्या तसा दाखवते."
 
+#: src/features/direct/NotFoundPage.tsx:38
+msgid "Sell your produce"
+msgstr "तुमचा माल विका"
+
 #: src/features/sell/LotDetailPage.tsx:31
 #: src/features/sell/LotsPage.tsx:22
 #: src/features/sell/NewLotPage.tsx:20
@@ -1288,6 +1296,10 @@ msgstr "अंदाज जुना आहे, म्हणून लपवल�
 msgid "The gap between what a farmer is paid and what a consumer pays is not all profit. Some of it is real work — packing, freight, storage. The engine separates the two, stage by stage."
 msgstr "शेतकर्याला मिळणार्या भाव आणि ग्राहक देणार्या भावातील अंतर संपूर्ण नफा नाही. त्यातील काही खरे काम आहे — पॅकिंग, वाहतूक, साठवणूक. हे संगणक दोहोंच्यात टप्प्याटप्प्याने वेगळे करते."
 
+#: src/features/direct/NotFoundPage.tsx:19
+msgid "The link may be old, or the address may have a typo. These are the pages that work:"
+msgstr "ही लिंक जुनी असू शकते, किंवा पत्त्यात चूक असू शकते. काम करणारी पुत्रे ही आहेत:"
+
 #: src/features/sell/LotDetailPage.tsx:346
 msgid "The offer stays open for 48 hours."
 msgstr "ऑफर 48 तास खुली राहते."
@@ -1323,6 +1335,10 @@ msgstr "हा माल सापडला नाही."
 msgid "This mandi has not reported a price for this crop in the last 15 days. Try a nearby mandi below."
 msgstr "या बाजाराने मागील 15 दिवसांत या पिकाचा भाव नोंदवलेला नाही. खालील जवळचा बाजार पहा."
 
+#: src/features/direct/NotFoundPage.tsx:16
+msgid "This page does not exist"
+msgstr "हे पुण नाही"
+
 #: src/charts/PriceForecastChart.tsx:110
 msgid "today"
 msgstr "आज"
@@ -1330,6 +1346,10 @@ msgstr "आज"
 #: src/app/AppShell.tsx:53
 msgid "Today"
 msgstr "आज"
+
+#: src/features/direct/NotFoundPage.tsx:26
+msgid "Today's prices"
+msgstr "आजच्या भावा"
 
 #. placeholder {0}: formatINR(f.predicted_price)
 #: src/features/board/BoardPage.tsx:104
@@ -1424,6 +1444,7 @@ msgid "Where the consumer's ₹{0} goes"
 msgstr "ग्राहकाचा ₹{0} कुठे जातो"
 
 #: src/features/direct/DirectPage.tsx:62
+#: src/features/direct/NotFoundPage.tsx:34
 #: src/features/price-detail/PairView.tsx:204
 msgid "Where your rupee goes"
 msgstr "तुमचा रुपा कुठे जातो"

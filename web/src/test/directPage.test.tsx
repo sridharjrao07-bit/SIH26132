@@ -3,7 +3,9 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { I18nProvider } from '@lingui/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { i18n } from '@lingui/core';
+import { RouterProvider, createMemoryHistory, createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
 import { DirectPage } from '../features/direct/DirectPage.tsx';
+import { NotFoundPage } from '../features/direct/NotFoundPage.tsx';
 
 /**
  * The page is the deliverable, so it gets rendered: a JSX typo or a bad field
@@ -232,6 +234,38 @@ describe('DirectPage: opens on the audited lane and shows the real numbers', () 
     // numbers here come from the same fixture, but the fact that the page
     // re-renders without error proves the key change is wired through.
     await waitFor(() => expect(share().length).toBeGreaterThan(0), { timeout: 3000 });
+    view.unmount();
+  });
+});
+
+describe('NotFoundPage: a mistyped path is not a broken page', () => {
+  test('names the routes that do exist, instead of TanStack Router\'s bare fallback', async () => {
+    // <Link> needs a router in context, and the 404 page only renders when the
+    // router actually fails to match — so mirror the real app: a root route with
+    // a notFoundComponent, navigated to a path no child claims.
+    const root = createRootRoute({ notFoundComponent: NotFoundPage });
+    const router = createRouter({
+      routeTree: root.addChildren([createRoute({ getParentRoute: () => root, path: '/' })]),
+      history: createMemoryHistory({ initialEntries: ['/no-such-page'] }),
+    });
+    const view = render(
+      <I18nProvider i18n={i18n}>
+        <RouterProvider router={router} />
+      </I18nProvider>,
+    );
+    // RouterProvider mounts asynchronously, so wait for the first link before
+    // asserting anything.
+    await waitFor(() => expect(view.container.querySelector('a')).toBeTruthy(), { timeout: 3000 });
+    // Marathi, because setup.ts activates 'mr' — a missing translation would
+    // silently fall back to English here.
+    expect(screen.getByText('\u0939\u0947 \u092a\u0941\u0923 \u0928\u093e\u0939\u0940')).toBeTruthy();
+    // Four live destinations, and none of the retired ones.
+    for (const to of ['/', '/bhav', '/direct', '/sell']) {
+      expect(view.container.querySelector(`a[href="${to}"]`)).toBeTruthy();
+    }
+    for (const dead of ['/forecasts/about', '/alerts', '/buy']) {
+      expect(view.container.querySelector(`a[href="${dead}"]`)).toBeNull();
+    }
     view.unmount();
   });
 });
