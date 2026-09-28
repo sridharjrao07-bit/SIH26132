@@ -55,8 +55,8 @@ def check(name: str, ok: bool, detail: str = "") -> bool:
 
 
 def run(cmd: list[str], env_extra: dict | None = None) -> tuple[int, str]:
-    env = {**os.environ, **(env_extra or {})}
-    proc = subprocess.run(cmd, capture_output=True, text=True, cwd=str(ROOT), env=env)
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8", **(env_extra or {})}
+    proc = subprocess.run(cmd, capture_output=True, text=True, cwd=str(ROOT), env=env, encoding="utf-8")
     return proc.returncode, proc.stdout + proc.stderr
 
 

@@ -36,6 +36,7 @@ ENV = {
     "RUN_SCHEDULER": "0",
     "RATE_LIMIT_ENABLED": "0",
     "PYTHONPATH": ".",
+    "PYTHONIOENCODING": "utf-8",
 }
 
 
@@ -44,7 +45,7 @@ def _run(cmd: list[str]) -> tuple[int, str]:
 
     env = {**os.environ, **ENV}
     proc = subprocess.run(
-        cmd, capture_output=True, text=True, cwd=str(ROOT), env=env
+        cmd, capture_output=True, text=True, cwd=str(ROOT), env=env, encoding="utf-8"
     )
     return proc.returncode, proc.stdout + proc.stderr
 
