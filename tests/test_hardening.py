@@ -56,16 +56,16 @@ def test_api_error_unknown_is_503():
 def test_postgrest_error_on_markets_is_not_500(override_supabase):
     def boom(*a, **k):
         raise APIError({"code": "22P02", "message": "invalid input syntax for type uuid"})
-    
+
     from app.deps import get_supabase
     from app.main import app
-    
+
     class BoomSupabase:
         def table(self, *a, **k):
             return boom()
-            
+
     app.dependency_overrides[get_supabase] = lambda: BoomSupabase()
-    
+
     try:
         resp = client.get("/api/v1/markets/")
         assert resp.status_code == 422

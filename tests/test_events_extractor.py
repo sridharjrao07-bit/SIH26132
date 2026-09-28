@@ -59,12 +59,12 @@ import respx
 @respx.mock
 async def test_llm_extractor_fake_transport():
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(
-        200, 
+        200,
         json={"choices": [{"message": {"content": '[{"event_type": "weather", "direction": "down", "magnitude": "major", "confidence": 0.9, "reasoning": "test"}]'}}]}
     ))
 
     extractor = LLMEventExtractor("fake_key")
-    
+
     headline = RawHeadline(
         source_url="http://test4",
         headline="Heavy rain",
@@ -79,7 +79,7 @@ async def test_llm_extractor_fake_transport():
 @respx.mock
 async def test_llm_extractor_retry_on_bad_json():
     attempts = []
-    
+
     def side_effect(request):
         attempts.append(1)
         if len(attempts) == 1:
@@ -104,7 +104,7 @@ async def test_llm_extractor_retry_on_bad_json():
 @respx.mock
 async def test_llm_extractor_two_bad_json_fails_gracefully():
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(
-        200, 
+        200,
         json={"choices": [{"message": {"content": 'bad json forever'}}]}
     ))
 

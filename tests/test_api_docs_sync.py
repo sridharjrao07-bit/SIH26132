@@ -20,36 +20,35 @@ def test_api_contract_paths():
     project_root = Path(__file__).resolve().parent.parent
     contract_path = project_root / "frontend_handoff" / "API_CONTRACT.md"
     content = contract_path.read_text(encoding="utf-8")
-    
+
     # Extract paths mentioned in table formats like `/api/v1/something`
     # Also handle `{id}` parameters.
     matches = re.findall(r'`(/api/v1/[a-zA-Z0-9_/{}-]+)[`|]', content)
-    
+
     openapi = app.openapi()
     actual_paths = openapi.get("paths", {}).keys()
-    
+
     missing = []
     for m in matches:
         # Some exceptions in the contract text
         if "/*" in m:
             continue
-        
+
         # Normalize `/{id}` from the contract to match any OpenAPI path parameter.
         pattern = m.replace("{id}", "{[^}]+}").replace("{payment_id}", "{[^}]+}")
-        
+
         found = False
         for actual in actual_paths:
             if re.match(f"^{pattern}$", actual):
                 found = True
                 break
-        
+
         if not found:
             missing.append(m)
-            
-            
+
+
     if missing:
         raise AssertionError(f"Endpoints documented in API_CONTRACT.md but missing in app.openapi(): {set(missing)}")
-    
+
     # bump this if you intentionally remove documented endpoints
     assert len(set(matches)) >= 21, f"Expected at least 21 unique matches, found {len(set(matches))}"
-

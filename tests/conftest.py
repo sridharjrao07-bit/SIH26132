@@ -70,7 +70,7 @@ class _FakeQuery:
     def lt(self, col, val): self._filters[f"{col}__lt"] = val; return self
     def or_(self, filter_str): self._or_filter = filter_str; return self
     def is_(self, col, val): self._filters[f"{col}__is"] = val; return self
-    
+
     @property
     def not_(self):
         class _NotHelper:
@@ -653,7 +653,7 @@ class FakeSupabase:
         p_commodity_id = params.get("p_commodity_id")
         p_limit = params.get("p_limit", 100)
         p_offset = params.get("p_offset", 0)
-        
+
         filtered = [
             {k: row[k] for k in (
                 "id", "commodity_id", "market_id", "quantity_qtl", "grade",
@@ -663,7 +663,7 @@ class FakeSupabase:
             if row.get("status") in ("open", "offered")
             and (p_commodity_id is None or str(row.get("commodity_id", "")) == str(p_commodity_id))
         ]
-        
+
         return filtered[p_offset : p_offset + p_limit]
 
     def _rpc_transition_payment(self, params: dict):
@@ -919,13 +919,13 @@ class FakeSupabase:
         payment_id = params.get("p_payment_id")
         test_uid = params.get("_test_user_id")
         payment = next((p for p in self._data.get("payments", []) if p.get("id") == payment_id), None)
-        
+
         if not payment:
             raise HTTPException(404, "payment not found")
         # RLS emulation for SECURITY DEFINER: only the owner can see the payment in the first place.
         if test_uid and payment.get("user_id") != test_uid and test_uid != "22222222-2222-2222-2222-222222222222":
             raise HTTPException(404, "payment not found")
-            
+
         if payment.get("status") in ("failed", "disputed"):
             raise HTTPException(409, f"cannot mark a {payment['status']} payment as paid")
         if payment.get("status") == "paid":
@@ -1138,12 +1138,12 @@ class FakeSupabase:
         import uuid as _uuid
 
         from fastapi import HTTPException
-        
+
         uid = params.get("_test_user_id", "test-user")
         existing = [b for b in self._data.get("buyers", []) if b.get("owner_user_id") == uid]
         if existing:
             raise HTTPException(409, "User already has a registered buyer profile")
-            
+
         row = {
             "id": str(_uuid.uuid4()),
             "name": params.get("p_name"),

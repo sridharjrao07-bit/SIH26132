@@ -25,15 +25,15 @@ def get_pair_uuids(supabase, m_name: str, c_name: str) -> Optional[tuple[str, st
 
 def main():
     supabase = get_supabase_service_role()
-    
+
     # Resolve actual UUIDs from DB
     target = get_pair_uuids(supabase, "Lasalgaon APCM", "Onion")
     if not target:
         sys.stderr.write("Failed to resolve UUIDs for Lasalgaon Onion\n")
         sys.exit(1)
-        
+
     pairs = [target]
-    
+
     # Run backtest with actual GBM
     report = run_backtest(
         supabase=supabase,
@@ -42,14 +42,14 @@ def main():
         history_days=120,
         evaluation_scope="smoke"
     )
-    
+
     # Print pure JSON report to stdout
     print(json.dumps(report.to_json(), indent=2, default=str))
-    
+
     from forecasting.gates import evaluate_gates
     gate_res = evaluate_gates(report, candidate_name="gbm", incumbent_name="naive")
     failed_gates = [g for g in gate_res.gates if g.outcome.name == "FAIL"]
-    
+
     if failed_gates:
         sys.stderr.write(f"Gates failed: {', '.join(g.name for g in failed_gates)}\n")
         sys.exit(1)

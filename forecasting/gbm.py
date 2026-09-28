@@ -69,7 +69,7 @@ class GlobalGBM:
 
         results = []
         last_feat = self.features[-1]
-        
+
         m_code = self.market_map.get(self.market_id, len(self.market_map))
         c_code = self.commodity_map.get(self.commodity_id, len(self.commodity_map))
 
@@ -91,15 +91,15 @@ class GlobalGBM:
             momentum = float('nan')
             if not math.isnan(lag_1) and not math.isnan(lag_15) and lag_15 != 0:
                 momentum = (lag_1 - lag_15) / lag_15
-                
+
             rain = last_feat.rain_7d_cum_mm if last_feat.rain_7d_cum_mm is not None else float('nan')
             dist = last_feat.district_mean_price if last_feat.district_mean_price is not None else float('nan')
-            
+
             # Recompute event pressure for target_date using events strictly available at forecast_origin
             evt, _ = _compute_event_pressure(
-                forecast_origin=forecast_origin, 
-                events=self.events, 
-                target_commodity_id=self.commodity_id, 
+                forecast_origin=forecast_origin,
+                events=self.events,
+                target_commodity_id=self.commodity_id,
                 strict_pit=self.strict_pit,
                 target_date=target_date
             )
@@ -122,7 +122,7 @@ class GlobalGBM:
 
             p = self.model.predict(feat_vec)[0]
             sim_prices_by_date[target_date] = p
-            
+
             # Use raw point predictions and let the shared post-processing engine handle interval math
             results.append(p)
 
@@ -138,7 +138,7 @@ def train_global_gbm(
 ) -> GlobalGBM:
     """
     Unified global training function for GBM.
-    Builds the feature matrix across all eligible pairs, performs a chronological 
+    Builds the feature matrix across all eligible pairs, performs a chronological
     calibration split to estimate sigma, and fits the global predictor.
     """
     try:
@@ -176,7 +176,7 @@ def train_global_gbm(
                 all_markets_inner.add(m)
                 all_commodities_inner.add(c)
                 break
-        
+
     market_map_inner = {m: i for i, m in enumerate(sorted(list(all_markets_inner)))}
     commodity_map_inner = {c: i for i, c in enumerate(sorted(list(all_commodities_inner)))}
 
@@ -187,10 +187,10 @@ def train_global_gbm(
         # Minimum eligibility for pair inclusion
         if len(rows) < 40:
             continue
-            
+
         daily_rows = build_daily_rows(rows)
         series = [(d, float(row["modal_price"])) for d, row in daily_rows]
-        
+
         if len(series) < 40:
             continue
 
@@ -300,10 +300,10 @@ def train_global_gbm(
         if len(rows) >= 40:
             all_markets_final.add(m)
             all_commodities_final.add(c)
-            
+
     market_map_final = {m: i for i, m in enumerate(sorted(list(all_markets_final)))}
     commodity_map_final = {c: i for i, c in enumerate(sorted(list(all_commodities_final)))}
-    
+
     # Rebuild the full training matrix with the final categorical maps.
     # X and y are appended in the SAME loop iteration so features and targets
     # can never desynchronize (previously y_all from the first pass was reused,
@@ -313,10 +313,10 @@ def train_global_gbm(
     for (m, c), rows in pairs_history.items():
         if len(rows) < 40:
             continue
-            
+
         daily_rows = build_daily_rows(rows)
         series = [(d, float(row["modal_price"])) for d, row in daily_rows]
-        
+
         if len(series) < 40:
             continue
 
@@ -355,7 +355,7 @@ def train_global_gbm(
             y_all_final.append(price)
 
     # NOTE: The reported sigma above estimates the error for the pre-refit model.
-    # It does not directly represent the final refitted model's error. 
+    # It does not directly represent the final refitted model's error.
     # Interval coverage must be explicitly measured out-of-sample in the backtest.
     # Refit on ALL data at the early-stopped iteration count found above.
     model = lgb.LGBMRegressor(

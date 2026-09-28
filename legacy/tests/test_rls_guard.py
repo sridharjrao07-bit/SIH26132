@@ -5,7 +5,7 @@ from tests.conftest import ADMIN_USER_ID, FARMER_USER_ID, FPO_USER_ID, mint_jwt
 
 def test_rls_canary_cross_tenant_isolation(override_supabase, fake_supabase):
     client = TestClient(app)
-    
+
     # Seed a lot belonging to FPO
     fake_supabase.seed("lots", [{
         "id": "lot-cross-tenant-1",
@@ -18,8 +18,8 @@ def test_rls_canary_cross_tenant_isolation(override_supabase, fake_supabase):
 
     # Authenticate as FARMER
     token = mint_jwt(FARMER_USER_ID)
-    
-    # Try to access the lots. 
+
+    # Try to access the lots.
     # Our /api/v1/lots/ GET uses the user client, but there is no such endpoint that returns all lots for user_id.
     # Actually, let's use the dashboard offers or grievances.
     fake_supabase.seed("grievances", [{
@@ -109,10 +109,10 @@ def test_rls_fake_direct_query(override_supabase, fake_supabase):
         {"id": "offer-1", "user_id": FARMER_USER_ID, "price": 100},
         {"id": "offer-2", "user_id": FPO_USER_ID, "price": 200},
     ])
-    
+
     # Raw query without any .eq filters via the RLS fake
     client = RlsFakeSupabase(fake_supabase, uid=FARMER_USER_ID)
     res = client.table("offers").select("*").execute()
-    
+
     assert len(res.data) == 1
     assert res.data[0]["id"] == "offer-1"

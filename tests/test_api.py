@@ -50,7 +50,7 @@ def test_get_markets_with_filter(override_supabase, fake_supabase):
     response = client.get("/api/v1/markets/?district=Nashik")
     assert response.status_code == 200
     assert len(response.json()) == 2
-    
+
 def test_get_markets_with_bad_filter(override_supabase, fake_supabase):
     response = client.get("/api/v1/markets/?district=Nowhere")
     assert response.status_code == 200
@@ -136,4 +136,3 @@ def test_nearby_markets_invalid_lat_returns_422(override_supabase, fake_supabase
 # ─── Auth gates ──────────────────────────────────────────────────────────────
 
 # ─── P1-1 regression: _call_rpc must RETURN, not RAISE, json_for_api_error ────
-

@@ -37,7 +37,7 @@ def test_revoked_table_conformance():
     db_url = os.environ.get("SUPABASE_DB_URL")
     if not db_url or db_url == "postgresql://p@db.placeholder.supabase.co:5432/postgres":
         pytest.skip("No real DB URL provided")
-        
+
     tables = ["buyers", "lots", "offers", "payments", "storage_bookings", "logistics_bookings"]
     import psycopg2
     conn = psycopg2.connect(db_url)
@@ -48,19 +48,19 @@ def test_revoked_table_conformance():
                 cur.execute(f"SELECT to_regclass('public.{table}')")
                 assert cur.fetchone()[0] is not None, f"Table {table} does not exist in DB"
                 cur.execute("SET ROLE authenticated")
-                
+
                 with pytest.raises(psycopg2.errors.InsufficientPrivilege) as exc:
                     cur.execute(f"INSERT INTO public.{table} DEFAULT VALUES")
                 assert exc.value.pgcode == "42501"
-                
+
                 with pytest.raises(psycopg2.errors.InsufficientPrivilege) as exc:
                     cur.execute(f"UPDATE public.{table} SET id = id")
                 assert exc.value.pgcode == "42501"
-                
+
                 with pytest.raises(psycopg2.errors.InsufficientPrivilege) as exc:
                     cur.execute(f"DELETE FROM public.{table}")
                 assert exc.value.pgcode == "42501"
-                
+
                 cur.execute("RESET ROLE")
     finally:
         conn.close()
@@ -103,22 +103,22 @@ def test_dead_control_check():
     db_url = os.environ.get("SUPABASE_DB_URL")
     if not db_url or db_url == "postgresql://p@db.placeholder.supabase.co:5432/postgres":
         pytest.skip("No real DB URL provided")
-        
+
     import psycopg2
     conn = psycopg2.connect(db_url)
     try:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT p.proname 
-                FROM pg_proc p 
-                JOIN pg_namespace n ON p.pronamespace = n.oid 
-                WHERE n.nspname = 'public' 
+                SELECT p.proname
+                FROM pg_proc p
+                JOIN pg_namespace n ON p.pronamespace = n.oid
+                WHERE n.nspname = 'public'
                   AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
             """)
             funcs = [row[0] for row in cur.fetchall()]
     finally:
         conn.close()
-        
+
     root = Path(__file__).parent.parent
     # Production code is more than app/ + ingestion/: notifications/,
     # forecasting/ and events/ also issue Supabase RPCs (e.g. the alerts job
@@ -130,11 +130,11 @@ def test_dead_control_check():
         + list(root.joinpath("forecasting").rglob("*.py"))
         + list(root.joinpath("events").rglob("*.py"))
     )
-    
+
     app_text = ""
     for f in app_files:
         app_text += f.read_text(encoding="utf-8")
-        
+
     violations = []
     for fn in funcs:
         # Ignore functions that are purely helpers for db triggers
@@ -145,7 +145,7 @@ def test_dead_control_check():
             continue
         if f'"{fn}"' not in app_text and f"'{fn}'" not in app_text:
             violations.append(fn)
-            
+
     check_ratchet("dead_control", violations)
 
 
@@ -171,7 +171,7 @@ def test_vacuous_test_check():
                         base_path = path.split("?")[0]
                         if base_path not in valid_paths and not any(base_path.startswith(v.split("{")[0]) and "{" in v for v in valid_paths if v.split("{")[0]):
                             violations.append(f"{rel_path}:{base_path}")
-    
+
     check_ratchet("vacuous_test", violations)
 
 

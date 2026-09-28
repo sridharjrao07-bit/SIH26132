@@ -282,5 +282,3 @@ def test_admin_set_role_not_granted_to_authenticated():
         src = _read(path).lower()
         assert needle not in src
         assert "to service_role" in src
-
-

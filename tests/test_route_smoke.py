@@ -18,7 +18,7 @@ never executed.
 This module closes that gap: it enumerates the real route table and issues a
 request to each one, asserting the app never returns an unhandled 5xx.
 
-Division of labour: this module catches crash-class bugs (unhandled exceptions). 
+Division of labour: this module catches crash-class bugs (unhandled exceptions).
 Field-drop-class bugs are caught by test_rpc_parity.py, because no status code can reveal them.
 
 DESIGN NOTES
@@ -153,7 +153,7 @@ def test_route_never_returns_unhandled_5xx(method: str, path: str, override_supa
         openapi_schema = app.openapi()
         components = openapi_schema.get("components", {}).get("schemas", {})
         paths = openapi_schema.get("paths", {})
-        
+
         # A safer way to find the actual operation in OpenAPI schema, avoiding FAKE_UUID string replacements if possible
         # We can just look up the original raw path. But the test parameter is the concrete path.
         # Let's iterate paths to find one that matches.
@@ -197,4 +197,3 @@ def test_route_never_returns_unhandled_5xx(method: str, path: str, override_supa
 # the thread offload and return its result? A missing `import asyncio` raises
 # NameError while *evaluating* `asyncio.to_thread(...)`, i.e. before the spy is
 # ever called, which surfaces as a 500 and fails this test.
-

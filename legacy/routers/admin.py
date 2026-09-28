@@ -175,7 +175,7 @@ def admin_verify_buyer(
     }
     if body.review_notes:
         payload["review_notes"] = body.review_notes
-        
+
     res = supabase.table("buyers").update(payload).eq("id", buyer_id).execute()
     if not res.data:
         raise HTTPException(404, "buyer not found")

@@ -99,7 +99,7 @@ def expire_stale_offers(supabase, ttl_hours: int = OFFER_TTL_HOURS, now: Optiona
             expired_ids.append(offer["id"])
             if offer.get("lot_id"):
                 lot_ids_to_check.add(offer.get("lot_id"))
-                
+
     lots_reopened = 0
     if expired_ids:
         for chunk in _chunks(expired_ids):
@@ -107,7 +107,7 @@ def expire_stale_offers(supabase, ttl_hours: int = OFFER_TTL_HOURS, now: Optiona
         for lot_id in lot_ids_to_check:
             if _reopen_lot_if_idle(supabase, lot_id):
                 lots_reopened += 1
-                
+
     return {"expired": len(expired_ids), "lots_reopened": lots_reopened, "offer_ids": expired_ids}
 
 

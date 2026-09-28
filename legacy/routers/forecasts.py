@@ -54,11 +54,11 @@ def get_forecasts(
         .order("forecast_date", desc=False)
         .execute()
     )
-    
+
     rows = list(res.data or [])
     # Re-sort to put newest generated_at first to handle revision history
     rows.sort(key=lambda r: str(r.get("generated_at") or ""), reverse=True)
-    
+
     seen_dates = set()
     deduped = []
     for r in rows:
@@ -66,7 +66,7 @@ def get_forecasts(
         if fdate not in seen_dates:
             seen_dates.add(fdate)
             deduped.append(r)
-            
+
     # Sort back by forecast_date ascending
     deduped.sort(key=lambda r: str(r.get("forecast_date") or ""))
 

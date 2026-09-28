@@ -71,7 +71,7 @@ def lot_advice(
     today = get_ist_today()
     lot, profile = _load_lot_and_profile(as_user, lot_id, user_id)
     lang = lang or profile.get("preferred_language") or "en"
-    
+
     evt_resp = (
         admin.table("events")
         .select("id")
@@ -81,7 +81,7 @@ def lot_advice(
         .limit(20)
         .execute()
     )
-    
+
     window = compute_sale_window(
         public,
         lot["commodity_id"],

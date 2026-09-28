@@ -219,7 +219,7 @@ def test_max_3_sms_per_user(fake_supabase):
         )
         for i in range(4)
     ]
-    
+
     fake_supabase.seed("user_profiles", [make_profile()])
     fake_supabase.seed("alerts", alerts)
     # Price crosses all 4 thresholds
@@ -285,21 +285,21 @@ def test_marathi_message_fits_in_70_chars(fake_supabase):
     """Marathi SMS template must stay within 70 Devanagari char limit"""
     from notifications.alert_checker import AlertChecker
     from notifications.sms_gateway import MockSMSGateway
-    
+
     sent_messages = []
     class CapturingGateway(MockSMSGateway):
         def send_sms(self, recipient, message, template_id=None, **kwargs):
             sent_messages.append(message)
             return ("mock", True)
-    
+
     fake_supabase.seed("user_profiles", [make_profile(lang="mr")])
     fake_supabase.seed("alerts", [make_alert()])
     fake_supabase.seed("prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300}))
-    
+
     checker = AlertChecker(fake_supabase)
     checker.gateway = CapturingGateway(log_file="/dev/null")
     checker.run()
-    
+
     for msg in sent_messages:
         assert len(msg) <= 70, f"Marathi SMS exceeds 70 chars: {len(msg)} chars"
 
@@ -308,10 +308,10 @@ def test_failed_resend_restores_previous_timestamp(fake_supabase):
     fake_supabase.seed("user_profiles", [make_profile()])
     fake_supabase.seed("alerts", [make_alert("a1", last_notified_at=old_ts, notified_count=2)])
     fake_supabase.seed("prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300}))
-    
+
     from notifications.alert_checker import AlertChecker
     checker = AlertChecker(fake_supabase)
-    
+
     class FailingGateway:
         def send_sms(self, phone, msg, template_id=None, **kwargs):
             raise Exception("Gateway down")
@@ -329,10 +329,10 @@ def test_failed_send_rolls_back_claim(fake_supabase):
     fake_supabase.seed("user_profiles", [make_profile()])
     fake_supabase.seed("alerts", [make_alert("a1", last_notified_at=None, notified_count=0)])
     fake_supabase.seed("prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300}))
-    
+
     from notifications.alert_checker import AlertChecker
     checker = AlertChecker(fake_supabase)
-    
+
     class FailingGateway:
         def send_sms(self, phone, msg, template_id=None, **kwargs):
             raise Exception("Gateway down")
@@ -350,28 +350,28 @@ def test_retry_after_failed_send(fake_supabase):
     fake_supabase.seed("user_profiles", [make_profile()])
     fake_supabase.seed("alerts", [make_alert("a1", last_notified_at=None, notified_count=0)])
     fake_supabase.seed("prices", make_prices(MARKET_ID_LASALGAON, COMMODITY_ID_ONION, {2: 2100, 1: 2300}))
-    
+
     from notifications.alert_checker import AlertChecker
     checker = AlertChecker(fake_supabase)
-    
+
     class FailingGateway:
         def send_sms(self, phone, msg, template_id=None, **kwargs):
             raise Exception("Gateway down")
 
     checker.gateway = FailingGateway()
     checker.run()
-    
+
     alert = fake_supabase._data["alerts"][0]
     assert alert["last_notified_at"] is None
-    
+
     # Second run with a working gateway
     import os
 
     from notifications.sms_gateway import MockSMSGateway
     checker.gateway = MockSMSGateway(log_file=os.devnull)
-    
+
     assert checker.run()["fired"] == 1
-    
+
     alert = fake_supabase._data["alerts"][0]
     assert alert["last_notified_at"] is not None
     assert alert["notified_count"] == 1

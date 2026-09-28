@@ -106,7 +106,7 @@ class DataGovInAdapter(IngestionSourceAdapter):
                 }
                 if date:
                     params["filters[arrival_date]"] = date.strftime("%d/%m/%Y")
-                
+
                 log.info("fetching_page_1", district_spelling=spelling)
                 try:
                     first_data = await self._get_json(client, params)
@@ -147,7 +147,7 @@ class DataGovInAdapter(IngestionSourceAdapter):
                 }
                 if date:
                     page_params["filters[arrival_date]"] = date.strftime("%d/%m/%Y")
-                
+
                 try:
                     page_data = await self._get_json(client, page_params)
                     page_records = page_data.get("records", [])
