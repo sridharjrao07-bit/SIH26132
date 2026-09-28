@@ -333,3 +333,55 @@ def test_loader_does_not_treat_the_placeholder_as_a_real_key(monkeypatch):
     assert not called, "the placeholder key must skip the live fetch entirely"
     assert origin == "snapshot"
     assert rows
+
+
+def test_snapshot_mode_skips_the_live_feed_entirely(monkeypatch):
+    """RETAIL_ANCHOR_SOURCE=snapshot must not touch the network at all.
+
+    The point is not speed, it is that a demo machine with no outbound access
+    still produces the same numbers. If the adapter is constructed at all, the
+    mode is not doing its job.
+    """
+    import ingestion.retail_loader as rl
+
+    constructed = []
+    import ingestion.dca_retail as dca
+
+    class _Spy:
+        def __init__(self, *a, **k):
+            constructed.append(k)
+
+        async def fetch_retail(self, **kwargs):
+            constructed.append(kwargs)
+            return []
+
+    monkeypatch.setenv("RETAIL_ANCHOR_SOURCE", "snapshot")
+    monkeypatch.setenv("DATA_GOV_IN_API_KEY", "test-key-not-a-placeholder")
+    monkeypatch.setattr(dca, "DcaRetailAdapter", _Spy, raising=False)
+
+    rows, origin = rl.load_retail_prices("Onion", "Maharashtra")
+    assert not constructed, (
+        "the live adapter was constructed despite RETAIL_ANCHOR_SOURCE=snapshot"
+    )
+    assert origin == "snapshot"
+    assert rows, "the committed snapshot must still carry the anchor"
+
+
+def test_snapshot_mode_still_refuses_to_guess(monkeypatch, tmp_path):
+    """Snapshot mode must raise rather than invent an anchor when the CSV is empty.
+
+    Skipping the network must not become a way to silently produce no data.
+    """
+    import ingestion.retail_loader as rl
+
+    empty = tmp_path / "gov_retail_prices.csv"
+    empty.write_text(
+        "commodity,state,market_area,price_date,retail_price_per_qtl,"
+        "wholesale_price_per_qtl,unit,source,source_ref,note\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("RETAIL_ANCHOR_SOURCE", "snapshot")
+    monkeypatch.setattr(rl, "SNAPSHOT", empty)
+
+    with pytest.raises(RuntimeError, match="Refusing to guess"):
+        rl.load_retail_prices("Onion", "Maharashtra")

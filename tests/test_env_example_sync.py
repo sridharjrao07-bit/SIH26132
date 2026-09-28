@@ -28,6 +28,9 @@ ENV_EXAMPLE = Path(__file__).resolve().parent.parent / ".env.example"
 # refuses to boot without it.
 NON_SETTINGS_KEYS = frozenset({
     "DCA_RETAIL_RESOURCE_ID",
+    # Source selector for the retail anchor: "live" (default) or "snapshot".
+    # Read with os.getenv, so it has no Settings field to be found by.
+    "RETAIL_ANCHOR_SOURCE",
     "DCA_RETAIL_RESOURCE_IDS",
     "DCA_RETAIL_CONNECT_TIMEOUT_SECONDS",
     "DCA_RETAIL_TIMEOUT_SECONDS",

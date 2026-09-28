@@ -12,6 +12,14 @@ existence — a gap in the data is reported as a gap.
 order is: live adapter → committed CSV snapshot → hard error. The engine never
 blocks on the network, and a demo in a room with no wifi still runs on real
 (government-published) numbers rather than a placeholder.
+
+**Snapshot-first mode.** Set ``RETAIL_ANCHOR_SOURCE=snapshot`` to skip the live
+attempt entirely and read the committed CSV directly. This is not a degradation:
+the snapshot is verbatim Department of Consumer Affairs data, so the numbers are
+identical either way. What it removes is a network round trip that costs ~1.6s
+and can only fail, plus a provenance line that reads like something went wrong
+when nothing did. Use it when the upstream API is down or rate-limiting, or on a
+demo machine with no outbound network.
 """
 
 from __future__ import annotations
@@ -89,6 +97,22 @@ def load_retail_prices(
     look authoritative and are not.
     """
     from ingestion.base import SourceFetchError
+
+    # Snapshot-first mode: skip the network entirely rather than spending ~1.6s
+    # on a call that can only fail. See the module docstring for why this is a
+    # choice about clarity, not a fallback in quality.
+    if os.getenv("RETAIL_ANCHOR_SOURCE", "live").strip().lower() == "snapshot":
+        rows = _read_snapshot(commodity, state)
+        if since is not None:
+            rows = [r for r in rows if r.price_date >= since]
+        if rows:
+            return rows, "snapshot"
+        raise RuntimeError(
+            f"No retail price anchor for {commodity}/{state} in the committed "
+            f"snapshot {SNAPSHOT.name}, and RETAIL_ANCHOR_SOURCE=snapshot forbids "
+            "the live feed. Refusing to guess: every consumer-rupee figure depends "
+            "on this number."
+        )
 
     api_key = os.getenv("DATA_GOV_IN_API_KEY", "").strip()
     if api_key and api_key != "placeholder":
