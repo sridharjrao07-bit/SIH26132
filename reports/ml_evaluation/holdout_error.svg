@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" viewBox="0 0 720 360">
+  <rect width="720" height="360" fill="#0b120d"/>
+  <text x="36" y="38" fill="#f3f5ef" font-family="Arial" font-size="20">Holdout error (₹/quintal)</text>
+  <line x1="80" y1="300" x2="680" y2="300" stroke="#87988a"/>
+  <line x1="80" y1="70" x2="80" y2="300" stroke="#87988a"/>
+  <rect x="150" y="113" width="100" height="187" fill="#f5aa16"/><rect x="310" y="122" width="100" height="178" fill="#58c68b"/><rect x="470" y="157" width="100" height="143" fill="#72a7ff"/>
+  <text x="164" y="324" fill="#f3f5ef" font-family="Arial" font-size="14">Naive</text><text x="317" y="324" fill="#f3f5ef" font-family="Arial" font-size="14">Mean</text><text x="473" y="324" fill="#f3f5ef" font-family="Arial" font-size="14">Trend</text>
+  <text x="180" y="104" fill="#f3f5ef" font-family="Arial" font-size="14">48.8</text><text x="340" y="113" fill="#f3f5ef" font-family="Arial" font-size="14">46.4</text><text x="500" y="148" fill="#f3f5ef" font-family="Arial" font-size="14">37.2</text>
+</svg>
