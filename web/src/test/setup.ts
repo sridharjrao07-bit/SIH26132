@@ -27,8 +27,10 @@ function wrapFetchWithSignalStrip(originalFetch: any) {
 }
 
 try {
+  // No @ts-expect-error here: on the TypeScript version this repo resolves, `undici`
+  // already has ambient types, so the directive is unused and tsc rejects it. If a
+  // future upgrade drops those types the error reappears and it needs restoring.
   const { fetch: undiciFetch, Headers: UHeaders, Request: URequest, Response: UResponse } =
-    // @ts-expect-error – undici is a Node.js built-in not in @types/node yet for all versions
     await import('undici');
   vi.stubGlobal('fetch', wrapFetchWithSignalStrip(undiciFetch));
   vi.stubGlobal('Headers', UHeaders);
