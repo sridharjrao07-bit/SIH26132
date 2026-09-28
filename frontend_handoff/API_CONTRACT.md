@@ -16,58 +16,62 @@ All requests and responses are `application/json`. Authenticated routes require
 ## DirectLink
 
 ### `GET` `/api/v1/direct/config`
-Returns calibration metadata: direct margin, spoilage by commodity, grade
-aliases, spoilage floors and ceilings, dispatch cost defaults, utility weight,
-and the planned-vs-committed delta ceiling.
+Returns the active assumptions: `category`, `traditional_chain`, `direct_chain`,
+`freight`, and derived pass-through/markup values.
 
 ### `POST` `/api/v1/direct/rupee`
 The consumer-rupee breakdown. Pure function — no database.
 
-Request: `farm_price`, `retail_price`, `commodity`, optional `distance_km`,
-`chain`, `region`.
+Request: `farm_price` (required), optional `retail_price`, `commodity_id`,
+`category`, `calibrate`, and a complete optional `stages` override.
 
-Response: total spread, absorption, stage-by-stage attribution (each with
-`margin_take` and `cost_take`), farmer share, `avoidable` (margin only) versus
-`unavoidable` (real work), `farmer_share_pct`, `farmer_share_verdict`,
-`pass_through`, `qty_multiplier`.
+Response: a leakage report containing the calibrated chain, stage attribution,
+farmer share, avoidable margin, real-work cost, and verdict fields. The exact
+response schema is the validated `RupeeResponse` returned by the backend.
 
 ### `POST` `/api/v1/direct/fair-price`
 Fair-price suggestion for one lane.
 
-Request: `farm_price`, `retail_price`, `distance_km`, `quantity_qtl`, `utility`,
-`perishability`, optional `region`, `handling_cost_per_qtl`, `farmer_share`,
-`displaced`, `stranded`.
+Request: `farm_price`, optional `retail_price`, `commodity_id`, `category`,
+`origin_lat`, `origin_lng`, `dest_lat`, `dest_lng`, `alpha`,
+`platform_fee_pct`, `load_qtl`, and `circuity`.
 
-Response: suggested farm and retail prices, transport and spoilage costs,
-farmer gain, consumer saving, total surplus, `max_allowed_delta`,
-`displaced_count`, `stranded_qtl`.
+Response: a two-sided quote containing distance, freight, direct/traditional
+comparisons, the farmer/consumer split, and the leakage report it displaces.
 
 ### `POST` `/api/v1/direct/plan`
 The core planner: allocate supply to demand, consolidate into shipments, split
 the surplus. Runs the full engine server-side and returns an optimality
 certificate.
 
-Request: `lots[]` (with `lat`, `lon`, `supply_qtl`, `price`), `demand[]` (with
-`lat`, `lon`, `demand_qtl`, `price`), `config`, `group_size`, `vehicles`.
+Request: `lots[]` and `demands[]`. Each lot uses `id`, `commodity_id`,
+`quantity_qtl`, `mandi_price_per_qtl` and optional coordinates/category/grade.
+Each demand uses `id`, `commodity_id`, `quantity_qtl`, optional
+`retail_price_per_qtl`, coordinates, `category`, and `kind`. Optional planner
+configuration is `alpha`, `platform_fee_pct`, `max_distance_km`,
+`min_allocation_qtl`, `cluster_size_km`, `circuity`, `calibrate`,
+`enforce_grade`, and nested `freight`.
 
-Response: `direct_plan`, `allocations`, `shipments`, `orders`, `summary`.
+Response: `plan_id`, `config`, `allocations`, `shipments`, `impact`,
+`calibrations`, and notes/unserved-demand fields as applicable.
 
 ### `POST` `/api/v1/direct/plans/commit`
-Persists a committed plan. **Re-runs the engine server-side** from the submitted
-inputs — the caller's `summary` is never trusted. Honours
-`if_absent: "delta_exceeded" | "always" | "never"`, storing
-`planned_total_qtl` / `committed_total_qtl`.
+Persists a committed plan. The request is `{ "plan": <PlanRequest>,
+"commodity_id": optional, "district": optional }`. The plan is recomputed
+server-side; there is no `if_absent` field.
 
 ### `GET` `/api/v1/direct/plans/{plan_id}`
 Fetch a stored plan by id.
 
 ### `POST` `/api/v1/direct/group-buy`
-For consumers. Request: `commodity`, `window`, `target_qtl`, `min_load_qtl`.
-Response includes a `group_url`.
+For consumers. Request: `orders[]`, `origin_lat`, `origin_lng`, optional
+`min_load_qtl`, `cluster_size_km`, `circuity`, and `freight`. Each order uses
+`order_id`, `qtl`, optional coordinates, and `label`. The response is the
+computed pool/freight result; it does not include a `group_url`.
 
 ### `GET` `/api/v1/direct/impact`
-For farmers. Returns `farmer_improvement_pct`, `best_mandi_price`,
-`demand_depth`, `route_count`, `trace_token`.
+Returns an aggregate of committed DirectLink allocations. It may return a
+dependency error when Supabase is unavailable; it is not a pure calculation.
 
 ### `GET` `/api/v1/direct/trace/{token}`
 Public, unauthenticated. Redacted trace record for a crate: producer district,
@@ -125,6 +129,5 @@ No names, phone numbers or coordinates are returned. Unknown tokens return 404.
 - **Money.** All prices are ₹ per quintal unless a field name says otherwise.
   Farmer gain and consumer saving are both measured against real fallbacks (the
   mandi price and the retail price), never against each other.
-- **Optimality.** `POST /api/v1/direct/plan` returns an `optimality_certificate`. A
-  plan is accepted only when it matches brute-force enumeration of the
-  transportation polytope.
+- **Optimality.** `POST /api/v1/direct/plan` returns the engine's allocation
+  impact and optimality flag; the backend recomputes the plan before commit.
