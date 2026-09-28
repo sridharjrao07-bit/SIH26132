@@ -4,7 +4,7 @@
 
 The repository does not contain a serialized production model artifact. Forecasting is runtime Python code with walk-forward gates. The committed snapshot is `data/gov_prices_60days.csv`, which contains 980 rows across 20 market/commodity series but covers only August 2026 and has irregular per-series observation counts (48–50). This is insufficient evidence for a production accuracy claim.
 
-On a final seven-observation holdout per series, the simple linear-trend baseline had the lowest aggregate MAE/RMSE, but every aggregate R² was negative. The correct SIH claim is therefore that the system has a tested forecasting framework, not that the forecast is already validated for deployment.
+On a final seven-observation holdout per series, the simple linear-trend baseline had the lowest mean-of-series MAE/RMSE, but every mean-of-series R² was negative. Metrics are averaged per series, not pooled across all observations. The correct SIH claim is therefore that the system has a tested forecasting framework, not that the forecast is already validated for deployment.
 
 ## Aggregate metrics
 
@@ -13,9 +13,8 @@ On a final seven-observation holdout per series, the simple linear-trend baselin
 | Naive last value | 42.22 | 48.82 | -2.15 |
 | Training mean | 38.63 | 46.36 | -1.28 |
 | Linear trend | 29.60 | 37.23 | -0.50 |
-| Naive blocked 3-fold mean | 40.11 | 46.84 | -1.97 |
 
-The detailed per-series calculations and source inventory are in `ml_evaluation_metrics.json`. `holdout_error.svg` is a compact visual summary for the judge folder. No classification metrics, confusion matrix, or ROC curve are applicable: the current task is continuous price forecasting.
+The detailed per-series calculations and source inventory are in `ml_evaluation_metrics.json`. The JSON records the aggregation method explicitly. `holdout_error.svg` is a compact visual summary for the judge folder. No classification metrics, confusion matrix, or ROC curve are applicable: the current task is continuous price forecasting.
 
 ## Data quality
 

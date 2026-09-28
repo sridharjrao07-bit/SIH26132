@@ -2,7 +2,7 @@
 
 ## How do you know the number is not invented?
 
-The visible lane is seeded from the audited Lasalgaon example and the result is produced by the pure DirectLink engine. The backend contract and frontend integration tests exercise real response schemas; the browser run showed 48.1155% farmer share, ₹2,032.2147 avoidable margin, and ₹368.5753 real work.
+The visible lane is seeded from the audited Lasalgaon example and the result is produced by the pure DirectLink engine. The backend contract and frontend integration tests exercise real response schemas; the browser run showed 48.1071% farmer share, ₹2,032.6047 avoidable margin, and ₹368.5753 real work. Rounded for presentation, these are 48.1%, ₹2,033, and ₹369.
 
 ## Are all intermediaries bad?
 
