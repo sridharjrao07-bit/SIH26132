@@ -51,8 +51,9 @@ import sys
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from importlib import import_module
+from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 # The DirectLink engine is deliberately pure and standard-library-only. Reusing
@@ -61,11 +62,23 @@ from urllib.parse import parse_qs, urlparse
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-from direct.consolidation import GroupOrder, evaluate_group_buy
-from direct.fair_price import direct_quote, leakage_report
-from direct.logistics import FreightConfig, road_distance_km
-from direct.pipeline import DemandNode, DirectConfig, SupplyLot, plan_direct_channel
-from direct.value_chain import default_direct_chain, default_traditional_chain
+_direct_consolidation = import_module("direct.consolidation")
+_direct_fair_price = import_module("direct.fair_price")
+_direct_logistics = import_module("direct.logistics")
+_direct_pipeline = import_module("direct.pipeline")
+_direct_value_chain = import_module("direct.value_chain")
+GroupOrder = _direct_consolidation.GroupOrder
+evaluate_group_buy = _direct_consolidation.evaluate_group_buy
+direct_quote = _direct_fair_price.direct_quote
+leakage_report = _direct_fair_price.leakage_report
+FreightConfig = _direct_logistics.FreightConfig
+road_distance_km = _direct_logistics.road_distance_km
+DemandNode = _direct_pipeline.DemandNode
+DirectConfig = _direct_pipeline.DirectConfig
+SupplyLot = _direct_pipeline.SupplyLot
+plan_direct_channel = _direct_pipeline.plan_direct_channel
+default_direct_chain = _direct_value_chain.default_direct_chain
+default_traditional_chain = _direct_value_chain.default_traditional_chain
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Fixture data (stable IDs so you can hardcode them while developing)
