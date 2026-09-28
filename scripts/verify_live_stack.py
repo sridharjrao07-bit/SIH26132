@@ -77,7 +77,7 @@ def main() -> int:
     ).stdout.strip()
     check("HEAD matches the pushed remote tip", bool(remote) and remote == local,
           f"local={local[:8]} remote={remote[:8]}")
-    check("virtualenv present", (ROOT / ".venv" / "bin" / "python").exists())
+    check("virtualenv present", (ROOT / ".venv" / "bin" / "python").exists() or (ROOT / ".venv" / "Scripts" / "python.exe").exists())
     check("SUPABASE_DB_URL is set", bool(os.environ.get("SUPABASE_DB_URL")))
     check("DATA_GOV_IN_API_KEY is set", bool(os.environ.get("DATA_GOV_IN_API_KEY")))
     check("DCA_RETAIL_RESOURCE_ID is set", bool(os.environ.get("DCA_RETAIL_RESOURCE_ID")))
