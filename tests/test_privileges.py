@@ -80,7 +80,10 @@ def test_migration_coverage():
     # 41 = migrations 001..040 plus 003b (the out-of-band letter-suffixed grant
     # patch).  The number is deliberately literal: a migration that appears
     # without anyone bumping this is exactly what the ratchet exists to catch.
-    EXPECTED_MIGRATIONS = 43  # 001-040 plus 003b, and 041 (chain profiles)
+    # 44 = 001-040 plus 003b (the out-of-band letter-suffixed grant patch), 041
+    # (chain profiles), 042 (pgcrypto in the extensions schema) and 043 (the
+    # gen_random_bytes wrapper that lets search_path=public RPCs reach it).
+    EXPECTED_MIGRATIONS = 44
     assert len(sql_files) == EXPECTED_MIGRATIONS, (
         f"Expected {EXPECTED_MIGRATIONS} migrations, found {len(sql_files)}"
     )
