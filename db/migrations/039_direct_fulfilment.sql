@@ -405,7 +405,7 @@ begin
         -- Trace token: 12 random chars from a restricted alphabet.  Not derived
         -- from any id and not sequential, so tokens are not enumerable.
         v_token := upper(substr(
-            replace(replace(replace(encode(extensions.gen_random_bytes(12), 'base64'), '+', ''), '/', ''), '=', ''),
+            replace(replace(replace(encode(gen_random_bytes(12), 'base64'), '+', ''), '/', ''), '=', ''),
             1, 12
         ));
 
