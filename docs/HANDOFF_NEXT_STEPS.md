@@ -494,6 +494,28 @@ not a subtly wrong one. `tests/test_retail_anchor.py` covers the plausibility
 band. Do not present a number from the audit as "verified against the market"
 — it is verified against the data, which is what "real data" means.
 
+## Never edit an applied migration
+
+`direct_plan_commit` mints its trace token with `gen_random_bytes(12)` while
+running as `security definer set search_path = public`. pgcrypto is not in
+`public` on Supabase (it is in `extensions`) nor on a plain local Postgres, so
+the call could not resolve on either. The diagnosis was right.
+
+The fix was applied by **editing migration 039**, which had already been applied
+to the live database. `schema_migrations` records filenames, not checksums, so an
+edited 039 never re-runs there. The file described a migration that did not
+happen, and the live database carried a hand-patched substitute for it. What got
+proven was the patch, not the migration.
+
+Corrected in `e7fe6e3`: 039 reverted to byte-identical, 042 made portable with an
+explicit `with schema extensions`, and 043 added as a forward migration that
+creates a six-line `public.gen_random_bytes` wrapper so the unqualified call
+resolves through `search_path`.
+
+The rule: **once a migration has run anywhere, changing it is a new file.** If the
+change is to a function body, prefer a small wrapper over re-declaring it —
+re-declaring duplicates the SQL and the copy goes stale.
+
 ## Definition of done
 
 P0 and P1 closed, i.e. migrations applied to a real Postgres, the write-path
