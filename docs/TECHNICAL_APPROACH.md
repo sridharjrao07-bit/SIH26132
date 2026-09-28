@@ -354,8 +354,8 @@ invented, every downstream number would be decorative.
 |---|---|---|
 | Farmer's share of the rupee | 64% | **48%** |
 | Margin share of the spread | 70% | **85%** |
-| Farmer gain | +35.6% | **+64.5%** |
-| Consumer saving | −20.5% | **−27.9%** |
+| Farmer gain | +35.6% | **+63.4%** |
+| Consumer saving | −20.5% | **−27.4%** |
 
 The September 2026 onion spike (inflation 48% YoY) means the assumed retail
 price had *understated* the problem.
@@ -414,8 +414,8 @@ API keys required). All figures computed live from the engine.
 
 | | Today | DirectLink | Change |
 |---|---|---|---|
-| Farmer receives | ₹2,226 | ₹3,663 | **+64.5%** |
-| Consumer pays | ₹5,392 | ₹3,890 | **−27.9%** |
+| Farmer receives | ₹2,226.39 | ₹3,637 | **+63.4%** |
+| Consumer pays | ₹5,392 | ₹3,917 | **−27.4%** |
 | Farmer's share | 48 paise | **95 paise** | — |
 
 **District plan — 60 farmer lots × 25 consumer groups, one night:**

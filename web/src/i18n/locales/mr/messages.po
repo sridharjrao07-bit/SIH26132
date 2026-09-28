@@ -1298,7 +1298,7 @@ msgstr "शेतकर्याला मिळणार्या भाव आ
 
 #: src/features/direct/NotFoundPage.tsx:19
 msgid "The link may be old, or the address may have a typo. These are the pages that work:"
-msgstr "ही लिंक जुनी असू शकते, किंवा पत्त्यात चूक असू शकते. काम करणारी पुत्रे ही आहेत:"
+msgstr "ही लिंक जुनी असू शकते, किंवा पत्त्यात चूक असू शकते. काम करणारी पाने ही आहेत:"
 
 #: src/features/sell/LotDetailPage.tsx:346
 msgid "The offer stays open for 48 hours."
@@ -1337,7 +1337,7 @@ msgstr "या बाजाराने मागील 15 दिवसांत
 
 #: src/features/direct/NotFoundPage.tsx:16
 msgid "This page does not exist"
-msgstr "हे पुण नाही"
+msgstr "हे पान नाही"
 
 #: src/charts/PriceForecastChart.tsx:110
 msgid "today"

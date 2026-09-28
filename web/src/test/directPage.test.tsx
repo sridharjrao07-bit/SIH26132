@@ -99,29 +99,29 @@ const fixtures = vi.hoisted(() => ({
   fair: {
     viable: true,
     distance_km: 72.784,
-    freight_per_qtl: 20.3795,
+    freight_per_qtl: 72.0,
     handling_per_qtl: 37.0,
-    freight_basis: 'consolidated_assumption',
+    freight_basis: 'rate_card@25qtl',
     split: {
       retail_price: 5392.0,
       farmer_fallback_per_qtl: 2226.39,
       delivered_ratio: 0.985,
-      logistics_per_farm_qtl: 57.3795,
+      logistics_per_farm_qtl: 109.0,
       effective_markup: 0.03,
       alpha: 0.5,
-      farm_price_per_qtl: 3662.7188,
+      farm_price_per_qtl: 3636.9086,
       mandi_price_per_qtl: 2226.39,
-      consumer_price_per_delivered_qtl: 3890.0521,
-      farmer_gain_per_farm_qtl: 1436.3288,
-      consumer_saving_per_farm_qtl: 1479.4187,
-      total_surplus_per_farm_qtl: 2915.7475,
-      farmer_share_rs: 3662.7188,
-      logistics_share_rs: 57.3795,
-      platform_share_rs: 111.603,
-      consumer_outlay_per_farm_qtl: 3831.7013,
-      farmer_gain_pct: 64.5138,
-      consumer_saving_pct: 27.8551,
-      farmer_share_of_consumer_rupee_pct: 95.5899,
+      consumer_price_per_delivered_qtl: 3917.0415,
+      farmer_gain_per_farm_qtl: 1410.5186,
+      consumer_saving_per_farm_qtl: 1452.8342,
+      total_surplus_per_farm_qtl: 2863.3527,
+      farmer_share_rs: 3636.9086,
+      logistics_share_rs: 109.0,
+      platform_share_rs: 112.3773,
+      consumer_outlay_per_farm_qtl: 3858.2858,
+      farmer_gain_pct: 63.3545,
+      consumer_saving_pct: 27.3546,
+      farmer_share_of_consumer_rupee_pct: 94.2623,
       viable: true,
       reason: '',
     },
@@ -174,7 +174,7 @@ describe('DirectPage: opens on the audited lane and shows the real numbers', () 
     const view = renderPage();
     // Two queries fire at once (breakdown, then direct comparison); wait for the
     // later one, or the assertions below race a still-pending panel.
-    await waitFor(() => expect(screen.getByText('₹3,663')).toBeTruthy(), { timeout: 3000 });
+    await waitFor(() => expect(screen.getByText('₹3,637')).toBeTruthy(), { timeout: 3000 });
 
     // Both halves of the spread are shown, so the reader can see the 85/15 split.
     expect(screen.getByText('₹2,032')).toBeTruthy();
@@ -189,20 +189,20 @@ describe('DirectPage: opens on the audited lane and shows the real numbers', () 
 
   test('the direct comparison shows what both sides would get instead', async () => {
     const view = renderPage();
-    await waitFor(() => expect(screen.getByText('₹3,663')).toBeTruthy(), { timeout: 3000 });
+    await waitFor(() => expect(screen.getByText('₹3,637')).toBeTruthy(), { timeout: 3000 });
 
-    // Farmer ₹2,226 -> ₹3,663 (+64.5%); consumer ₹5,392 -> ₹3,890 (-27.9%).
-    expect(screen.getByText('₹3,663')).toBeTruthy();
-    expect(screen.getByText('₹3,890')).toBeTruthy();
+    // Farmer ₹2,226.39 -> ₹3,637 (+63.4%); consumer ₹5,392 -> ₹3,917 (-27.4%).
+    expect(screen.getByText('₹3,637')).toBeTruthy();
+    expect(screen.getByText('₹3,917')).toBeTruthy();
     // Directions in words, not signs: the farmer's price rose, the consumer's fell.
-    expect(screen.getByText('64.5% more')).toBeTruthy();
-    expect(screen.getByText('27.9% less')).toBeTruthy();
+    expect(screen.getByText('63.4% more')).toBeTruthy();
+    expect(screen.getByText('27.4% less')).toBeTruthy();
     view.unmount();
   });
 
   test('a retail price below the farm price is refused rather than fitted', async () => {
     const view = renderPage();
-    await waitFor(() => expect(screen.getByText('₹3,663')).toBeTruthy(), { timeout: 3000 });
+    await waitFor(() => expect(screen.getByText('₹3,637')).toBeTruthy(), { timeout: 3000 });
 
     const retail = view.container.querySelector('#direct-retail') as HTMLInputElement;
     expect(retail.value).toBe('5392');
@@ -225,7 +225,7 @@ describe('DirectPage: opens on the audited lane and shows the real numbers', () 
 
   test('changing the commodity refetches rather than reusing the cached lane', async () => {
     const view = renderPage();
-    await waitFor(() => expect(screen.getByText('₹3,663')).toBeTruthy(), { timeout: 3000 });
+    await waitFor(() => expect(screen.getByText('₹3,637')).toBeTruthy(), { timeout: 3000 });
 
     const select = view.container.querySelector('#direct-commodity') as HTMLSelectElement;
     fireEvent.change(select, { target: { value: 'Tomato' } });
@@ -258,7 +258,7 @@ describe('NotFoundPage: a mistyped path is not a broken page', () => {
     await waitFor(() => expect(view.container.querySelector('a')).toBeTruthy(), { timeout: 3000 });
     // Marathi, because setup.ts activates 'mr' — a missing translation would
     // silently fall back to English here.
-    expect(screen.getByText('\u0939\u0947 \u092a\u0941\u0923 \u0928\u093e\u0939\u0940')).toBeTruthy();
+    expect(screen.getByText('\u0939\u0947 \u092a\u093e\u0928 \u0928\u093e\u0939\u0940')).toBeTruthy();
     // Four live destinations, and none of the retired ones.
     for (const to of ['/', '/bhav', '/direct', '/sell']) {
       expect(view.container.querySelector(`a[href="${to}"]`)).toBeTruthy();

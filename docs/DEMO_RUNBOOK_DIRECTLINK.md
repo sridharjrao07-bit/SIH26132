@@ -136,8 +136,8 @@ One lane: Lasalgaon → a Nashik housing society, 62 km.
 
 | | today | direct | |
 |---|---|---|---|
-| Farmer is paid | ₹2,226 | ₹3,663 | **+64.5%** |
-| Consumer pays | ₹5,392 | ₹3,890 | **−27.9%** |
+| Farmer is paid | ₹2,226.39 | ₹3,637 | **+63.4%** |
+| Consumer pays | ₹5,392 | ₹3,917 | **−27.4%** |
 
 > "Intermediaries go from five to zero. The only margin left is a 3% platform
 > fee — 2.9% of what the consumer spends."

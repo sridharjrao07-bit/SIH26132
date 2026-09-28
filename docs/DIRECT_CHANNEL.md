@@ -414,8 +414,8 @@ wrong by 100× while still looking reasonable.
 |---|---|---|
 | Farmer's share of the rupee | 64% | **48%** |
 | Margin as a share of the spread | 70% | **85%** |
-| Farmer gain from DirectLink | +35.6% | **+64.5%** |
-| Consumer saving | −20.5% | **−27.9%** |
+| Farmer gain from DirectLink | +35.6% | **+63.4%** |
+| Consumer saving | −20.5% | **−27.4%** |
 
 The September 2026 onion spike (inflation at 48% YoY) means the assumed figure
 *understated* the problem. Measuring it rather than assuming it made the case

@@ -38,7 +38,7 @@ The mock API now reuses the pure `direct/` engine for DirectLink `config`, `rupe
 
 ## Browser observations
 
-The live page opens on the audited Lasalgaon lane and displays the real engine result: farmer share 48.1071%, avoidable margin ₹2,032.6047, real work ₹368.5753, five stages, ₹3,663 direct farmer receipt (64.5% more), and ₹3,890 consumer price (27.9% less). `/direct/rupee` shows the custom 404 page and active route links. The browser values use the page's exact default farm input of ₹2,226; the audit-number script uses ₹2,226.39, so its share/margin figures must not be attributed to the page.
+The live page opens on the audited Lasalgaon lane and displays the real engine result: farmer share 48.1155%, avoidable margin ₹2,032.2147, real work ₹368.5753, five stages, ₹3,637 direct farmer receipt (63.4% more), and ₹3,917 consumer price (27.4% less). `/direct/rupee` shows the custom 404 page and active route links. The browser sends the exact snapshot farm input of ₹2,226.39 and the backend's `load_qtl` field, so these values are reproducible against both the mock and FastAPI services.
 
 ## Remaining test limitations
 

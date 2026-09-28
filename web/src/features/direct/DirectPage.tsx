@@ -16,7 +16,7 @@ import { rupeeQuery } from '../../queries/direct.ts';
  * from the real pair means the screen opens showing the real answer, and the
  * user only edits them to explore a different lane.
  */
-const DEFAULT_FARM = 2226;
+const DEFAULT_FARM = 2226.39;
 const DEFAULT_RETAIL = 5392;
 
 const COMMODITIES = ['Onion', 'Tomato', 'Potato', 'Soybean'];
@@ -283,8 +283,8 @@ function Stat({ label, value, sub, tone }: { label: string; value: string; sub?:
 }
 
 /**
- * `delta` is a magnitude in both directions — `farmer_gain_pct` is +64.5 ("64.5%
- * more") and `consumer_saving_pct` is 27.9 ("27.9% less"). Printing a bare sign
+ * `delta` is a magnitude in both directions — `farmer_gain_pct` is +63.4 ("63.4%
+ * more") and `consumer_saving_pct` is 27.4 ("27.4% less"). Printing a bare sign
  * would show "+27.9%" for a price that fell, so the caller states the direction
  * in words instead.
  */

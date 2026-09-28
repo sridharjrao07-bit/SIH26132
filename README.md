@@ -39,8 +39,8 @@ a committed snapshot otherwise — see `ingestion/dca_retail.py`.
 
 Headline result on those numbers: the farmer keeps **48 paise** of the
 consumer's rupee, and **85%** of the ₹2,401/quintal spread is pure margin
-rather than work done. DirectLink pays the farmer **₹3,663 (+64.5%)** and
-charges the consumer **₹3,890 (−27.9%)** — both sides better off than their
+rather than work done. DirectLink pays the farmer **₹3,637 (+63.4%)** and
+charges the consumer **₹3,917 (−27.4%)** — both sides better off than their
 fallback, by construction, not by assertion.
 
 ---

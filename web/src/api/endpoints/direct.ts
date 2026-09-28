@@ -184,7 +184,9 @@ export function directApi(api: ApiClient) {
           origin_lng: p.originLng,
           dest_lat: p.destLat,
           dest_lng: p.destLng,
-          quantity_qtl: p.quantityQtl,
+          // The backend calls the truckload field `load_qtl`; `quantity_qtl`
+          // is accepted by the planner but is silently ignored by fair-price.
+          load_qtl: p.quantityQtl,
           ...(p.commodity ? { commodity: p.commodity } : {}),
           ...(p.utility != null ? { utility: p.utility } : {}),
           ...(p.perishability != null ? { perishability: p.perishability } : {}),
