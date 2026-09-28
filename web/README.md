@@ -28,7 +28,9 @@ Backend gaps are G5–G7 (plus G12 below). Frontend tickets are G1, G2, G3, G8, 
 
 ## Run
 
-For the public price and marketplace screens, use the mock API on port 8000:
+For a complete offline demo, use the mock API on port 8000. It now includes the
+same pure DirectLink engine as the backend, so prices, marketplace screens, and
+the `/direct` rupee breakdown all work without a second service:
 
 ```bash
 cd web
@@ -36,6 +38,16 @@ npm ci
 npm run mock          # ../frontend_handoff/mock/mock_api.py on :8000
 npm run dev           # http://localhost:5173, with /api proxied to API_TARGET
 ```
+
+To run the enforced frontend suite against that one mock process:
+
+```bash
+REQUIRE_MOCK=1 REQUIRE_DIRECT_API=1 \
+DIRECT_API_BASE=http://127.0.0.1:8000 npm test
+```
+
+The real backend on port 8001 remains useful for a separate production-contract
+check, but it is no longer required to exercise DirectLink locally.
 
 For the live DirectLink surface, run the real FastAPI app on port 8001 as well.
 Use `http://localhost:5173` in the browser; the default backend CORS allowlist does

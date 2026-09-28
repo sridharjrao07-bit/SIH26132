@@ -18,6 +18,7 @@ Scope: public PWA entry point `/direct`, its FastAPI DirectLink API, the pure ru
 | Frontend translations | PASS | 353 source messages, 0 missing in hi/mr |
 | Frontend tests | PASS | 58/58 with mock API and real DirectLink API enforced |
 | Browser demo | PASS | `http://localhost:5173/direct` rendered live values; custom 404 verified |
+| Unified offline mock | PASS | One mock on `:8000` served marketplace plus DirectLink; 8 files / 58 tests / 0 skipped |
 | Browser console/network | PASS in the exercised flow | No visible runtime error; CORS requires `localhost`, not `127.0.0.1` |
 
 ## API matrix
@@ -32,6 +33,8 @@ The existing route tests cover valid, invalid, empty, oversized, wrong-type, aut
 - `/group-buy` missing required fields.
 
 Persistence and impact routes are covered against the repository's fake Supabase contract emulator. A real Supabase/Postgres integration run was not possible with dummy local credentials; that limitation is recorded as P3-001.
+
+The mock API now reuses the pure `direct/` engine for DirectLink `config`, `rupee`, `fair-price`, `plan`, and `group-buy`, with in-memory commit/read-back and the expected 404 behavior for unknown trace tokens. This removes the previous need to run a second backend for offline frontend testing.
 
 ## Browser observations
 
