@@ -494,6 +494,31 @@ not a subtly wrong one. `tests/test_retail_anchor.py` covers the plausibility
 band. Do not present a number from the audit as "verified against the market"
 — it is verified against the data, which is what "real data" means.
 
+## Verification record
+
+What has actually been executed, as opposed to read. This section exists so the
+next person does not redo closed work, and so a claim about the database layer
+can be traced to a run rather than to a commit message.
+
+| Date | Command | Result |
+|---|---|---|
+| 2026-09-28 | `verify_live_stack.py` against a live Supabase | **15 of 16 checks passed.** 44 migrations applied and re-applied as a no-op. `value_chain_profiles` 3 rows x 5 stages, all active. `retail_prices` populated with a readable anchor. |
+| 2026-09-28 | `exercise_rpc.py` | **16 of 16 checks passed**, including the `group_buy_join` two-connection contention check and the traceability round trip. |
+
+The single failure both times was `live fetch reports origin == 'live'`:
+data.gov.in returned 503 and the snapshot fallback engaged, which is the designed
+outcome. That check remains a hard failure by design — it has never been downgraded
+to a warning.
+
+Getting there fixed four bugs in `exercise_rpc.py` and one in the migration set.
+All are recorded in the commit messages; the substantive one is summarised under
+"Never edit an applied migration" below.
+
+**What this still does not prove.** The chain split between margin and real work
+is a calibrated model fitted to the observed price pair, not a measurement. The
+audit checks derivations, not anchors — a plausible-but-wrong price reconciles
+exactly. And a green run proves the write path works once, not under demo load.
+
 ## Never edit an applied migration
 
 `direct_plan_commit` mints its trace token with `gen_random_bytes(12)` while
