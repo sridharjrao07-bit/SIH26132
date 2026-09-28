@@ -66,13 +66,23 @@ string is enough to boot; it only needs to be real for the live retail adapter.
 This is the safe fallback, and on its own it carries the whole argument:
 
 ```bash
-.venv/bin/python demo/direct_channel_demo.py
+RETAIL_ANCHOR_SOURCE=snapshot .venv/bin/python demo/direct_channel_demo.py
 ```
 
 No database, no network, no keys. Reads the farm gate from
 `data/gov_prices_60days.csv` and the retail anchor from
-`data/gov_retail_prices.csv` (or live, if the adapter is configured). Prints the
-five acts. If this runs, the demo runs.
+`data/gov_retail_prices.csv`. Prints the five acts. If this runs, the demo runs.
+
+**`RETAIL_ANCHOR_SOURCE=snapshot` is the recommended setting while data.gov.in is
+returning 503.** It is not a degraded mode: the committed snapshot is verbatim
+Department of Consumer Affairs data, so the numbers are byte-identical to what
+the live feed returns. What it removes is a network round trip that can only
+fail, and a provenance line reading `[snapshot]`, which looks like something went
+wrong when nothing did. With the flag set the demo prints
+`[committed snapshot]` and says so plainly.
+
+Omit the flag and the demo still works — it tries the live feed, gets the 503,
+and falls back. It just costs ~1.6s and prints the apologetic version.
 
 To also show the HTTP surface with a dummy backend:
 

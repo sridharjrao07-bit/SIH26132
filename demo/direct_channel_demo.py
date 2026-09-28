@@ -91,10 +91,19 @@ def _load_anchors():
 
     # Right anchor: live if configured, else the committed snapshot.
     retail, rdate, origin = latest_retail_price("Onion", "Maharashtra")
-    prov.append(
-        f"retail     Dept. of Consumer Affairs {rdate} "
-        f"[{'live' if origin == 'live' else 'snapshot'}]"
-    )
+    if origin == "live":
+        how = "live"
+    elif os.getenv("RETAIL_ANCHOR_SOURCE", "live").strip().lower() == "snapshot":
+        # Not a failure state. Say what it is: the same government figures,
+        # committed to the repo so the demo does not depend on an upstream API.
+        how = "committed snapshot"
+    else:
+        how = "snapshot"
+    prov.append(f"retail     Dept. of Consumer Affairs {rdate} [{how}]")
+    if how == "committed snapshot":
+        prov.append(
+            "           both anchors committed government data — no network needed"
+        )
     return mandi, retail, prov
 
 
