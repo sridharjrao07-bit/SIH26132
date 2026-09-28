@@ -1,9 +1,9 @@
-import * as v from 'valibot';
 import type { ApiClient } from '../client.ts';
 import {
   DirectConfigSchema,
   DirectPlanSchema,
   FairPriceReportSchema,
+  GroupBuyReportSchema,
   RupeeReportSchema,
   TraceRecordSchema,
 } from '../schemasDirect.ts';
@@ -36,46 +36,120 @@ export interface FairPriceParams {
   stranded?: number;
 }
 
+/**
+ * One supply lot for the planner.
+ *
+ * Field names are the backend's, not ours: `id`, `commodity_id`,
+ * `quantity_qtl` and `mandi_price_per_qtl` are all required by `LotIn`.
+ * `mandi_price_per_qtl` is the fallback the farmer would get at the mandi, not
+ * the price being asked for — that distinction is what the surplus is measured
+ * against.
+ */
 export interface PlanLot {
-  lotId: string;
-  lat: number;
-  lon: number;
-  supplyQtl: number;
-  price: number;
+  id: string;
+  commodityId: string;
+  quantityQtl: number;
+  mandiPricePerQtl: number;
+  lat?: number;
+  lng?: number;
+  farmerId?: string;
+  marketName?: string;
+  grade?: string;
+  category?: string;
 }
 
+/** One demand node for the planner. `id`, `commodity_id` and `quantity_qtl` are required. */
 export interface PlanDemand {
-  demandId: string;
-  lat: number;
-  lon: number;
-  demandQtl: number;
-  price: number;
+  id: string;
+  commodityId: string;
+  quantityQtl: number;
+  retailPricePerQtl?: number;
+  lat?: number;
+  lng?: number;
+  label?: string;
+  kind?: string;
+  category?: string;
+  minGrade?: string;
 }
 
 export interface PlanParams {
   lots: PlanLot[];
-  demand: PlanDemand[];
-  commodity?: string;
-  district?: string;
-  groupSize?: number;
-  vehicles?: number;
+  demands: PlanDemand[];
   alpha?: number;
+  platformFeePct?: number;
+  maxDistanceKm?: number;
+  minAllocationQtl?: number;
+  clusterSizeKm?: number;
+  circuity?: number;
+  calibrate?: boolean;
+  enforceGrade?: boolean;
 }
 
-export interface CommitParams extends PlanParams {
-  planId: string;
-  ifAbsent?: 'delta_exceeded' | 'always' | 'never';
+/** One consumer order in a group buy. `orderId` and `qtl` are required. */
+export interface GroupOrder {
+  orderId: string;
+  qtl: number;
+  lat?: number;
+  lng?: number;
+  label?: string;
+}
+
+export interface GroupBuyParams {
+  originLat: number;
+  originLng: number;
+  orders: GroupOrder[];
+  minLoadQtl?: number;
+  clusterSizeKm?: number;
+  circuity?: number;
 }
 
 /**
  * DirectLink: the consumer-rupee attribution engine and the direct channel.
  *
- * `/rupee` and `/fair-price` are pure functions — no database, no network beyond
- * this call — which is why the whole demo can run without credentials.
- * `/plan` runs the engine server-side; `/plans/commit` persists it and re-runs
- * the engine rather than trusting the caller's summary.
+ * `/rupee` and `/fair-price` are pure functions — no database — which is why the
+ * whole demo can run without credentials. `/plan` runs the engine server-side;
+ * `/plans/commit` persists it and re-runs the engine rather than trusting the
+ * caller's summary.
  */
 export function directApi(api: ApiClient) {
+  const toLot = (l: PlanLot) => ({
+    id: l.id,
+    commodity_id: l.commodityId,
+    quantity_qtl: l.quantityQtl,
+    mandi_price_per_qtl: l.mandiPricePerQtl,
+    ...(l.lat != null ? { lat: l.lat } : {}),
+    ...(l.lng != null ? { lng: l.lng } : {}),
+    ...(l.farmerId ? { farmer_id: l.farmerId } : {}),
+    ...(l.marketName ? { market_name: l.marketName } : {}),
+    ...(l.grade ? { grade: l.grade } : {}),
+    ...(l.category ? { category: l.category } : {}),
+  });
+
+  const toDemand = (d: PlanDemand) => ({
+    id: d.id,
+    commodity_id: d.commodityId,
+    quantity_qtl: d.quantityQtl,
+    ...(d.retailPricePerQtl != null ? { retail_price_per_qtl: d.retailPricePerQtl } : {}),
+    ...(d.lat != null ? { lat: d.lat } : {}),
+    ...(d.lng != null ? { lng: d.lng } : {}),
+    ...(d.label ? { label: d.label } : {}),
+    ...(d.kind ? { kind: d.kind } : {}),
+    ...(d.category ? { category: d.category } : {}),
+    ...(d.minGrade ? { min_grade: d.minGrade } : {}),
+  });
+
+  /** The shared engine knobs. Sent only when set, so the server defaults apply. */
+  const planKnobs = (p: PlanParams) => ({
+    ...(p.alpha != null ? { alpha: p.alpha } : {}),
+    ...(p.platformFeePct != null ? { platform_fee_pct: p.platformFeePct } : {}),
+    ...(p.maxDistanceKm != null ? { max_distance_km: p.maxDistanceKm } : {}),
+    ...(p.minAllocationQtl != null ? { min_allocation_qtl: p.minAllocationQtl } : {}),
+    ...(p.clusterSizeKm != null ? { cluster_size_km: p.clusterSizeKm } : {}),
+    ...(p.circuity != null ? { circuity: p.circuity } : {}),
+    ...(p.calibrate != null ? { calibrate: p.calibrate } : {}),
+    ...(p.enforceGrade != null ? { enforce_grade: p.enforceGrade } : {}),
+  });
+
   return {
     /** Calibration metadata: platform fee, spoilage bounds, dispatch defaults. */
     config: (signal?: AbortSignal) =>
@@ -129,64 +203,39 @@ export function directApi(api: ApiClient) {
     /**
      * Run the planner. Pure engine: the server allocates supply to demand,
      * consolidates into shipments and splits the surplus, returning an
-     * optimality certificate alongside the result.
+     * optimality certificate in `impact.allocation_optimal`.
      */
     plan: (p: PlanParams, signal?: AbortSignal) =>
       api.post('/api/v1/direct/plan', {
         body: {
-          lots: p.lots.map((l) => ({
-            lot_id: l.lotId,
-            lat: l.lat,
-            lon: l.lon,
-            supply_qtl: l.supplyQtl,
-            price: l.price,
-          })),
-          demand: p.demand.map((d) => ({
-            demand_id: d.demandId,
-            lat: d.lat,
-            lon: d.lon,
-            demand_qtl: d.demandQtl,
-            price: d.price,
-          })),
-          ...(p.commodity ? { commodity: p.commodity } : {}),
-          ...(p.district ? { district: p.district } : {}),
-          ...(p.groupSize != null ? { group_size: p.groupSize } : {}),
-          ...(p.vehicles != null ? { vehicles: p.vehicles } : {}),
-          ...(p.alpha != null ? { alpha: p.alpha } : {}),
+          lots: p.lots.map(toLot),
+          demands: p.demands.map(toDemand),
+          ...planKnobs(p),
         },
         schema: DirectPlanSchema,
         signal,
       }),
 
     /**
-     * Persist a plan. The server re-runs the engine from these inputs, so the
-     * caller's summary is never trusted — commit the inputs, not the answer.
+     * Persist a plan. The whole `PlanRequest` is nested under `plan` — the
+     * server re-runs the engine from those inputs, so the caller's numbers are
+     * never trusted. Commit the inputs, not the answer.
      */
-    commit: (p: CommitParams, signal?: AbortSignal) =>
+    commit: (
+      p: PlanParams & { planId?: string; commodityId?: string; district?: string },
+      signal?: AbortSignal,
+    ) =>
       api.post('/api/v1/direct/plans/commit', {
         auth: true,
         body: {
-          plan_id: p.planId,
-          lots: p.lots.map((l) => ({
-            lot_id: l.lotId,
-            lat: l.lat,
-            lon: l.lon,
-            supply_qtl: l.supplyQtl,
-            price: l.price,
-          })),
-          demand: p.demand.map((d) => ({
-            demand_id: d.demandId,
-            lat: d.lat,
-            lon: d.lon,
-            demand_qtl: d.demandQtl,
-            price: d.price,
-          })),
-          if_absent: p.ifAbsent ?? 'delta_exceeded',
-          ...(p.commodity ? { commodity: p.commodity } : {}),
+          plan: {
+            lots: p.lots.map(toLot),
+            demands: p.demands.map(toDemand),
+            ...planKnobs(p),
+          },
+          ...(p.commodityId ? { commodity_id: p.commodityId } : {}),
           ...(p.district ? { district: p.district } : {}),
-          ...(p.groupSize != null ? { group_size: p.groupSize } : {}),
-          ...(p.vehicles != null ? { vehicles: p.vehicles } : {}),
-          ...(p.alpha != null ? { alpha: p.alpha } : {}),
+          ...(p.planId ? { plan_id: p.planId } : {}),
         },
         schema: DirectPlanSchema,
         signal,
@@ -196,6 +245,31 @@ export function directApi(api: ApiClient) {
     planById: (planId: string, signal?: AbortSignal) =>
       api.get(`/api/v1/direct/plans/${encodeURIComponent(planId)}`, {
         schema: DirectPlanSchema,
+        signal,
+      }),
+
+    /**
+     * Truck-load consolidation for consumers. The origin is the delivery point
+     * every order is consolidated towards; each order keeps its own coordinates
+     * so the engine can cluster nearby consumers into one truck.
+     */
+    groupBuy: (p: GroupBuyParams, signal?: AbortSignal) =>
+      api.post('/api/v1/direct/group-buy', {
+        body: {
+          origin_lat: p.originLat,
+          origin_lng: p.originLng,
+          orders: p.orders.map((o) => ({
+            order_id: o.orderId,
+            qtl: o.qtl,
+            ...(o.lat != null ? { lat: o.lat } : {}),
+            ...(o.lng != null ? { lng: o.lng } : {}),
+            ...(o.label ? { label: o.label } : {}),
+          })),
+          ...(p.minLoadQtl != null ? { min_load_qtl: p.minLoadQtl } : {}),
+          ...(p.clusterSizeKm != null ? { cluster_size_km: p.clusterSizeKm } : {}),
+          ...(p.circuity != null ? { circuity: p.circuity } : {}),
+        },
+        schema: GroupBuyReportSchema,
         signal,
       }),
 
@@ -215,7 +289,3 @@ export function directApi(api: ApiClient) {
 }
 
 export type DirectApi = ReturnType<typeof directApi>;
-
-/** Guard so a caller can narrow a loose plan payload without a cast. */
-export const isPlanLike = (x: unknown): x is { plan_id: string } =>
-  v.safeParse(v.object({ plan_id: v.string() }), x).success;

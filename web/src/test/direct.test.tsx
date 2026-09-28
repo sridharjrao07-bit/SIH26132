@@ -197,42 +197,110 @@ describe('direct.trace: an unknown token is an answer, not an error', () => {
 });
 
 describe('direct.plan: lot and demand mapping', () => {
-  test('lots and demand are sent as snake_case arrays', async () => {
-    const { fetch, api } = stub({ plan_id: 'DP-1', allocations: [], shipments: [], orders: [], summary: {} });
-    await api.plan({
-      lots: [{ lotId: 'L1', lat: 20.12, lon: 74.33, supplyQtl: 30, price: 2226 }],
-      demand: [{ demandId: 'D1', lat: 19.99, lon: 73.79, demandQtl: 25, price: 3890 }],
-      commodity: 'Onion',
-      groupSize: 4,
-    });
+  // A real captured PlanRequest shape. `LotIn` requires id, commodity_id,
+  // quantity_qtl and mandi_price_per_qtl; `DemandIn` requires id, commodity_id
+  // and quantity_qtl. These are the backend's names, not the UI's.
+  const LOT = { id: 'L1', commodityId: 'c1', quantityQtl: 30, mandiPricePerQtl: 2226, lat: 20.12, lng: 74.33 };
+  const DEMAND = { id: 'D1', commodityId: 'c1', quantityQtl: 25, retailPricePerQtl: 3890, lat: 19.99, lng: 73.79 };
+  const PLAN_RESPONSE = { plan_id: 'DP-1', allocations: [], shipments: [], unserved_lots: [], unserved_demands: [], notes: [] };
+
+  test('lots and demands are sent as the snake_case arrays LotIn/DemandIn require', async () => {
+    const { fetch, api } = stub(PLAN_RESPONSE);
+    await api.plan({ lots: [LOT], demands: [DEMAND], alpha: 0.5 });
+
     const [, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
     const body = JSON.parse(init.body as string);
-    expect(body.lots).toEqual([{ lot_id: 'L1', lat: 20.12, lon: 74.33, supply_qtl: 30, price: 2226 }]);
-    expect(body.demand).toEqual([{ demand_id: 'D1', lat: 19.99, lon: 73.79, demand_qtl: 25, price: 3890 }]);
-    expect(body.group_size).toBe(4);
+    expect(body.lots).toEqual([{ id: 'L1', commodity_id: 'c1', quantity_qtl: 30, mandi_price_per_qtl: 2226, lat: 20.12, lng: 74.33 }]);
+    expect(body.demands).toEqual([{ id: 'D1', commodity_id: 'c1', quantity_qtl: 25, retail_price_per_qtl: 3890, lat: 19.99, lng: 73.79 }]);
+    expect(body.alpha).toBe(0.5);
+    // The key is `demands`, plural. A singular `demand` is silently ignored by
+    // FastAPI, which would plan against an empty market.
+    expect('demand' in body).toBe(false);
   });
 
-  test('commit sends the plan id and the safe default for if_absent', async () => {
-    const { fetch, api } = authed({ plan_id: 'DP-1', allocations: [], shipments: [], orders: [], summary: {} });
-    await api.commit({
-      planId: 'DP-1',
-      lots: [{ lotId: 'L1', lat: 20.12, lon: 74.33, supplyQtl: 30, price: 2226 }],
-      demand: [{ demandId: 'D1', lat: 19.99, lon: 73.79, demandQtl: 25, price: 3890 }],
-    });
+  test('engine knobs are omitted rather than sent as null, so server defaults apply', async () => {
+    const { fetch, api } = stub(PLAN_RESPONSE);
+    await api.plan({ lots: [LOT], demands: [DEMAND] });
     const [, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
     const body = JSON.parse(init.body as string);
-    expect(body.plan_id).toBe('DP-1');
-    expect(body.if_absent).toBe('delta_exceeded');
+    for (const k of ['alpha', 'platform_fee_pct', 'max_distance_km', 'min_allocation_qtl', 'cluster_size_km', 'circuity', 'calibrate', 'enforce_grade']) {
+      expect(k in body).toBe(false);
+    }
+  });
+
+  test('knobs are forwarded when set', async () => {
+    const { fetch, api } = stub(PLAN_RESPONSE);
+    await api.plan({ lots: [LOT], demands: [DEMAND], alpha: 0.5, platformFeePct: 0.03, maxDistanceKm: 250, calibrate: false });
+    const [, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body.platform_fee_pct).toBe(0.03);
+    expect(body.max_distance_km).toBe(250);
+    expect(body.calibrate).toBe(false);
+  });
+
+  test('commit nests the whole PlanRequest under `plan`, not flat', async () => {
+    const { fetch, api } = authed(PLAN_RESPONSE);
+    await api.commit({ planId: 'DP-1', lots: [LOT], demands: [DEMAND], district: 'Nashik' });
+    const [, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    // CommitRequest requires exactly one field: `plan`.
+    expect(Object.keys(body).sort()).toEqual(['district', 'plan', 'plan_id']);
+    expect(body.plan.lots).toEqual([{ id: 'L1', commodity_id: 'c1', quantity_qtl: 30, mandi_price_per_qtl: 2226, lat: 20.12, lng: 74.33 }]);
+    expect(body.plan.demands).toHaveLength(1);
+    // The old client sent lots/demand flat and an `if_absent` the API ignores.
+    expect('lots' in body).toBe(false);
+    expect('if_absent' in body).toBe(false);
   });
 
   test('commit attaches a bearer token, because a plan is written to the database', async () => {
-    const { fetch, api } = authed({ plan_id: 'DP-1', allocations: [], shipments: [], orders: [], summary: {} });
-    await api.commit({
-      planId: 'DP-1',
-      lots: [{ lotId: 'L1', lat: 20.12, lon: 74.33, supplyQtl: 30, price: 2226 }],
-      demand: [{ demandId: 'D1', lat: 19.99, lon: 73.79, demandQtl: 25, price: 3890 }],
-    });
+    const { fetch, api } = authed(PLAN_RESPONSE);
+    await api.commit({ lots: [LOT], demands: [DEMAND] });
     const [, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer tok-123');
+  });
+
+  test('a plan response without `impact` still parses, because it has a default', async () => {
+    const { api } = stub({ plan_id: 'DP-1', allocations: [], shipments: [] });
+    const r = await api.plan({ lots: [LOT], demands: [DEMAND] });
+    expect(r.plan_id).toBe('DP-1');
+    // A missing impact must not throw; valibot fills ImpactSchema's own defaults,
+    // so every aggregate arrives null rather than undefined.
+    expect(r.impact.surplus_rs).toBeNull();
+    expect(r.impact.allocation_optimal).toBe(false);
+  });
+});
+
+describe('direct.groupBuy: request and response shape', () => {
+  test('origin and orders are sent as the backend requires', async () => {
+    const { fetch, api } = stub({ total_qtl: 25, vehicles: 1, viable: true });
+    await api.groupBuy({
+      originLat: 19.99,
+      originLng: 73.79,
+      orders: [{ orderId: 'O1', qtl: 25, lat: 19.99, lng: 73.79 }],
+      minLoadQtl: 20,
+    });
+    const [, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    // GroupBuyRequest requires origin_lat and origin_lng — the delivery point.
+    expect(body.origin_lat).toBe(19.99);
+    expect(body.origin_lng).toBe(73.79);
+    expect(body.orders).toEqual([{ order_id: 'O1', qtl: 25, lat: 19.99, lng: 73.79 }]);
+    expect(body.min_load_qtl).toBe(20);
+    // The contract document describes commodity/window/target_qtl; the backend
+    // accepts none of them.
+    for (const k of ['commodity', 'window', 'target_qtl']) expect(k in body).toBe(false);
+  });
+
+  test('a group-buy response parses, including the per-order freight split', async () => {
+    const { api } = stub({
+      total_qtl: 25, vehicles: 1, capacity_qtl: 90, fill_pct: 27.7778, distance_km: 0,
+      min_load_qtl: 20, shortfall_qtl: 0, freight_total: 1800, freight_per_qtl: 72,
+      handling_total: 925, handling_per_qtl: 37, landed_cost_per_qtl: 109,
+      packing_lower_bound: 1, viable: true, reason: 'clears', freight_by_order: { O1: 1800 },
+    });
+    const r = await api.groupBuy({ originLat: 19.99, originLng: 73.79, orders: [{ orderId: 'O1', qtl: 25 }] });
+    expect(r.freight_by_order).toEqual({ O1: 1800 });
+    expect(r.landed_cost_per_qtl).toBe(109);
+    expect(r.viable).toBe(true);
   });
 });
