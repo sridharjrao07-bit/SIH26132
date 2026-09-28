@@ -77,10 +77,7 @@ function Account({ me }: { me: Profile }) {
       <Section>
         <ul className="-my-2 text-base">
           <li><Link to="/sell" className="tap flex items-center justify-between"><Trans>My produce for sale</Trans><span aria-hidden>›</span></Link></li>
-          {me.role !== 'fpo' && me.role !== 'admin' && (
-            <li className="rule-t"><Link to="/buy" className="tap flex items-center justify-between"><Trans>I buy produce</Trans><span aria-hidden>›</span></Link></li>
-          )}
-          <li className="rule-t"><Link to="/forecasts/about" className="tap flex items-center justify-between"><Trans>About forecasts</Trans><span aria-hidden>›</span></Link></li>
+          <li className="rule-t"><Link to="/direct" className="tap flex items-center justify-between"><Trans>Where my rupee goes</Trans><span aria-hidden>›</span></Link></li>
         </ul>
       </Section>
       <div className="px-4 py-4">

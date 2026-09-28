@@ -7,6 +7,7 @@ import { accuracyApi } from './endpoints/accuracy.ts';
 import { accountApi } from './endpoints/account.ts';
 import { alertsApi } from './endpoints/alerts.ts';
 import { marketplaceApi } from './endpoints/marketplace.ts';
+import { directApi } from './endpoints/direct.ts';
 import { getToken, refreshSession } from '../auth/session.ts';
 
 // Same-origin: Vite (dev) and the CDN (prod) proxy /api to FastAPI.
@@ -20,3 +21,4 @@ export const accuracy = accuracyApi(api);
 export const account = accountApi(api);
 export const alerts = alertsApi(api);
 export const marketplace = marketplaceApi(api);
+export const direct = directApi(api);

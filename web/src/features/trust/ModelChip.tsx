@@ -1,5 +1,4 @@
 import { useRef } from 'react';
-import { Link } from '@tanstack/react-router';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { useQuery } from '@tanstack/react-query';
 import { METHODS } from './methods.ts';
@@ -72,9 +71,6 @@ export function ModelChip({ method, confidence, observations, generatedAt, model
 
           <div className="rule-t mt-4 pt-3 text-sm">
             <AccuracyStatusLine report={acc} />
-            <Link to="/forecasts/about" onClick={() => ref.current?.close()} className="tap mt-1 inline-flex items-center font-semibold underline underline-offset-4">
-              <Trans>How forecasts are checked</Trans>
-            </Link>
           </div>
         </div>
       </dialog>
