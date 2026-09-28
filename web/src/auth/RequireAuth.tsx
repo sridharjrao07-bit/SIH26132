@@ -66,8 +66,8 @@ export function SignIn({ why }: { why: ReactNode }) {
         </div>
       )}
       <p className="mt-6 rule-t pt-3 text-sm">
-        <Trans>Prices, forecasts and advice work without an account.</Trans>{' '}
-        <Link to="/forecasts/about" className="underline underline-offset-4"><Trans>How forecasts work</Trans></Link>
+        <Trans>Prices work without an account.</Trans>{' '}
+        <Link to="/bhav" className="underline underline-offset-4"><Trans>See mandi prices</Trans></Link>
       </p>
     </div>
   );

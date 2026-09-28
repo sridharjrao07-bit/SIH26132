@@ -5,12 +5,12 @@ import { usePrefs } from '../stores/prefs.ts';
 import { LANGS, LANG_LABEL } from '../i18n/locales.ts';
 import { useOnline } from '../ui/hooks.ts';
 
-function Icon({ name }: { name: 'today' | 'prices' | 'sell' | 'alerts' | 'account' }) {
+function Icon({ name }: { name: 'today' | 'prices' | 'direct' | 'sell' | 'account' }) {
   const paths = {
     today: <><path d="M4 11.5 12 5l8 6.5"/><path d="M6.5 10.5V20h11v-9.5M10 20v-5h4v5"/></>,
     prices: <><path d="M4 19V9M10 19V5M16 19v-7M22 19V3"/><path d="M2 19h22"/></>,
     sell: <><path d="M5 7h14l-1 13H6L5 7Z"/><path d="M9 7a3 3 0 0 1 6 0"/></>,
-    alerts: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></>,
+    direct: <><path d="M12 3v18"/><path d="M5 8h14"/><path d="M8 8l-3 6h6L8 8Z"/><path d="M16 8l-3 6h6l-3-6Z"/></>,
     account: <><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></>,
   };
   return <svg aria-hidden width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
@@ -52,8 +52,8 @@ function OfflineBanner() {
 const navItems = [
   { to: '/', label: <Trans>Today</Trans>, icon: 'today' as const, exact: true },
   { to: '/bhav', label: <Trans>Prices</Trans>, icon: 'prices' as const },
+  { to: '/direct', label: <Trans>Direct</Trans>, icon: 'direct' as const },
   { to: '/sell', label: <Trans>Sell</Trans>, icon: 'sell' as const },
-  { to: '/alerts', label: <Trans>Alerts</Trans>, icon: 'alerts' as const },
   { to: '/account', label: <Trans>Account</Trans>, icon: 'account' as const },
 ];
 
