@@ -1,12 +1,19 @@
 # Phase 1 architecture map
 
-## Scope assumption
+## Official SIH problem statement and scope
+
+**Ministry of Consumer Affairs, Food & Public Distribution — Agriculture, FoodTech
+& Rural Development — Software:**
+
+> Multiple intermediaries reduce farmers earnings and increase consumer prices.
 
 The requested demo entry point is the public PWA landing flow, with the flagship
 demo path beginning at `/direct` and ending at the rendered consumer-rupee
 breakdown and direct-trade comparison. The repository also contains the older
 price-discovery and authenticated marketplace journeys, which remain in scope for
-the later end-to-end audit.
+the later end-to-end audit. The acceptance test for every later phase is whether
+the product demonstrably reduces intermediary absorption while improving the
+farmer and consumer outcomes, without inventing unsupported accuracy or savings.
 
 ## Repository map
 
