@@ -19,6 +19,7 @@ mock_lgb.LGBMRegressor.return_value.predict.side_effect = _mock_predict
 # Ensure that we only mock lightgbm during the specific mock tests
 @patch.dict(sys.modules, {"lightgbm": mock_lgb})
 def test_train_global_gbm_isolation_and_sigma():
+    pytest.importorskip("numpy", reason="numpy not installed")
     from forecasting.gbm import train_global_gbm
 
     # 1. Deterministic Synthetic Dataset
