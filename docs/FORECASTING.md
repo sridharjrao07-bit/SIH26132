@@ -44,7 +44,7 @@ The Gradient Boosting model (`GlobalGBM`) has been refactored to remove global s
 **Current Status**: 
 - **Evaluation Status**: `BLOCKED` (Phase 6). The current smoke test database lacks sufficient history (requires 57+ days for training/calibration) to produce valid out-of-sample predictions.
 - **Automatic-Selection Status**: **Disabled**. Because the model cannot currently be verified against baseline models in the backtest harness, the engine will safely fall back to baselines (e.g., Naive or Moving Average) and will not automatically promote GBM.
-- **Explicit-Selection Availability**: **Available**. Users may still explicitly select the `gbm` model via API parameters, but its accuracy is currently unverified.
+- **Explicit-Selection Availability**: **Available**. Users may explicitly select `gbm`. The engine uses the pretrained global model when available, otherwise records `fallback_from=gbm` and uses `feature_ols` when its features and sample size are sufficient before falling back to the tiered baseline.
 
 ## 6. Current Accuracy Card
 

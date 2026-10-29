@@ -333,7 +333,9 @@ def _make_forecast_rows(
     if requested_model != "auto" and (requested_model in MODELS or requested_model == "gbm"):
         model_cls = MODELS.get(requested_model)
         try:
-            if requested_model == "gbm" and pretrained_model is not None:
+            if requested_model == "gbm":
+                if pretrained_model is None:
+                    raise ValueError("GBM pretrained model is unavailable")
                 model_inst = pretrained_model
                 model_inst.fit(series, features, pair_id=(market_id, commodity_id))
             elif requested_model == "feature_ols":
@@ -352,6 +354,37 @@ def _make_forecast_rows(
                 confidence = "high" if n >= HIGH_CONFIDENCE_THRESHOLD else "medium"
         except Exception as e:
             logger.warning("forecast_model_failed", market_id=market_id, commodity_id=commodity_id, model=requested_model, error=str(e))
+
+    # GBM is trained globally. If that model is unavailable or fails for this
+    # pair, use the same engineered features with Feature OLS before dropping
+    # to the generic moving-average/blend tier.
+    if preds is None and requested_model == "gbm" and features is not None:
+        try:
+            fallback_model = FeatureOLSModel(prices, features)
+            if not getattr(fallback_model, "fallback", False):
+                raw_preds = fallback_model.predict(
+                    horizon=HORIZON_DAYS, forecast_origin=horizon_start
+                )
+                preds = apply_postprocessing(raw_preds, fallback_model.sigma, sanity)
+                model_inst = fallback_model
+                method = "feature_ols"
+                confidence = "high" if n >= HIGH_CONFIDENCE_THRESHOLD else "medium"
+                logger.warning(
+                    "forecast_model_fallback",
+                    market_id=market_id,
+                    commodity_id=commodity_id,
+                    requested_model="gbm",
+                    fallback_model="feature_ols",
+                )
+        except Exception as e:
+            logger.warning(
+                "forecast_model_fallback_failed",
+                market_id=market_id,
+                commodity_id=commodity_id,
+                requested_model="gbm",
+                fallback_model="feature_ols",
+                error=str(e),
+            )
             
     # Fallback / Auto Tier Logic
     if preds is None:
@@ -396,6 +429,8 @@ def _make_forecast_rows(
         # method=blend rows — the accuracy card then over-claimed).
         if method == requested_model:
             mapped_model = requested_model          # honoured as requested
+        elif method in (model_registry or {}):
+            mapped_model = method                   # actual registered fallback
         else:
             mapped_model = "auto"                   # fallback tier (blend / moving_avg)
 
@@ -411,6 +446,7 @@ def _make_forecast_rows(
             "model_id":        (model_registry or {}).get(mapped_model),
             "observations":    n,
             "status":          "ok",
+            "fallback_from":   requested_model if method != requested_model else None,
             "model_version":   "1.0",
             "features_used":   features_used,
             "generated_at":    v_generated_at,

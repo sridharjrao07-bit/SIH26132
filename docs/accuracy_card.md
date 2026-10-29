@@ -8,7 +8,7 @@
 
 The newly implemented LightGBM global forecasting model is currently **blocked** from automated promotion. While the data pipelines, walk-forward evaluation harness, and promotion gates are fully wired and functional, the model cannot be certified for live production use because there is currently insufficient live history in the primary pairs to support valid training and calibration splits. 
 
-As a result, no accuracy card can be definitively established for the GBM model at this time. **Automatic Selection (promotion)** is safely disabled, and the engine will fall back to baselines (Naive, Moving Average). **Explicit Selection** is still available (users can request the `gbm` model via the API), but its predictions are unverified.
+No accuracy card is established for automatic GBM promotion. Explicit `gbm` selection remains available: a successful pretrained run emits `method=gbm`; an unavailable or failed GBM run emits `fallback_from=gbm` and uses `feature_ols` or the tiered baseline. Accuracy reporting must use the emitted method, never the requested model.
 
 ## Evaluation Results (Smoke Test)
 
