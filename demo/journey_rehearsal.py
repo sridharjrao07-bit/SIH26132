@@ -63,7 +63,9 @@ def step(label: str, cond: bool, detail: str = "") -> bool:
 
 
 def mint_token(base: str, role: str = "farmer") -> str | None:
-    import jwt, time
+    import time
+
+    import jwt
     from app.config import get_settings
     secret = get_settings().supabase_jwt_secret
     if role == "admin":
