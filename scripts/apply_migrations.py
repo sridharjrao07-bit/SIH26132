@@ -36,14 +36,10 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import ssl
 import sys
+import urllib.parse
 from pathlib import Path
-
-try:
-    import psycopg2
-except ImportError:
-    print("ERROR: psycopg2 is not installed.  Run: pip install psycopg2-binary", file=sys.stderr)
-    sys.exit(1)
 
 MIGRATIONS_DIR = Path(__file__).parent.parent / "db" / "migrations"
 MIGRATION_PATTERN = re.compile(r"^(\d{3})([a-z]?)_.*\.sql$")
@@ -70,8 +66,66 @@ def get_migration_files() -> list[tuple[int, str, Path]]:
     return files
 
 
+def _connect(db_url: str):
+    """Open a Postgres connection.
+
+    Prefers ``pg8000`` (pure Python, no libpq needed) and falls back to
+    ``psycopg2``. The driver is imported *here*, not at module scope: several
+    tests import this script to enumerate migrations, and a module-level
+    ``import pg8000.dbapi`` turns a missing optional driver into an import
+    error that fails the whole test file.
+
+    SSL is on by default and only disabled by an explicit ``sslmode=disable``.
+    Supabase's direct connection (port 5432) refuses plaintext, and the
+    connection strings it hands out carry no ``sslmode`` at all -- so keying
+    SSL off the presence of ``sslmode=require`` meant every Supabase URL
+    connected unencrypted and was rejected at the TCP layer, which reads as a
+    network failure rather than a configuration one.
+    """
+    url = urllib.parse.urlparse(db_url)
+    query = url.query or ""
+    ssl_on = "sslmode=disable" not in query
+    ssl_context = None
+    if ssl_on:
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        # Supabase presents a certificate for its own host; the pooler's is
+        # frequently re-issued mid-session. We are authenticating with the
+        # database password either way, so verify the chain but not the name.
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+
+    try:
+        import pg8000.dbapi as dbapi
+    except ImportError:
+        try:
+            import psycopg2 as dbapi  # type: ignore[no-redef]
+        except ImportError as exc:  # pragma: no cover - environment issue
+            raise SystemExit(
+                "ERROR: no Postgres driver available. Install pg8000 or "
+                "psycopg2-binary."
+            ) from exc
+        return dbapi.connect(db_url)
+
+    return dbapi.connect(
+        user=url.username,
+        password=url.password,
+        host=url.hostname,
+        port=url.port,
+        database=url.path[1:],
+        ssl_context=ssl_context,
+    )
+
+
+def _relation_missing(exc: BaseException) -> bool:
+    """True when the error means 'the ledger table is not there yet'."""
+    args = getattr(exc, "args", None) or []
+    if args and isinstance(args[0], dict) and args[0].get("C") == "42P01":
+        return True
+    return 'schema_migrations" does not exist' in str(exc)
+
+
 def apply_migrations(db_url: str, dry_run: bool = False, from_version: int = 0) -> None:
-    conn = psycopg2.connect(db_url)
+    conn = _connect(db_url)
     conn.autocommit = False
 
     try:
@@ -83,18 +137,23 @@ def apply_migrations(db_url: str, dry_run: bool = False, from_version: int = 0) 
             # transaction".)  Read the ledger if present; a missing ledger
             # simply means nothing is applied yet.
             try:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT filename FROM schema_migrations")
-                    applied_files = {row[0] for row in cur.fetchall()}
-            except psycopg2.errors.UndefinedTable:
-                applied_files = set()
+                cur = conn.cursor()
+                cur.execute("SELECT filename FROM schema_migrations")
+                applied_files = {row[0] for row in cur.fetchall()}
+                cur.close()
+            except Exception as e:  # noqa: BLE001 - driver-specific error class
+                if _relation_missing(e):
+                    applied_files = set()
+                else:
+                    raise
             finally:
                 conn.rollback()
         else:
-            with conn.cursor() as cur:
-                cur.execute(CREATE_LEDGER_SQL)
-                cur.execute("SELECT filename FROM schema_migrations")
-                applied_files = {row[0] for row in cur.fetchall()}
+            cur = conn.cursor()
+            cur.execute(CREATE_LEDGER_SQL)
+            cur.execute("SELECT filename FROM schema_migrations")
+            applied_files = {row[0] for row in cur.fetchall()}
+            cur.close()
             conn.commit()
 
         migrations = get_migration_files()
@@ -113,12 +172,13 @@ def apply_migrations(db_url: str, dry_run: bool = False, from_version: int = 0) 
                 continue
 
             print(f"Applying: {path.name} ... ", end="", flush=True)
-            with conn.cursor() as cur:
-                cur.execute(sql)
-                cur.execute(
-                    "INSERT INTO schema_migrations (version, filename) VALUES (%s, %s)",
-                    (version, path.name),
-                )
+            cur = conn.cursor()
+            cur.execute(sql)
+            cur.execute(
+                "INSERT INTO schema_migrations (version, filename) VALUES (%s, %s)",
+                (version, path.name),
+            )
+            cur.close()
             conn.commit()
             print("OK")
 

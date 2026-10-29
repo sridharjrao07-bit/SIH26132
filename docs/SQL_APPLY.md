@@ -20,9 +20,18 @@ If you cannot run the Python script (e.g. missing dependencies), you can apply t
 
 ```sh
 psql -d $DATABASE_URL -f db/migrations/001_schema.sql
-# ... apply up to 034 sequentially
-psql -d $DATABASE_URL -f db/migrations/034_fix_indexes.sql
+# ... apply through the current head sequentially
+psql -d $DATABASE_URL -f db/migrations/043_resolve_gen_random_bytes.sql
 ```
+
+The current migration head is `043_resolve_gen_random_bytes.sql`. Migrations
+`035_fpo_security_patches.sql`, `036_marketplace_hardening.sql`, and
+`037_headlines_require_approved.sql` harden FPO access, marketplace capacity and
+payment invariants, and approved-headline exposure respectively. Migrations
+`038_direct_channel.sql` through `043_resolve_gen_random_bytes.sql` add the
+DirectLink channel, fulfilment and seed data, plus the PostgreSQL crypto
+compatibility fixes. Apply them with the ledger runner; do not edit an applied
+migration in place.
 
 ## Upgrade and Recovery Paths
 
@@ -52,27 +61,27 @@ After deployment, verify the state by running these probes as the `postgres` use
 ```sql
 -- 1. Verify review_status is a valid ENUM type
 SELECT column_name, data_type, udt_name
-FROM information_schema.columns 
+FROM information_schema.columns
 WHERE table_name = 'events' AND column_name = 'review_status';
 -- Expected: data_type='USER-DEFINED', udt_name='review_state'
 
 -- 2. Verify legacy reviews were reconciled
-SELECT review_status, count(*) 
-FROM events 
-WHERE reviewed_by IS NOT NULL 
+SELECT review_status, count(*)
+FROM events
+WHERE reviewed_by IS NOT NULL
 GROUP BY review_status;
 -- Expected: If historical reviews existed, they should be in 'legacy_reviewed'.
 
 -- 3. Verify RPC existence and security definitions
-SELECT p.proname, p.prosecdef 
-FROM pg_proc p 
-JOIN pg_namespace n ON p.pronamespace = n.oid 
-WHERE n.nspname = 'public' 
+SELECT p.proname, p.prosecdef
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'public'
   AND p.proname IN ('claim_source_document', 'review_event', 'publish_extracted_events_v2');
 
 -- 4. Verify view security
-SELECT grantee, privilege_type 
-FROM information_schema.role_table_grants 
+SELECT grantee, privilege_type
+FROM information_schema.role_table_grants
 WHERE table_name = 'live_events_published';
 -- Expected: service_role has SELECT, public does NOT.
 ```

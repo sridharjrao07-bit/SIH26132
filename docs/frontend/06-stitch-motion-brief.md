@@ -114,7 +114,7 @@ everything behind `motion-safe:` / `motion-reduce:`.
 8. **Offline banner + sync dot:** banner `animate-slide-down`; the `SyncStatus` dot
    pulses only while `fetching` (opacity), static otherwise.
 9. **Bottom nav active indicator:** animated underline/dot that slides between tabs
-   (transform). 
+   (transform).
 10. **Confirmations:** a tiny toast (`animate-rise`, bottom, above nav) for "Offer
     accepted", "Payment recorded", "Alert saved". Auto-dismiss ~2.5s, `role="status"`.
 

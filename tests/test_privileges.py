@@ -14,11 +14,10 @@ KNOWN_VIOLATIONS = {
         ('review_event', 'backend-team', '2026-10-01'),
     ],
     "vacuous_test": [
-        ('tests/test_backend_audit.py:/api/v1/does-not-exist', 'qa-team', '2026-10-01'), 
-        ('tests/test_marketplace.py:/docs', 'qa-team', '2026-10-01'), 
-        ('tests/test_openapi_contract.py:/openapi.json', 'qa-team', '2026-10-01'), 
-        ('tests/test_rls_guard.py:/api/v1/grievances/grievance-fpo-1/resolved', 'qa-team', '2026-10-01'), 
-        ('tests/test_sms.py:/test', 'qa-team', '2026-10-01')
+        # test_marketplace.py, test_rls_guard.py and test_sms.py moved to
+        # legacy/ with the SIH26132 feature set; their entries are retired.
+        ('tests/test_backend_audit.py:/api/v1/does-not-exist', 'qa-team', '2026-10-01'),
+        ('tests/test_openapi_contract.py:/openapi.json', 'qa-team', '2026-10-01'),
     ]
 }
 
@@ -38,7 +37,7 @@ def test_revoked_table_conformance():
     db_url = os.environ.get("SUPABASE_DB_URL")
     if not db_url or db_url == "postgresql://p@db.placeholder.supabase.co:5432/postgres":
         pytest.skip("No real DB URL provided")
-        
+
     tables = ["buyers", "lots", "offers", "payments", "storage_bookings", "logistics_bookings"]
     import psycopg2
     conn = psycopg2.connect(db_url)
@@ -49,19 +48,19 @@ def test_revoked_table_conformance():
                 cur.execute(f"SELECT to_regclass('public.{table}')")
                 assert cur.fetchone()[0] is not None, f"Table {table} does not exist in DB"
                 cur.execute("SET ROLE authenticated")
-                
+
                 with pytest.raises(psycopg2.errors.InsufficientPrivilege) as exc:
                     cur.execute(f"INSERT INTO public.{table} DEFAULT VALUES")
                 assert exc.value.pgcode == "42501"
-                
+
                 with pytest.raises(psycopg2.errors.InsufficientPrivilege) as exc:
                     cur.execute(f"UPDATE public.{table} SET id = id")
                 assert exc.value.pgcode == "42501"
-                
+
                 with pytest.raises(psycopg2.errors.InsufficientPrivilege) as exc:
                     cur.execute(f"DELETE FROM public.{table}")
                 assert exc.value.pgcode == "42501"
-                
+
                 cur.execute("RESET ROLE")
     finally:
         conn.close()
@@ -78,7 +77,13 @@ def test_migration_coverage():
         assert re.match(r"^\d{3}[a-z]?_.*\.sql$", name), f"Invalid migration name: {name}"
 
     # Count ratchet — bump when a migration is intentionally added.
-    EXPECTED_MIGRATIONS = 37
+    # 41 = migrations 001..040 plus 003b (the out-of-band letter-suffixed grant
+    # patch).  The number is deliberately literal: a migration that appears
+    # without anyone bumping this is exactly what the ratchet exists to catch.
+    # 44 = 001-040 plus 003b (the out-of-band letter-suffixed grant patch), 041
+    # (chain profiles), 042 (pgcrypto in the extensions schema) and 043 (the
+    # gen_random_bytes wrapper that lets search_path=public RPCs reach it).
+    EXPECTED_MIGRATIONS = 44
     assert len(sql_files) == EXPECTED_MIGRATIONS, (
         f"Expected {EXPECTED_MIGRATIONS} migrations, found {len(sql_files)}"
     )
@@ -98,22 +103,22 @@ def test_dead_control_check():
     db_url = os.environ.get("SUPABASE_DB_URL")
     if not db_url or db_url == "postgresql://p@db.placeholder.supabase.co:5432/postgres":
         pytest.skip("No real DB URL provided")
-        
+
     import psycopg2
     conn = psycopg2.connect(db_url)
     try:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT p.proname 
-                FROM pg_proc p 
-                JOIN pg_namespace n ON p.pronamespace = n.oid 
-                WHERE n.nspname = 'public' 
+                SELECT p.proname
+                FROM pg_proc p
+                JOIN pg_namespace n ON p.pronamespace = n.oid
+                WHERE n.nspname = 'public'
                   AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
             """)
             funcs = [row[0] for row in cur.fetchall()]
     finally:
         conn.close()
-        
+
     root = Path(__file__).parent.parent
     # Production code is more than app/ + ingestion/: notifications/,
     # forecasting/ and events/ also issue Supabase RPCs (e.g. the alerts job
@@ -125,11 +130,11 @@ def test_dead_control_check():
         + list(root.joinpath("forecasting").rglob("*.py"))
         + list(root.joinpath("events").rglob("*.py"))
     )
-    
+
     app_text = ""
     for f in app_files:
         app_text += f.read_text(encoding="utf-8")
-        
+
     violations = []
     for fn in funcs:
         # Ignore functions that are purely helpers for db triggers
@@ -140,8 +145,10 @@ def test_dead_control_check():
             continue
         if f'"{fn}"' not in app_text and f"'{fn}'" not in app_text:
             violations.append(fn)
-            
+
     check_ratchet("dead_control", violations)
+
+
 
 def test_vacuous_test_check():
     """Every path a test requests via client.<verb> must exist in app.openapi()."""
@@ -164,5 +171,27 @@ def test_vacuous_test_check():
                         base_path = path.split("?")[0]
                         if base_path not in valid_paths and not any(base_path.startswith(v.split("{")[0]) and "{" in v for v in valid_paths if v.split("{")[0]):
                             violations.append(f"{rel_path}:{base_path}")
-    
+
     check_ratchet("vacuous_test", violations)
+
+
+
+def test_no_migration_contains_merge_conflict_markers():
+    """A migration committed with conflict markers fails to apply at all.
+
+    This is not hypothetical: migration 041 was once committed containing
+    '<<<<<<< HEAD' / '=======' / '>>>>>>>' markers after a rebase conflict was
+    resolved by a script that only replaced part of the file. Postgres rejects
+    the whole file, so the migration is not merely wrong, it is unusable — and
+    nothing in the test suite would have noticed, because no test ever reads the
+    migration text as SQL.
+    """
+    root = Path(__file__).resolve().parent.parent
+    markers = ("<<<<<<<", "=======", ">>>>>>>")
+    bad = []
+    for p in sorted((root / "db" / "migrations").glob("*.sql")):
+        text = p.read_text(encoding="utf-8")
+        for i, line in enumerate(text.splitlines(), start=1):
+            if line.startswith(markers):
+                bad.append(f"{p.name}:{i}")
+    assert not bad, f"merge conflict markers in migrations: {bad}"

@@ -317,7 +317,7 @@ def compute_sale_window(
             relevant_events.append(e)
             if len(relevant_events) >= 2:
                 break
-    
+
     for e in relevant_events:
         reason += f" Recent events: {e['headline']} ({e['event_date']})."
 

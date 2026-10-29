@@ -6,13 +6,13 @@
 
 ## Executive Summary
 
-The newly implemented LightGBM global forecasting model is currently **blocked** from automated promotion. While the data pipelines, walk-forward evaluation harness, and promotion gates are fully wired and functional, the model cannot be certified for live production use because there is currently insufficient live history in the primary pairs to support valid training and calibration splits. 
+The newly implemented LightGBM global forecasting model is currently **blocked** from automated promotion. While the data pipelines, walk-forward evaluation harness, and promotion gates are fully wired and functional, the model cannot be certified for live production use because there is currently insufficient live history in the primary pairs to support valid training and calibration splits.
 
 As a result, no accuracy card can be definitively established for the GBM model at this time. **Automatic Selection (promotion)** is safely disabled, and the engine will fall back to baselines (Naive, Moving Average). **Explicit Selection** is still available (users can request the `gbm` model via the API), but its predictions are unverified.
 
 ## Evaluation Results (Smoke Test)
 
-The following metrics were derived using a 120-day legacy history scope (`smoke` profile) on Lasalgaon Onion. Because the GBM model demands a strict pre-fold chronological split to determine early-stopping iterations (calibration), it yields 0 valid predictions in this limited historical window. 
+The following metrics were derived using a 120-day legacy history scope (`smoke` profile) on Lasalgaon Onion. Because the GBM model demands a strict pre-fold chronological split to determine early-stopping iterations (calibration), it yields 0 valid predictions in this limited historical window.
 
 ### Baseline Benchmarks
 

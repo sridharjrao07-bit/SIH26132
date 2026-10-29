@@ -1,3 +1,5 @@
+# Generated duplicate of ../requirements.txt for deployment tooling.
+# Keep this file byte-for-byte aligned with the root file; tests enforce parity.
 # Production dependencies — Krishi Bazaar API
 # Python 3.12 (pre-built wheels; do not pin pydantic 2.7 / FastAPI 0.111)
 # Install: pip install -r requirements.txt

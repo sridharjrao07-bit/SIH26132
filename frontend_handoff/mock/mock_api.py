@@ -52,7 +52,33 @@ import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from importlib import import_module
+from pathlib import Path
 from urllib.parse import parse_qs, urlparse
+
+# The DirectLink engine is deliberately pure and standard-library-only. Reusing
+# it here keeps the mock numerically faithful to FastAPI without copying or
+# hardcoding demo results. The mock still runs from ``web/`` or this directory.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+_direct_consolidation = import_module("direct.consolidation")
+_direct_fair_price = import_module("direct.fair_price")
+_direct_logistics = import_module("direct.logistics")
+_direct_pipeline = import_module("direct.pipeline")
+_direct_value_chain = import_module("direct.value_chain")
+GroupOrder = _direct_consolidation.GroupOrder
+evaluate_group_buy = _direct_consolidation.evaluate_group_buy
+direct_quote = _direct_fair_price.direct_quote
+leakage_report = _direct_fair_price.leakage_report
+FreightConfig = _direct_logistics.FreightConfig
+road_distance_km = _direct_logistics.road_distance_km
+DemandNode = _direct_pipeline.DemandNode
+DirectConfig = _direct_pipeline.DirectConfig
+SupplyLot = _direct_pipeline.SupplyLot
+plan_direct_channel = _direct_pipeline.plan_direct_channel
+default_direct_chain = _direct_value_chain.default_direct_chain
+default_traditional_chain = _direct_value_chain.default_traditional_chain
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Fixture data (stable IDs so you can hardcode them while developing)
@@ -262,6 +288,7 @@ def seed_store() -> None:
                                 "lat": None, "lng": None,
                                 "created_at": _iso(_now()), "updated_at": _iso(_now())},
         },
+        "direct_plans": {},
     })
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -564,6 +591,201 @@ class Req:
         if u.get("role") not in roles:
             raise ApiError(403, f"requires role in {list(roles)}")
         return u
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DirectLink (the same pure engine used by the real FastAPI app)
+# ─────────────────────────────────────────────────────────────────────────────
+
+_DIRECT_RETAIL_BY_CATEGORY = {
+    "vegetable": 5392.0,
+    "oilseed": 6200.0,
+    "cereal": 3200.0,
+    "other": 4000.0,
+}
+
+
+def _direct_category(body: dict) -> str:
+    category = body.get("category") or "vegetable"
+    if isinstance(category, list):
+        category = category[0] if category else "vegetable"
+    if category not in {"vegetable", "oilseed", "cereal", "other"}:
+        raise ApiError(422, "category must be vegetable, oilseed, cereal, or other")
+    return category
+
+
+def _positive(body: dict, name: str) -> float:
+    value = body.get(name)
+    if value is None:
+        raise ApiError(422, [{"loc": ["body", name], "msg": "Field required", "type": "missing"}])
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        raise ApiError(422, [{"loc": ["body", name], "msg": "Input should be a valid number", "type": "float_parsing"}])
+    if value <= 0:
+        raise ApiError(422, [{"loc": ["body", name], "msg": "Input should be greater than 0", "type": "greater_than"}])
+    return value
+
+
+def _direct_freight(body: dict) -> FreightConfig:
+    try:
+        return FreightConfig.from_dict(body.get("freight"))
+    except (TypeError, ValueError) as exc:
+        raise ApiError(422, str(exc)) from exc
+
+
+def _direct_plan(body: dict):
+    category = _direct_category(body)
+    lots = []
+    for item in body.get("lots") or []:
+        lots.append(SupplyLot(
+            id=str(item.get("id", "")), commodity_id=str(item.get("commodity_id", "")),
+            quantity_qtl=float(item.get("quantity_qtl", 0)),
+            mandi_price_per_qtl=float(item.get("mandi_price_per_qtl", 0)),
+            lat=item.get("lat"), lng=item.get("lng"), category=item.get("category", category),
+            grade=item.get("grade", "General"), farmer_id=item.get("farmer_id"),
+            market_name=item.get("market_name", ""),
+        ))
+    demands = []
+    for item in body.get("demands") or []:
+        retail = item.get("retail_price_per_qtl")
+        if retail is None:
+            retail = _DIRECT_RETAIL_BY_CATEGORY.get(item.get("category", category), 4000.0)
+        demands.append(DemandNode(
+            id=str(item.get("id", "")), commodity_id=str(item.get("commodity_id", "")),
+            quantity_qtl=float(item.get("quantity_qtl", 0)), retail_price_per_qtl=float(retail),
+            lat=item.get("lat"), lng=item.get("lng"), category=item.get("category", category),
+            kind=item.get("kind", "household"), label=item.get("label", ""),
+            min_grade=item.get("min_grade", "General"),
+        ))
+    if not lots or not demands:
+        raise ApiError(422, "at least one lot and one demand are required")
+    cfg = DirectConfig(
+        alpha=float(body.get("alpha", 0.5)), platform_fee_pct=float(body.get("platform_fee_pct", 0.03)),
+        max_distance_km=float(body.get("max_distance_km", 250.0)),
+        min_allocation_qtl=float(body.get("min_allocation_qtl", 5.0)),
+        cluster_size_km=float(body.get("cluster_size_km", 25.0)),
+        circuity=float(body.get("circuity", 1.25)), calibrate=bool(body.get("calibrate", True)),
+        enforce_grade=bool(body.get("enforce_grade", False)), freight=_direct_freight(body),
+    )
+    return plan_direct_channel(lots, demands, cfg)
+
+
+@route("GET", r"/api/v1/direct/config")
+def _direct_config(r: Req):
+    category = _direct_category(r.query)
+    traditional = default_traditional_chain(category)
+    direct = default_direct_chain(category)
+    freight = FreightConfig()
+    return {
+        "category": category, "traditional_chain": traditional.to_dict(),
+        "direct_chain": direct.to_dict(), "freight": freight.to_dict(),
+        "derivations": {
+            "traditional_A": traditional.A, "traditional_B": traditional.B,
+            "traditional_delivered_ratio": traditional.delivered_ratio,
+            "traditional_pass_through": traditional.pass_through,
+            "traditional_intermediary_count": traditional.intermediary_count,
+            "direct_A": direct.A, "direct_B": direct.B,
+            "direct_delivered_ratio": direct.delivered_ratio,
+            "direct_effective_markup": direct.effective_markup,
+        },
+    }
+
+
+@route("POST", r"/api/v1/direct/rupee")
+def _direct_rupee(r: Req):
+    body = r.body or {}
+    category = _direct_category(body)
+    farm = _positive(body, "farm_price")
+    retail = _positive(body, "retail_price")
+    commodity = body.get("commodity_id") or body.get("commodity") or category
+    return leakage_report(
+        default_traditional_chain(category), farm, retail, commodity=commodity,
+        calibrate=bool(body.get("calibrate", True)),
+    ).to_dict()
+
+
+@route("POST", r"/api/v1/direct/fair-price")
+def _direct_fair_price(r: Req):
+    body = r.body or {}
+    category = _direct_category(body)
+    farm = _positive(body, "farm_price")
+    retail = _positive(body, "retail_price")
+    coords = [body.get(k) for k in ("origin_lat", "origin_lng", "dest_lat", "dest_lng")]
+    if any(v is None for v in coords):
+        raise ApiError(422, "origin_lat, origin_lng, dest_lat and dest_lng are required")
+    try:
+        distance = road_distance_km(*[float(v) for v in coords], float(body.get("circuity", 1.25)))
+    except (TypeError, ValueError):
+        raise ApiError(422, "coordinates must be valid numbers")
+    if distance is None:
+        raise ApiError(422, "could not compute a distance for the supplied coordinates")
+    return direct_quote(
+        default_traditional_chain(category), default_direct_chain(category, float(body.get("platform_fee_pct", 0.03))),
+        farm, retail, distance, _direct_freight(body), alpha=float(body.get("alpha", 0.5)),
+        quantity_qtl=body.get("load_qtl", body.get("quantity_qtl")),
+        commodity=body.get("commodity_id") or body.get("commodity") or category,
+        include_leakage=True,
+    ).to_dict()
+
+
+@route("POST", r"/api/v1/direct/plan")
+def _direct_plan_route(r: Req):
+    return _direct_plan(r.body or {}).to_dict()
+
+
+@route("POST", r"/api/v1/direct/group-buy")
+def _direct_group_buy(r: Req):
+    body = r.body or {}
+    orders = body.get("orders") or []
+    if not orders:
+        raise ApiError(422, "at least one order is required")
+    try:
+        origin_lat, origin_lng = float(body["origin_lat"]), float(body["origin_lng"])
+        points = [(float(o["lat"]), float(o["lng"])) for o in orders if o.get("lat") is not None and o.get("lng") is not None]
+        dest_lat = sum(p[0] for p in points) / len(points) if points else origin_lat
+        dest_lng = sum(p[1] for p in points) / len(points) if points else origin_lng
+        distance = road_distance_km(origin_lat, origin_lng, dest_lat, dest_lng, float(body.get("circuity", 1.25)))
+        result = evaluate_group_buy(
+            [GroupOrder(order_id=str(o["order_id"]), qtl=float(o["qtl"]), lat=o.get("lat"), lng=o.get("lng"), label=o.get("label", "")) for o in orders],
+            _direct_freight(body), distance or 0.0, min_load_qtl=float(body.get("min_load_qtl", 0.0)),
+            cluster_size_km=float(body.get("cluster_size_km", 8.0)),
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ApiError(422, str(exc)) from exc
+    return result.to_dict()
+
+
+@route("POST", r"/api/v1/direct/plans/commit")
+def _direct_commit(r: Req):
+    r.require_auth()
+    body = r.body or {}
+    plan_body = body.get("plan")
+    if not isinstance(plan_body, dict):
+        raise ApiError(422, "plan is required")
+    plan = _direct_plan(plan_body)
+    STORE["direct_plans"][plan.plan_id] = plan.to_dict()
+    return plan.to_dict()
+
+
+@route("GET", r"/api/v1/direct/plans/(?P<plan_id>[^/]+)")
+def _direct_get_plan(r: Req):
+    r.require_auth()
+    plan = STORE["direct_plans"].get(r.path_params["plan_id"])
+    if not plan:
+        raise ApiError(404, "plan not found")
+    return plan
+
+
+@route("GET", r"/api/v1/direct/trace/(?P<token>[^/]+)")
+def _direct_trace(r: Req):
+    raise ApiError(404, "unknown trace token")
+
+
+@route("GET", r"/api/v1/direct/impact")
+def _direct_impact(r: Req):
+    plans = list(STORE["direct_plans"].values())
+    return {"plans": len(plans), "allocations": sum(len(p.get("allocations", [])) for p in plans), "impact": {}}
 
 
 # ─────────────────────────────────────────────────────────────────────────────

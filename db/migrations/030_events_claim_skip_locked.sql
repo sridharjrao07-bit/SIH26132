@@ -83,7 +83,7 @@ BEGIN
     -- 3. Claim (expired lease or failed/new document)
     v_new_token := gen_random_uuid();
 
-    -- If this is a reclaim, we DO NOT OVERWRITE the content. 
+    -- If this is a reclaim, we DO NOT OVERWRITE the content.
     -- Changed source content requires a separate explicit revision/re-extraction flow.
     UPDATE public.source_documents
     SET extraction_status = 'extracting',

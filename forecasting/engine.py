@@ -126,7 +126,7 @@ def get_daily_series(rows: List[dict]) -> List[Tuple[date, float]]:
     return build_daily_series(rows)
 
 
-# ── Models ────────────────────────────────────────────────────────────────     
+# ── Models ────────────────────────────────────────────────────────────────
 
 MODELS = {} # Populated below after class definitions
 
@@ -213,8 +213,8 @@ def _blend_predictions(
     return results, sigma
 
 def apply_postprocessing(
-    raw_preds: List[float], 
-    sigma: float, 
+    raw_preds: List[float],
+    sigma: float,
     sanity: Optional[Tuple[float, float]] = None
 ) -> List[Tuple[float, Optional[float], Optional[float]]]:
     """
@@ -224,19 +224,19 @@ def apply_postprocessing(
     """
     results = []
     for i, p in enumerate(raw_preds, start=1):
-        # We assume 1.96 multiplier is applied outside or here? 
+        # We assume 1.96 multiplier is applied outside or here?
         # Wait, CONFIDENCE_Z is 1.96.
         margin = CONFIDENCE_Z * sigma * math.sqrt(i) if sigma > 0 else 0.0
-        
+
         if sanity is not None:
             p = _clamp(p, sanity[0], sanity[1])
-            
+
         if sigma <= 0:
             lo, hi = p, p
         else:
             lo = max(0.0, p - margin)
             hi = p + margin
-            
+
         if sanity is not None:
             lo = _clamp(lo, sanity[0], sanity[1])
             hi = _clamp(hi, sanity[0], sanity[1])
@@ -244,10 +244,10 @@ def apply_postprocessing(
                 lo = p
             if hi < p:
                 hi = p
-        
+
         results.append((
-            round(p, 2), 
-            round(lo, 2) if lo is not None else None, 
+            round(p, 2),
+            round(lo, 2) if lo is not None else None,
             round(hi, 2) if hi is not None else None
         ))
     return results
@@ -321,14 +321,14 @@ def _make_forecast_rows(
         }]
 
     prices = [p for _, p in series]
-    
+
     settings = get_settings()
     requested_model = settings.forecast_model
-    
+
     preds = None
     method = "none"
     confidence = "none"
-    
+
     # Try the requested model if it's not "auto"
     if requested_model != "auto" and (requested_model in MODELS or requested_model == "gbm"):
         model_cls = MODELS.get(requested_model)
@@ -342,7 +342,7 @@ def _make_forecast_rows(
                 model_inst = model_cls(prices, features)
             else:
                 model_inst = model_cls(prices)
-                
+
             if getattr(model_inst, 'fallback', False):
                 logger.warning("forecast_model_fallback", market_id=market_id, commodity_id=commodity_id, model=requested_model)
             else:
@@ -352,7 +352,7 @@ def _make_forecast_rows(
                 confidence = "high" if n >= HIGH_CONFIDENCE_THRESHOLD else "medium"
         except Exception as e:
             logger.warning("forecast_model_failed", market_id=market_id, commodity_id=commodity_id, model=requested_model, error=str(e))
-            
+
     # Fallback / Auto Tier Logic
     if preds is None:
         if n >= BLEND_THRESHOLD:
@@ -379,7 +379,7 @@ def _make_forecast_rows(
     for i, (predicted, lower, upper) in enumerate(preds):
         fdate = (horizon_start + timedelta(days=i + 1)).isoformat()
 
-        
+
         features_used = []
         if method in ("feature_ols", "gbm"):
             names = ["bias", "lag_1", "lag_7", "lag_14", "arrivals_7d_avg", "momentum_14d", "rain_7d_cum_mm", "district_mean_price", "event_pressure"]
@@ -387,8 +387,8 @@ def _make_forecast_rows(
                 features_used = [names[c] for c in getattr(model_inst, "keep_cols", [])]
             else:
                 features_used = ["market_id", "commodity_id", "dow", "lag_1", "lag_7", "lag_14", "arrivals_7d_avg", "momentum_14d", "rain_7d_cum_mm", "district_mean_price", "event_pressure"]
-            
-        
+
+
         # The registry key must describe the model that ACTUALLY produced the
         # row.  A requested model that fell back to the blend/MA tier must not
         # be stamped with the requested model's id (FORECAST_MODEL=gbm with
@@ -440,13 +440,13 @@ class ForecastEngine:
         self.supabase = supabase
         self.model_registry = {}
 
-    # ── Private helpers ────────────────────────────────────────────────        
+    # ── Private helpers ────────────────────────────────────────────────
 
     def _load_sanity_bands(self) -> Dict[str, Tuple[float, float]]:
         # Load registry as well
         models_resp = self.supabase.table("forecast_models").select("id, name").execute()
         self.model_registry = {m["name"]: m["id"] for m in (models_resp.data or [])}
-        
+
         resp = self.supabase.table("commodities").select("id, sanity_min, sanity_max").execute()
         return {
             row["id"]: (float(row["sanity_min"]), float(row["sanity_max"]))
@@ -488,11 +488,11 @@ class ForecastEngine:
         Paginate the fetch to bypass the PostgREST 1000 row limit.
         """
         cutoff = (get_ist_today() - timedelta(days=self.HISTORY_DAYS)).isoformat()
-        
+
         history_map = collections.defaultdict(list)
         offset = 0
         PAGE_SIZE = 1000
-        
+
         while True:
             resp = (
                 self.supabase.table("prices")
@@ -509,10 +509,10 @@ class ForecastEngine:
             if len(resp.data) < PAGE_SIZE:
                 break
             offset += PAGE_SIZE
-            
+
         return history_map
 
-    # ── Public entry point ────────────────────────────────────────────────     
+    # ── Public entry point ────────────────────────────────────────────────
 
     def run(self) -> dict:
         """
@@ -540,7 +540,7 @@ class ForecastEngine:
             events = load_published_events(self.supabase, event_date_from=get_ist_today() - timedelta(days=self.HISTORY_DAYS))
         except Exception as e:
             logger.warning("global_features_fetch_failed", error=str(e))
-            
+
         # Group weather by market_id for fast lookup
         weather_by_market = {}
         for w in weather_daily:
@@ -571,7 +571,7 @@ class ForecastEngine:
                 history = pairs_history.get((market_id, commodity_id), [])
                 series  = build_daily_series(history)
                 sanity  = sanity_bands.get(commodity_id)
-                
+
                 features = None
                 if get_settings().forecast_model in ("feature_ols", "gbm"):
                     try:
@@ -579,15 +579,15 @@ class ForecastEngine:
                         market_weather = weather_by_market.get(market_id, [])
                         winning_rows = [row for _, row in build_daily_rows(history)]
                         features = build_feature_matrix(
-                            winning_rows, 
-                            weather=market_weather, 
-                            events=events, 
-                            district_prices=[], 
+                            winning_rows,
+                            weather=market_weather,
+                            events=events,
+                            district_prices=[],
                             target_commodity_id=commodity_id
                         )
                     except Exception as e:
                         logger.warning("feature_build_failed", error=str(e))
-                
+
                 rows    = _make_forecast_rows(
                     market_id, commodity_id, series, sanity, features=features, pretrained_model=global_gbm, model_registry=self.model_registry
                 )

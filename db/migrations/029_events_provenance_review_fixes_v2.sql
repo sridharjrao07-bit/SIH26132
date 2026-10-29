@@ -17,7 +17,7 @@ BEGIN
 END $$;
 
 -- 1. Review Status Schema Repair
-DO $$ 
+DO $$
 DECLARE
     v_col_type text;
     v_has_unknown boolean;
@@ -29,23 +29,23 @@ BEGIN
 
     -- Inspect existing review_status column
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_schema = 'public' 
-          AND table_name = 'events' 
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'events'
           AND column_name = 'review_status'
     ) THEN
-        SELECT data_type INTO v_col_type 
-        FROM information_schema.columns 
-        WHERE table_schema = 'public' 
-          AND table_name = 'events' 
+        SELECT data_type INTO v_col_type
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'events'
           AND column_name = 'review_status';
 
         -- If it's a manual text patch, we need to convert it
         IF v_col_type = 'text' OR v_col_type = 'character varying' THEN
             -- Validate existing values
             SELECT EXISTS (
-                SELECT 1 FROM public.events 
-                WHERE review_status IS NOT NULL 
+                SELECT 1 FROM public.events
+                WHERE review_status IS NOT NULL
                   AND review_status NOT IN ('pending', 'approved', 'rejected', 'legacy_reviewed')
             ) INTO v_has_unknown;
 
@@ -65,7 +65,7 @@ BEGIN
 
             -- Convert type
             ALTER TABLE public.events ALTER COLUMN review_status TYPE public.review_state USING review_status::public.review_state;
-            
+
             -- Apply intended constraints
             ALTER TABLE public.events ALTER COLUMN review_status SET DEFAULT 'pending';
             ALTER TABLE public.events ALTER COLUMN review_status SET NOT NULL;
@@ -78,9 +78,9 @@ END $$;
 
 -- 2. Backfill historical reviews
 -- Ambiguous legacy reviews must remain protected from replacement without being silently promoted to approved.
-UPDATE public.events 
-SET review_status = 'legacy_reviewed' 
-WHERE reviewed_by IS NOT NULL 
+UPDATE public.events
+SET review_status = 'legacy_reviewed'
+WHERE reviewed_by IS NOT NULL
   AND review_status = 'pending';
 
 
@@ -159,7 +159,7 @@ BEGIN
     -- 3. Claim (expired lease or failed/new document)
     v_new_token := gen_random_uuid();
 
-    -- If this is a reclaim, we DO NOT OVERWRITE the content. 
+    -- If this is a reclaim, we DO NOT OVERWRITE the content.
     -- Changed source content requires a separate explicit revision/re-extraction flow.
     UPDATE public.source_documents
     SET extraction_status = 'extracting',
@@ -321,11 +321,11 @@ BEGIN
     WHERE id = p_doc_id
     FOR UPDATE;
 
-    IF FOUND 
-       AND v_status = 'extracting' 
-       AND v_db_token IS NOT NULL 
-       AND p_claim_token IS NOT NULL 
-       AND v_db_token IS NOT DISTINCT FROM p_claim_token 
+    IF FOUND
+       AND v_status = 'extracting'
+       AND v_db_token IS NOT NULL
+       AND p_claim_token IS NOT NULL
+       AND v_db_token IS NOT DISTINCT FROM p_claim_token
     THEN
         UPDATE public.source_documents
         SET extraction_status = 'failed',
@@ -406,7 +406,7 @@ DROP VIEW IF EXISTS public.sale_window_headlines;
 DROP VIEW IF EXISTS public.live_events_published;
 
 CREATE VIEW public.live_events_published AS
-    SELECT 
+    SELECT
         e.id,
         e.source_document_id,
         e.event_hash,
@@ -436,7 +436,7 @@ REVOKE ALL ON public.live_events_published FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.live_events_published TO service_role;
 
 CREATE VIEW public.sale_window_headlines AS
-    SELECT 
+    SELECT
         e.id,
         e.headline,
         e.event_date,

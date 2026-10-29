@@ -35,8 +35,18 @@ You need **Python 3.8+**. No `pip install`. The standard library is all it uses.
 
 ### Fake
 - Prices and forecasts are a seeded random walk. Deterministic across restarts.
+- DirectLink economics reuse the repository's pure `direct/` engine, so rupee,
+  fair-price, planning, and group-buy numbers are not hand-written fixtures.
 - Auth is not verified. See below.
 - Everything is in memory and resets when you restart.
+
+### DirectLink routes
+
+The mock implements the full `/api/v1/direct/*` surface. The pure calculation
+routes (`config`, `rupee`, `fair-price`, `plan`, and `group-buy`) execute the same
+standard-library engine as the real backend. Commit/read-back uses an in-memory
+store and requires a mock bearer token; unknown trace tokens return 404 and the
+impact route returns the current in-memory aggregate.
 
 ---
 

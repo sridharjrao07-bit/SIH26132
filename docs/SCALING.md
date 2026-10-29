@@ -21,7 +21,7 @@ VALUES (
 
 -- 2. Add Source Aliases for Ingestion
 INSERT INTO public.commodity_alias (source, source_key, commodity_id)
-VALUES 
+VALUES
     ('data_gov_in', 'Banana', 'e0000000-0000-0000-0000-000000000001'),
     ('data_gov_in', 'Banana(Ripe)', 'e0000000-0000-0000-0000-000000000001');
 

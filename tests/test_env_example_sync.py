@@ -15,7 +15,28 @@ ENV_EXAMPLE = Path(__file__).resolve().parent.parent / ".env.example"
 
 # Env vars intentionally documented in .env.example but read directly by tests
 # or tooling rather than via Settings.  Empty today; extend with a reason.
-NON_SETTINGS_KEYS = frozenset()
+# Keys read directly via os.getenv by the ingestion adapters rather than through
+# app.config.Settings. They are documented in .env.example because an operator
+# needs to see them, but they are not app configuration: they bound a single
+# outbound HTTP call and are deliberately not part of the validated settings
+# object (a bad value must degrade to a safe default, not fail startup).
+# Keys read directly with os.getenv rather than through Settings, so the
+# dead-key guard below cannot find a field for them. Deliberately narrow:
+# anything with a Settings field must stay OUT of here, or renaming that field
+# would silently stop being caught. DATA_GOV_IN_API_KEY used to be listed and
+# was removed once it turned out to be a required Settings field -- the app
+# refuses to boot without it.
+NON_SETTINGS_KEYS = frozenset({
+    "DCA_RETAIL_RESOURCE_ID",
+    # Source selector for the retail anchor: "live" (default) or "snapshot".
+    # Read with os.getenv, so it has no Settings field to be found by.
+    "RETAIL_ANCHOR_SOURCE",
+    "DCA_RETAIL_RESOURCE_IDS",
+    "DCA_RETAIL_CONNECT_TIMEOUT_SECONDS",
+    "DCA_RETAIL_TIMEOUT_SECONDS",
+    "DCA_RETAIL_DEADLINE_SECONDS",
+    "DCA_RETAIL_MAX_RETRY_WAIT_SECONDS",
+})
 
 
 def _example_keys() -> set:

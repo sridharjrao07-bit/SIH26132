@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Krishi Bazaar — APMC Mandi Intelligence &amp; GBM Price Predictions</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Plus Jakarta Sans & Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration with Design System Tokens -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-tint": "#006c49",
+            "primary-container": "#10b981",
+            "on-tertiary-fixed-variant": "#653e00",
+            "error-container": "#ffdad6",
+            "surface-container-high": "#e2e7ff",
+            "on-surface": "#131b2e",
+            "secondary-container": "#645efb",
+            "secondary-fixed-dim": "#c3c0ff",
+            "tertiary-fixed-dim": "#ffb95f",
+            "background": "#faf8ff",
+            "surface-dim": "#d2d9f4",
+            "on-primary-fixed-variant": "#005236",
+            "on-tertiary-container": "#523200",
+            "on-error-container": "#93000a",
+            "inverse-primary": "#4edea3",
+            "primary-fixed-dim": "#4edea3",
+            "primary": "#006c49",
+            "surface-container-low": "#f2f3ff",
+            "on-primary-container": "#00422b",
+            "tertiary-container": "#e29100",
+            "surface-variant": "#dae2fd",
+            "on-tertiary": "#ffffff",
+            "on-tertiary-fixed": "#2a1700",
+            "on-surface-variant": "#3c4a42",
+            "primary-fixed": "#6ffbbe",
+            "surface-container": "#eaedff",
+            "inverse-surface": "#283044",
+            "inverse-on-surface": "#eef0ff",
+            "on-background": "#131b2e",
+            "secondary-fixed": "#e2dfff",
+            "on-error": "#ffffff",
+            "on-secondary-fixed-variant": "#3323cc",
+            "on-secondary-fixed": "#0f0069",
+            "secondary": "#4b41e1",
+            "tertiary-fixed": "#ffddb8",
+            "outline": "#6c7a71",
+            "surface": "#faf8ff",
+            "surface-container-highest": "#dae2fd",
+            "on-secondary": "#ffffff",
+            "outline-variant": "#bbcabf",
+            "surface-bright": "#faf8ff",
+            "on-primary": "#ffffff",
+            "surface-container-lowest": "#ffffff",
+            "on-primary-fixed": "#002113",
+            "tertiary": "#855300",
+            "on-secondary-container": "#fffbff",
+            "error": "#ba1a1a"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-sm": "0.5rem",
+            "margin-desktop": "2.5rem",
+            "margin-tablet": "1.5rem",
+            "space-lg": "1.5rem",
+            "gutter": "1.25rem",
+            "margin": "1rem",
+            "space-xs": "0.25rem",
+            "gutter-desktop": "1.5rem",
+            "space-md": "1rem",
+            "space-xl": "2rem"
+          },
+          "fontFamily": {
+            "headline-lg": ["Plus Jakarta Sans"],
+            "headline-md": ["Plus Jakarta Sans"],
+            "headline-lg-mobile": ["Plus Jakarta Sans"],
+            "display-lg": ["Plus Jakarta Sans"],
+            "data-metric": ["Inter"],
+            "display-sm": ["Plus Jakarta Sans"],
+            "body-md": ["Inter"],
+            "label-sm": ["Inter"],
+            "data-table": ["Inter"],
+            "body-sm": ["Inter"],
+            "body-lg": ["Inter"],
+            "label-md": ["Inter"]
+          },
+          "fontSize": {
+            "headline-lg": ["1.75rem", { lineHeight: "2.25rem", letterSpacing: "-0.015em", fontWeight: "600" }],
+            "headline-md": ["1.25rem", { lineHeight: "1.75rem", letterSpacing: "-0.01em", fontWeight: "600" }],
+            "headline-lg-mobile": ["1.375rem", { lineHeight: "1.875rem", letterSpacing: "-0.01em", fontWeight: "600" }],
+            "display-lg": ["3rem", { lineHeight: "3.5rem", letterSpacing: "-0.025em", fontWeight: "700" }],
+            "data-metric": ["1.5rem", { lineHeight: "1.875rem", letterSpacing: "-0.02em", fontWeight: "600" }],
+            "display-sm": ["2.25rem", { lineHeight: "2.75rem", letterSpacing: "-0.02em", fontWeight: "700" }],
+            "body-md": ["0.9375rem", { lineHeight: "1.5rem", fontWeight: "400" }],
+            "label-sm": ["0.75rem", { lineHeight: "1rem", letterSpacing: "0.04em", fontWeight: "600" }],
+            "data-table": ["0.875rem", { lineHeight: "1.25rem", fontWeight: "400" }],
+            "body-sm": ["0.8125rem", { lineHeight: "1.25rem", fontWeight: "400" }],
+            "body-lg": ["1.125rem", { lineHeight: "1.75rem", fontWeight: "400" }],
+            "label-md": ["0.875rem", { lineHeight: "1.25rem", letterSpacing: "0.01em", fontWeight: "500" }]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 20px;
+      line-height: 1;
+      display: inline-block;
+      text-transform: none;
+      letter-spacing: normal;
+      word-wrap: normal;
+      white-space: nowrap;
+      direction: ltr;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Frosted glass backdrop token */
+    .glass-tile {
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(14px) saturate(180%);
+      border: 1px solid rgba(226, 232, 240, 0.85);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03), 0 6px 20px rgba(15, 23, 42, 0.02);
+    }
+
+    .glass-floating {
+      background: rgba(255, 255, 255, 0.80);
+      backdrop-filter: blur(16px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.05);
+    }
+
+    .pulse-glow {
+      box-shadow: 0 0 18px -2px rgba(16, 185, 129, 0.4);
+    }
+
+    .indigo-glow {
+      box-shadow: 0 0 20px -3px rgba(99, 102, 241, 0.35);
+    }
+
+    /* Custom smooth scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface antialiased font-body-md selection:bg-primary selection:text-on-primary">
+<!-- ================= TOP NAV BAR (SHARED COMPONENT JSON DRIVEN) ================= -->
+<header class="bg-surface/80 dark:bg-inverse-surface/80 backdrop-blur-md docked full-width top-0 sticky z-50 shadow-sm border-b border-outline-variant/40 dark:border-outline/20">
+<div class="w-full px-space-md lg:px-margin-desktop flex items-center justify-between h-16 max-w-full">
+<!-- Brand & Agmarknet Live Status -->
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-on-primary shadow-sm shadow-primary/30">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">eco</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-headline-lg text-headline-lg font-bold text-primary dark:text-inverse-primary tracking-tight">Krishi Bazaar</span>
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-primary border border-emerald-200/80 font-label-sm text-label-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container animate-pulse"></span>
+                Agmarknet Live Sync
+              </span>
+</div>
+<p class="font-label-sm text-label-sm text-on-surface-variant leading-none">Indian APMC Telemetry &amp; Predictive Analytics</p>
+</div>
+</div>
+<!-- Navigation Links (Dashboard Active per Semantic Intent) -->
+<nav class="hidden xl:flex items-center gap-6 ml-6">
+<a class="text-primary dark:text-inverse-primary border-b-2 border-primary dark:border-inverse-primary font-semibold pb-1 font-label-md text-label-md" href="#">Dashboard</a>
+<a class="text-on-surface-variant dark:text-surface-container-highest hover:text-on-surface dark:hover:text-inverse-on-surface transition-colors pb-1 font-label-md text-label-md" href="#">Mandi Comparison</a>
+<a class="text-on-surface-variant dark:text-surface-container-highest hover:text-on-surface dark:hover:text-inverse-on-surface transition-colors pb-1 font-label-md text-label-md" href="#">GBM Model Diagnostics</a>
+<a class="text-on-surface-variant dark:text-surface-container-highest hover:text-on-surface dark:hover:text-inverse-on-surface transition-colors pb-1 font-label-md text-label-md" href="#">Arrival Feed</a>
+<a class="text-on-surface-variant dark:text-surface-container-highest hover:text-on-surface dark:hover:text-inverse-on-surface transition-colors pb-1 font-label-md text-label-md" href="#">Alerts</a>
+</nav>
+</div>
+<!-- Right Header Utilities: Actions, Language Switcher, Icons, Profile -->
+<div class="flex items-center gap-3">
+<!-- Language Switcher from JSON -->
+<div class="hidden md:flex items-center px-2.5 py-1 rounded-lg bg-surface-container-lowest border border-outline-variant/60 shadow-xs font-label-sm text-label-sm text-on-surface">
+<span class="font-semibold text-primary">EN</span>
+<span class="mx-1.5 text-outline-variant">|</span>
+<span class="text-on-surface-variant hover:text-on-surface cursor-pointer">हिन्दी</span>
+<span class="mx-1.5 text-outline-variant">|</span>
+<span class="text-on-surface-variant hover:text-on-surface cursor-pointer">मराठी</span>
+</div>
+<!-- Trailing Primary Action from JSON -->
+<button class="hidden lg:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary text-on-primary hover:bg-emerald-700 font-label-md text-label-md transition-all shadow-xs active:scale-95">
+<span class="material-symbols-outlined text-[18px]">download</span>
+          Export Telemetry
+        </button>
+<!-- Icon Actions from JSON -->
+<div class="flex items-center gap-1">
+<button class="relative p-2 rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-primary transition-all duration-150 active:scale-95" title="Notifications">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-error ring-2 ring-surface-container-lowest"></span>
+</button>
+<button class="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-primary transition-all duration-150 active:scale-95" title="Filter Tuning">
+<span class="material-symbols-outlined">tune</span>
+</button>
+<button class="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-primary transition-all duration-150 active:scale-95" title="Account Settings">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+<div class="h-6 w-px bg-outline-variant/40 mx-1"></div>
+<!-- Agribusiness Operator Avatar -->
+<div class="flex items-center gap-2 pl-1">
+<div alt="Agribusiness Operator Avatar" class="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant/80 flex items-center justify-center font-headline-md text-primary font-bold text-xs">
+            AK
+          </div>
+<div class="hidden 2xl:block text-left">
+<div class="font-label-sm text-label-sm font-semibold text-on-surface leading-tight">Anand Kumar</div>
+<div class="text-[11px] text-on-surface-variant font-body-sm">FPO Lead / Azadpur</div>
+</div>
+</div>
+</div>
+</div>
+</header>
+<!-- ================= SUB-HEADER: COMMODITY & MANDI CONTROLLER BAR ================= -->
+<section class="bg-surface-container-lowest border-b border-outline-variant/40 px-space-md lg:px-margin-desktop py-3">
+<div class="max-w-[1440px] mx-auto flex flex-wrap items-center justify-between gap-4">
+<!-- Selectors Group -->
+<div class="flex flex-wrap items-center gap-3">
+<!-- Crop Selector -->
+<div class="flex items-center gap-2">
+<label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Commodity:</label>
+<div class="relative">
+<select class="pl-3 pr-8 py-1.5 rounded-lg border border-slate-300 bg-surface-container-lowest text-on-surface font-label-md text-label-md focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 cursor-pointer shadow-xs">
+<option selected="">🍅 Tomato (Hybrid / Tamatar)</option>
+<option>🧅 Onion (Nashik Red)</option>
+<option>🥔 Potato (Jyoti Seed)</option>
+<option>🌶️ Green Chilli (G4)</option>
+<option>🥬 Cauliflower (Snowball)</option>
+</select>
+</div>
+</div>
+<!-- Quick Commodity Pills -->
+<div class="hidden sm:flex items-center gap-1.5">
+<button class="px-2.5 py-1 rounded-md text-xs font-label-sm bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors border border-outline-variant/30">
+            Onion (Nashik)
+          </button>
+<button class="px-2.5 py-1 rounded-md text-xs font-label-sm bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors border border-outline-variant/30">
+            Potato (Jyoti)
+          </button>
+<button class="px-2.5 py-1 rounded-md text-xs font-label-sm bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors border border-outline-variant/30">
+            Green Chilli
+          </button>
+</div>
+<div class="hidden md:block h-5 w-px bg-outline-variant/50 mx-1"></div>
+<!-- APMC Mandi Selector -->
+<div class="flex items-center gap-2">
+<label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Primary APMC:</label>
+<div class="relative flex items-center">
+<select class="pl-3 pr-8 py-1.5 rounded-lg border border-slate-300 bg-surface-container-lowest text-on-surface font-label-md text-label-md focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 cursor-pointer shadow-xs">
+<option selected="">📍 Azadpur Mandi, New Delhi</option>
+<option>📍 Vashi APMC, Navi Mumbai</option>
+<option>📍 Kolar APMC, Karnataka</option>
+<option>📍 Lasalgaon APMC, Maharashtra</option>
+<option>📍 Madanapalle APMC, AP</option>
+</select>
+<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-label-sm text-label-sm border border-slate-200">
+              NCT Delhi
+            </span>
+</div>
+</div>
+</div>
+<!-- Live Metadata & Inset Search -->
+<div class="flex items-center gap-3">
+<div class="hidden xl:flex items-center gap-2 text-on-surface-variant font-label-sm text-label-sm bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200/80">
+<span class="material-symbols-outlined text-[16px] text-primary">schedule</span>
+<span>Synced: <strong>24 Oct 2024, 11:42 IST</strong></span>
+</div>
+<div class="relative">
+<input class="pl-8 pr-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs placeholder:text-slate-400 focus:border-primary-container focus:ring-1 focus:ring-primary-container text-on-surface w-44 lg:w-56" placeholder="Search Mandi or Variety..." type="text"/>
+<span class="material-symbols-outlined absolute left-2 top-2 text-[16px] text-slate-400">search</span>
+</div>
+</div>
+</div>
+</section>
+<!-- ================= MAIN CONTENT WRAPPER ================= -->
+<main class="max-w-[1440px] mx-auto px-space-md lg:px-margin-desktop py-5 space-y-6">
+<!-- ================= 2. TOP MARKET PULSE & TELEMETRY BANNER ================= -->
+<div class="glass-floating rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-3 border border-secondary/20 shadow-xs bg-gradient-to-r from-white via-indigo-50/40 to-emerald-50/40">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-secondary/10 text-secondary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[18px]">psychology</span>
+</div>
+<div class="flex items-center flex-wrap gap-2 text-on-surface font-body-sm text-body-sm">
+<span class="font-semibold px-2 py-0.5 rounded-md bg-secondary text-white text-xs">GBM Model v2.4</span>
+<span class="text-on-surface-variant">Refreshed 14 mins ago •</span>
+<span class="font-medium text-slate-800">Projected Azadpur tomato modal rate surge expected within <span class="text-primary font-bold">4 days</span> due to heavy rainfall in Kolar supply corridor.</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-100/70 text-secondary font-label-sm text-label-sm font-semibold">
+<span class="w-2 h-2 rounded-full bg-secondary animate-ping"></span>
+          High Impact Event
+        </span>
+<button class="text-xs font-label-md text-secondary hover:text-indigo-800 font-semibold underline underline-offset-2">Telemetry Audit</button>
+</div>
+</div>
+<!-- ================= 3. TOP BENTO METRIC CARDS (ROW OF 3) ================= -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-gutter-desktop">
+<!-- Card 1: Today's Modal Price -->
+<div class="glass-tile rounded-xl p-5 relative overflow-hidden flex flex-col justify-between">
+<div class="flex items-start justify-between">
+<div>
+<div class="flex items-center gap-1.5 text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wide">
+<span>Today's Modal Price</span>
+<span class="material-symbols-outlined text-[15px] cursor-pointer" title="Volume-weighted central APMC clearing rate">info</span>
+</div>
+<div class="mt-2 flex items-baseline gap-2">
+<span class="font-headline-lg text-[2rem] font-bold text-slate-900 tracking-tight">₹2,480</span>
+<span class="font-body-sm text-slate-500 font-medium">/ Quintal</span>
+</div>
+<div class="text-xs text-slate-500 font-label-sm">( ₹24.80 / kg wholesale )</div>
+</div>
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 font-label-sm text-label-sm font-semibold">
+<span class="material-symbols-outlined text-[14px]">arrow_upward</span>
+            +12.4% <span class="font-normal text-emerald-700">(₹270)</span>
+</span>
+</div>
+<!-- Micro Sparkline SVG -->
+<div class="my-4 py-2 border-y border-slate-100 flex items-center justify-between">
+<div class="space-y-0.5">
+<span class="text-[11px] text-slate-400 uppercase font-semibold">Intraday Flow</span>
+<div class="text-xs font-semibold text-slate-700">14,280 Qtl <span class="text-emerald-600 font-normal">▲ 8% arrivals</span></div>
+</div>
+<svg class="w-32 h-9 overflow-visible" fill="none" viewbox="0 0 120 30">
+<path d="M 0 24 Q 20 28, 40 18 T 80 12 T 120 4" fill="none" stroke="#10b981" stroke-linecap="round" stroke-width="2.5"></path>
+<path d="M 0 24 Q 20 28, 40 18 T 80 12 T 120 4 L 120 30 L 0 30 Z" fill="rgba(16, 185, 129, 0.08)"></path>
+<circle cx="120" cy="4" fill="#10b981" r="3"></circle>
+</svg>
+</div>
+<div class="flex items-center justify-between text-xs text-slate-600 font-data-table pt-1">
+<div>Min: <strong class="text-slate-900 font-semibold">₹2,100</strong></div>
+<div class="w-1 h-1 rounded-full bg-slate-300"></div>
+<div>Max: <strong class="text-slate-900 font-semibold">₹2,850</strong></div>
+<div class="w-1 h-1 rounded-full bg-slate-300"></div>
+<div>Trades: <strong class="text-slate-900 font-semibold">84 Lots</strong></div>
+</div>
+</div>
+<!-- Card 2: 7-Day Forecast Trend (GBM Machine Learning) -->
+<div class="rounded-xl p-5 relative overflow-hidden flex flex-col justify-between border border-secondary/30 bg-gradient-to-br from-indigo-50/90 via-white to-purple-50/60 shadow-sm indigo-glow">
+<div class="flex items-start justify-between">
+<div>
+<div class="flex items-center gap-1.5 text-secondary font-label-sm text-label-sm uppercase tracking-wide font-semibold">
+<span class="material-symbols-outlined text-[16px]">insights</span>
+<span>7-Day Forecast Trend</span>
+</div>
+<div class="mt-2 flex items-baseline gap-2">
+<span class="font-headline-lg text-[2rem] font-bold text-secondary tracking-tight">₹2,920</span>
+<span class="font-body-sm text-indigo-900/60 font-medium">/ Qtl Peak</span>
+</div>
+<div class="text-xs text-indigo-800 font-label-sm font-semibold">+17.7% Expected Surge</div>
+</div>
+<div class="text-right">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary text-white font-label-sm text-label-sm font-bold shadow-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+              93.8% Conf.
+            </span>
+<div class="text-[10px] text-indigo-600 mt-1 font-mono">GBM-Regressor-v2</div>
+</div>
+</div>
+<!-- Predictive Micro-Curve Graphic -->
+<div class="my-4 py-1.5 px-3 rounded-lg bg-white/70 border border-indigo-100 flex items-center justify-between">
+<div class="text-xs">
+<span class="text-slate-500 font-body-sm">Key driver:</span>
+<div class="font-semibold text-slate-800 text-[11px]">Kolar deficit &amp; wet-rot risk</div>
+</div>
+<!-- Predictive Mini Graph -->
+<svg class="w-24 h-8" fill="none" viewbox="0 0 100 30">
+<path d="M 0 25 C 30 20, 50 15, 70 8 C 85 4, 95 2, 100 2" fill="none" stroke="#4b41e1" stroke-dasharray="3 2" stroke-width="2.5"></path>
+<polygon fill="rgba(99, 102, 241, 0.12)" points="50,15 100,2 100,28 50,28"></polygon>
+<circle class="animate-pulse" cx="100" cy="2" fill="#4b41e1" r="3.5"></circle>
+</svg>
+</div>
+<div class="flex items-center justify-between text-xs text-indigo-900 font-label-sm">
+<span>Lower Band: <strong>₹2,780</strong></span>
+<span class="text-slate-300">|</span>
+<span>Upper Band: <strong>₹3,050</strong></span>
+<span class="text-slate-300">|</span>
+<span class="text-emerald-700 font-semibold">High Alpha</span>
+</div>
+</div>
+<!-- Card 3: System Advice & Action Recommendation -->
+<div class="glass-tile rounded-xl p-5 relative overflow-hidden flex flex-col justify-between border-slate-200">
+<div class="flex items-start justify-between">
+<div>
+<div class="flex items-center gap-1.5 text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wide">
+<span>Algorithmic Recommendation</span>
+<span class="material-symbols-outlined text-[15px] text-amber-500">bolt</span>
+</div>
+<div class="mt-2.5">
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-headline-md text-headline-md font-bold tracking-wide shadow-sm pulse-glow">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+                HOLD STOCK (HOLD)
+              </span>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[11px] font-semibold text-slate-400 uppercase">Arbitrage Delta</span>
+<div class="font-headline-md text-slate-800 font-bold text-sm text-emerald-600">+₹440 / Qtl</div>
+</div>
+</div>
+<div class="my-3 space-y-1 bg-slate-50/80 p-2.5 rounded-lg border border-slate-100">
+<div class="flex items-center justify-between text-xs">
+<span class="text-slate-500">Optimal Liquidation Window:</span>
+<span class="font-bold text-slate-900">Oct 28 – Oct 30</span>
+</div>
+<div class="text-[11px] text-slate-500">Holding yield matches peak mandi arrival exhaustion cycle.</div>
+</div>
+<!-- Action CTAs -->
+<div class="grid grid-cols-2 gap-2 pt-1">
+<button class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-primary text-on-primary hover:bg-emerald-700 font-label-md text-label-md font-semibold transition-colors shadow-xs active:scale-95">
+<span class="material-symbols-outlined text-[16px]">add_alert</span>
+            Set Trigger
+          </button>
+<button class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-label-md text-label-md font-semibold transition-colors active:scale-95">
+<span class="material-symbols-outlined text-[16px]">swap_horiz</span>
+            Simulate Arb
+          </button>
+</div>
+</div>
+</section>
+<!-- ================= 4. CENTRAL HERO SECTION: AI PRICE TRAJECTORY & CHART ================= -->
+<section class="glass-tile rounded-2xl p-6 relative">
+<!-- Section Header & Controls -->
+<div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5">
+<div>
+<div class="flex items-center gap-2">
+<h2 class="font-headline-lg text-headline-lg font-bold text-slate-900 tracking-tight">AI Price Trajectory &amp; Historical vs. Forecasted Rates</h2>
+<span class="px-2.5 py-0.5 rounded-full bg-indigo-50 text-secondary border border-indigo-200 font-label-sm text-label-sm font-semibold">
+              Dual-Engine GBM
+            </span>
+</div>
+<p class="font-body-sm text-body-sm text-slate-500 mt-0.5">
+            Tomato Hybrid (Solanum lycopersicum) • Azadpur Yard 4 Wholesale Rate Sequence
+          </p>
+</div>
+<!-- Timeframe Tabs & Legend -->
+<div class="flex flex-wrap items-center gap-3">
+<!-- Timeframe selector -->
+<div class="inline-flex p-1 rounded-xl bg-slate-100 border border-slate-200/80 text-xs font-label-md">
+<button class="px-3 py-1.5 rounded-lg bg-white text-slate-900 font-bold shadow-xs">7-Day Forecast</button>
+<button class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition-colors">15-Day Outlook</button>
+<button class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition-colors">Historical 30D</button>
+<button class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition-colors">Seasonality 1Y</button>
+</div>
+</div>
+</div>
+<!-- Chart Legend & Metadata Strip -->
+<div class="flex flex-wrap items-center justify-between gap-4 py-3 text-xs">
+<div class="flex items-center gap-5">
+<div class="flex items-center gap-2">
+<span class="w-4 h-1 bg-emerald-600 rounded-full inline-block"></span>
+<span class="font-medium text-slate-700">Actual Mandi Modal Rate (₹/Qtl)</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-4 h-1 bg-secondary rounded-full inline-block border-b-2 border-secondary"></span>
+<span class="font-medium text-secondary font-semibold">GBM Projected Median</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-4 h-2.5 bg-indigo-100 border border-indigo-200 rounded-xs inline-block"></span>
+<span class="text-slate-500">95% Confidence Corridor (±σ)</span>
+</div>
+</div>
+<div class="flex items-center gap-4 text-slate-500 font-data-table">
+<span>MAE: <strong class="text-slate-800">2.41%</strong></span>
+<span>R² Score: <strong class="text-slate-800">0.912</strong></span>
+<span>Feature Weights: <strong class="text-slate-800">28 Signals</strong></span>
+</div>
+</div>
+<!-- MAIN HIGH-FIDELITY SVG INTERACTIVE CHART -->
+<div class="relative w-full h-80 my-2 select-none">
+<!-- Interactive Tooltip Overlay (Anchored to Oct 27 Forecast Peak) -->
+<div class="absolute left-[62%] top-8 transform -translate-x-1/2 z-20 pointer-events-none">
+<div class="glass-floating rounded-xl p-3 shadow-lg border border-secondary/30 bg-white/95 text-xs space-y-1">
+<div class="flex items-center justify-between gap-3 border-b border-slate-100 pb-1">
+<span class="font-bold text-slate-900">Sun, 27 Oct 2024</span>
+<span class="px-1.5 py-0.5 rounded bg-indigo-50 text-secondary font-bold text-[10px]">GBM Step +3</span>
+</div>
+<div class="flex items-center justify-between gap-4">
+<span class="text-slate-500">Expected Rate:</span>
+<span class="font-bold text-secondary text-sm">₹2,840 / Qtl</span>
+</div>
+<div class="flex items-center justify-between text-[11px] text-slate-400">
+<span>Spread: ₹2,740 – ₹2,960</span>
+<span class="text-emerald-600 font-semibold">Conf: 94.5%</span>
+</div>
+</div>
+<!-- Arrow Indicator -->
+<div class="w-3 h-3 bg-white border-r border-b border-secondary/30 transform rotate-45 mx-auto -mt-1.5"></div>
+</div>
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 1000 300">
+<defs>
+<!-- Gradient for Confidence Corridor -->
+<lineargradient id="corridorGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#4b41e1" stop-opacity="0.18"></stop>
+<stop offset="100%" stop-color="#4b41e1" stop-opacity="0.02"></stop>
+</lineargradient>
+<!-- Gradient for Historical Underfill -->
+<lineargradient id="historyGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#10b981" stop-opacity="0.15"></stop>
+<stop offset="100%" stop-color="#10b981" stop-opacity="0.0"></stop>
+</lineargradient>
+</defs>
+<!-- Horizontal Grid Lines (Y-Axis) -->
+<g stroke="#e2e8f0" stroke-dasharray="4 4" stroke-width="1">
+<line x1="40" x2="980" y1="30" y2="30"></line>
+<line x1="40" x2="980" y1="80" y2="80"></line>
+<line x1="40" x2="980" y1="130" y2="130"></line>
+<line x1="40" x2="980" y1="180" y2="180"></line>
+<line x1="40" x2="980" y1="230" y2="230"></line>
+</g>
+<!-- Y-Axis Labels -->
+<g fill="#94a3b8" font-family="Inter" font-size="11" text-anchor="end">
+<text x="35" y="34">₹3,200</text>
+<text x="35" y="84">₹2,850</text>
+<text x="35" y="134">₹2,500</text>
+<text x="35" y="184">₹2,150</text>
+<text x="35" y="234">₹1,800</text>
+</g>
+<!-- Today Separator Vertical Line (Oct 24 at x=480) -->
+<line stroke="#0f172a" stroke-dasharray="3 3" stroke-width="1.5" x1="480" x2="480" y1="20" y2="250"></line>
+<rect fill="#0f172a" height="18" rx="4" width="70" x="445" y="12"></rect>
+<text fill="#ffffff" font-family="Inter" font-size="10" font-weight="600" text-anchor="middle" x="480" y="24">Today (Oct 24)</text>
+<!-- HISTORICAL AREA & LINE (Oct 18 to Oct 24: x=60 to x=480) -->
+<!-- Coordinates:
+               Oct 18 (x=60, y=210 ₹1940)
+               Oct 19 (x=130, y=195 ₹2050)
+               Oct 20 (x=200, y=200 ₹2010)
+               Oct 21 (x=270, y=170 ₹2220)
+               Oct 22 (x=340, y=165 ₹2260)
+               Oct 23 (x=410, y=150 ₹2360)
+               Oct 24 (x=480, y=133 ₹2480 Modal)
+          -->
+<path d="M 60 210 L 130 195 L 200 200 L 270 170 L 340 165 L 410 150 L 480 133 L 480 250 L 60 250 Z" fill="url(#historyGradient)"></path>
+<path d="M 60 210 L 130 195 L 200 200 L 270 170 L 340 165 L 410 150 L 480 133" fill="none" stroke="#006c49" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"></path>
+<!-- Historical Markers -->
+<circle cx="60" cy="210" fill="#006c49" r="3.5"></circle>
+<circle cx="130" cy="195" fill="#006c49" r="3.5"></circle>
+<circle cx="200" cy="200" fill="#006c49" r="3.5"></circle>
+<circle cx="270" cy="170" fill="#006c49" r="3.5"></circle>
+<circle cx="340" cy="165" fill="#006c49" r="3.5"></circle>
+<circle cx="410" cy="150" fill="#006c49" r="3.5"></circle>
+<!-- TODAY'S PIVOT ANCHOR POINT -->
+<circle class="drop-shadow" cx="480" cy="133" fill="#10b981" r="6" stroke="#ffffff" stroke-width="2"></circle>
+<circle cx="480" cy="133" fill="none" opacity="0.6" r="10" stroke="#10b981" stroke-width="1.5"></circle>
+<!-- FORECAST CONFIDENCE BAND CORRIDOR (Oct 24 to Nov 01: x=480 to x=950) -->
+<!-- Upper bound: 133 -> 110 -> 90 -> 72 -> 62 (₹3,050) -> 68 -> 80 -> 95
+               Lower bound: 133 -> 140 -> 125 -> 105 -> 95 (₹2,780) -> 102 -> 115 -> 130
+          -->
+<path d="M 480 133
+                   C 540 120, 600 95, 660 76
+                   C 720 62, 780 60, 840 70
+                   C 890 80, 920 88, 950 95
+                   L 950 145
+                   C 920 138, 890 125, 840 115
+                   C 780 102, 720 95, 660 105
+                   C 600 120, 540 130, 480 133 Z" fill="url(#corridorGradient)" stroke="rgba(99, 102, 241, 0.3)" stroke-dasharray="2 2"></path>
+<!-- PREDICTED MEDIAN LINE (Electric Indigo) -->
+<path d="M 480 133
+                   C 540 125, 600 105, 660 88
+                   C 720 75, 780 72, 840 85
+                   C 890 95, 920 105, 950 118" fill="none" stroke="#4b41e1" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"></path>
+<!-- Forecast Node Points -->
+<circle cx="550" cy="118" fill="#4b41e1" r="3.5"></circle>
+<circle cx="620" cy="98" fill="#4b41e1" r="4"></circle>
+<!-- Key Peak Node (Oct 27-28) -->
+<circle cx="690" cy="78" fill="#4b41e1" r="5.5" stroke="#ffffff" stroke-width="2"></circle>
+<circle cx="760" cy="73" fill="#4b41e1" r="4"></circle>
+<circle cx="830" cy="84" fill="#4b41e1" r="3.5"></circle>
+<circle cx="900" cy="102" fill="#4b41e1" r="3.5"></circle>
+<circle cx="950" cy="118" fill="#4b41e1" r="3.5"></circle>
+<!-- X-Axis Labels (Dates) -->
+<g fill="#64748b" font-family="Inter" font-size="11" text-anchor="middle">
+<text x="60" y="270">Oct 18</text>
+<text x="130" y="270">Oct 19</text>
+<text x="200" y="270">Oct 20</text>
+<text x="270" y="270">Oct 21</text>
+<text x="340" y="270">Oct 22</text>
+<text x="410" y="270">Oct 23</text>
+<text fill="#0f172a" font-weight="700" x="480" y="270">Oct 24 (Live)</text>
+<text fill="#4b41e1" x="550" y="270">Oct 25</text>
+<text fill="#4b41e1" x="620" y="270">Oct 26</text>
+<text fill="#4b41e1" font-weight="700" x="690" y="270">Oct 27 (Peak)</text>
+<text fill="#4b41e1" x="760" y="270">Oct 28</text>
+<text fill="#4b41e1" x="830" y="270">Oct 29</text>
+<text fill="#4b41e1" x="900" y="270">Oct 30</text>
+<text fill="#4b41e1" x="950" y="270">Nov 01</text>
+</g>
+</svg>
+</div>
+<!-- Under-Chart Feature Signals & Telemetry Bar -->
+<div class="mt-4 pt-4 border-t border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+<div class="flex items-center gap-2.5">
+<div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs">
+<span class="material-symbols-outlined text-[15px]">water_drop</span>
+</div>
+<div>
+<div class="text-slate-500 font-label-sm">Kolar Soil Moisture</div>
+<div class="font-semibold text-slate-800">84% (+22% above avg)</div>
+</div>
+</div>
+<div class="flex items-center gap-2.5">
+<div class="w-7 h-7 rounded-lg bg-indigo-50 text-secondary flex items-center justify-center font-bold text-xs">
+<span class="material-symbols-outlined text-[15px]">local_shipping</span>
+</div>
+<div>
+<div class="text-slate-500 font-label-sm">Supply Corridor Lead Time</div>
+<div class="font-semibold text-slate-800">38 hrs (NH-44 Disrupted)</div>
+</div>
+</div>
+<div class="flex items-center gap-2.5">
+<div class="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-xs">
+<span class="material-symbols-outlined text-[15px]">storefront</span>
+</div>
+<div>
+<div class="text-slate-500 font-label-sm">Delhi NCR Retail Demand</div>
+<div class="font-semibold text-slate-800">Surging (Navratri Exhaustion)</div>
+</div>
+</div>
+<div class="flex items-center gap-2.5">
+<div class="w-7 h-7 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center font-bold text-xs">
+<span class="material-symbols-outlined text-[15px]">analytics</span>
+</div>
+<div>
+<div class="text-slate-500 font-label-sm">GBM Model Iteration</div>
+<div class="font-semibold text-slate-800">Estimator #420 (Trees: 850)</div>
+</div>
+</div>
+</div>
+</section>
+<!-- ================= 5. BOTTOM BENTO ROW (3 ANCILLARY MODULES) ================= -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-gutter-desktop">
+<!-- Module 1: Mandi Benchmark & Arbitrage Matrix (Col-span 5) -->
+<div class="lg:col-span-5 glass-tile rounded-2xl p-5 flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between pb-3 border-b border-slate-100">
+<div>
+<h3 class="font-headline-md text-headline-md font-bold text-slate-900">Inter-Mandi Arbitrage Matrix</h3>
+<p class="font-body-sm text-body-sm text-slate-500">Live wholesale spread vs. Delhi Azadpur benchmark</p>
+</div>
+<span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-label-sm text-label-sm font-semibold">
+              Live Rates
+            </span>
+</div>
+<!-- Tabular Arbitrage Grid -->
+<div class="overflow-x-auto mt-3">
+<table class="w-full text-left font-data-table text-data-table border-collapse">
+<thead>
+<tr class="text-slate-400 text-[11px] uppercase tracking-wider border-b border-slate-100">
+<th class="py-2 font-semibold">APMC Mandi</th>
+<th class="py-2 font-semibold text-right">Modal Rate</th>
+<th class="py-2 font-semibold text-right">Freight to Del</th>
+<th class="py-2 font-semibold text-right">Net Spread</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 text-xs">
+<!-- Row 1: Azadpur (Base) -->
+<tr class="bg-slate-50/60 font-semibold">
+<td class="py-2.5 flex items-center gap-1.5 text-slate-900">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+                    Azadpur, New Delhi
+                  </td>
+<td class="py-2.5 text-right font-mono font-bold text-slate-900">₹2,480</td>
+<td class="py-2.5 text-right text-slate-400">Baseline</td>
+<td class="py-2.5 text-right text-slate-500">—</td>
+</tr>
+<!-- Row 2: Vashi Mumbai -->
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="py-2.5 text-slate-700">Vashi APMC, Mumbai</td>
+<td class="py-2.5 text-right font-mono font-semibold text-slate-800">₹2,650</td>
+<td class="py-2.5 text-right text-slate-500">₹140/Q</td>
+<td class="py-2.5 text-right font-bold text-emerald-600">+₹30</td>
+</tr>
+<!-- Row 3: Kolar APMC -->
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="py-2.5 text-slate-700">Kolar APMC, KA</td>
+<td class="py-2.5 text-right font-mono font-semibold text-slate-800">₹2,150</td>
+<td class="py-2.5 text-right text-slate-500">₹210/Q</td>
+<td class="py-2.5 text-right font-bold text-emerald-600">+₹120</td>
+</tr>
+<!-- Row 4: Lasalgaon -->
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="py-2.5 text-slate-700">Lasalgaon, MH</td>
+<td class="py-2.5 text-right font-mono font-semibold text-slate-800">₹2,320</td>
+<td class="py-2.5 text-right text-slate-500">₹160/Q</td>
+<td class="py-2.5 text-right font-bold text-slate-500">Flat</td>
+</tr>
+<!-- Row 5: Madanapalle -->
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="py-2.5 text-slate-700">Madanapalle, AP</td>
+<td class="py-2.5 text-right font-mono font-semibold text-slate-800">₹1,980</td>
+<td class="py-2.5 text-right text-slate-500">₹240/Q</td>
+<td class="py-2.5 text-right font-bold text-emerald-600">+₹260</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+<span class="text-slate-500">Maximum Arbitrage Route:</span>
+<span class="font-bold text-primary">Madanapalle ➔ Azadpur (₹260 Margin)</span>
+</div>
+</div>
+<!-- Module 2: ML Feature Importance / Drivers (Col-span 4) -->
+<div class="lg:col-span-4 glass-tile rounded-2xl p-5 flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between pb-3 border-b border-slate-100">
+<div>
+<h3 class="font-headline-md text-headline-md font-bold text-slate-900">GBM Feature Weights</h3>
+<p class="font-body-sm text-body-sm text-slate-500">Key pricing volatility drivers</p>
+</div>
+<span class="w-7 h-7 rounded-lg bg-indigo-50 text-secondary flex items-center justify-center font-bold text-xs">
+<span class="material-symbols-outlined text-[16px]">model_training</span>
+</span>
+</div>
+<!-- Feature Bars -->
+<div class="mt-4 space-y-3.5">
+<!-- Feature 1 -->
+<div>
+<div class="flex items-center justify-between text-xs mb-1">
+<span class="font-medium text-slate-800">Rainfall Anomaly (Southern Hubs)</span>
+<span class="font-bold text-emerald-600">+42% Impact</span>
+</div>
+<div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+<div class="bg-primary h-2 rounded-full" style="width: 84%"></div>
+</div>
+</div>
+<!-- Feature 2 -->
+<div>
+<div class="flex items-center justify-between text-xs mb-1">
+<span class="font-medium text-slate-800">Diesel Freight &amp; Toll Index</span>
+<span class="font-bold text-secondary">+24% Impact</span>
+</div>
+<div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+<div class="bg-secondary h-2 rounded-full" style="width: 48%"></div>
+</div>
+</div>
+<!-- Feature 3 -->
+<div>
+<div class="flex items-center justify-between text-xs mb-1">
+<span class="font-medium text-slate-800">Festive Navratri / Diwali Demand</span>
+<span class="font-bold text-secondary">+21% Impact</span>
+</div>
+<div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+<div class="bg-secondary h-2 rounded-full" style="width: 42%"></div>
+</div>
+</div>
+<!-- Feature 4 -->
+<div>
+<div class="flex items-center justify-between text-xs mb-1">
+<span class="font-medium text-slate-800">Cold Storage Buffer Stock</span>
+<span class="font-bold text-rose-600">-13% Impact</span>
+</div>
+<div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+<div class="bg-rose-500 h-2 rounded-full" style="width: 26%"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+<span>SHAP Value Co-efficient: <strong>0.78</strong></span>
+<a class="text-secondary hover:underline font-semibold" href="#">View Correlation Matrix</a>
+</div>
+</div>
+<!-- Module 3: Live Mandi Arrivals & Truck Dispatches (Col-span 3) -->
+<div class="lg:col-span-3 glass-tile rounded-2xl p-5 flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between pb-3 border-b border-slate-100">
+<div>
+<h3 class="font-headline-md text-headline-md font-bold text-slate-900">Live Yard Feed</h3>
+<p class="font-body-sm text-body-sm text-slate-500">Azadpur Gate 3 Weighbridge</p>
+</div>
+<span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+</div>
+<!-- Incoming Trucks Mini Stream -->
+<div class="mt-3 space-y-2.5">
+<!-- Truck 1 -->
+<div class="p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors text-xs space-y-1">
+<div class="flex items-center justify-between">
+<span class="font-bold text-slate-900 font-mono">HR-55-AN-3921</span>
+<span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">Grade A Export</span>
+</div>
+<div class="flex items-center justify-between text-slate-500 text-[11px]">
+<span>280 Crates (7.2 MT)</span>
+<span class="text-slate-400">09m ago</span>
+</div>
+</div>
+<!-- Truck 2 -->
+<div class="p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors text-xs space-y-1">
+<div class="flex items-center justify-between">
+<span class="font-bold text-slate-900 font-mono">KA-04-E-8842</span>
+<span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">Grade A</span>
+</div>
+<div class="flex items-center justify-between text-slate-500 text-[11px]">
+<span>410 Crates (10.5 MT)</span>
+<span class="text-slate-400">18m ago</span>
+</div>
+</div>
+<!-- Truck 3 -->
+<div class="p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors text-xs space-y-1">
+<div class="flex items-center justify-between">
+<span class="font-bold text-slate-900 font-mono">UP-14-BT-1109</span>
+<span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[10px]">Grade B Domestic</span>
+</div>
+<div class="flex items-center justify-between text-slate-500 text-[11px]">
+<span>190 Crates (4.8 MT)</span>
+<span class="text-slate-400">32m ago</span>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-slate-100">
+<button class="w-full py-2 rounded-lg bg-slate-100 hover:bg-slate-200/80 text-slate-700 font-label-md text-label-md font-semibold transition-colors flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-[16px]">receipt_long</span>
+            Mandi Cess Receipts (42)
+          </button>
+</div>
+</div>
+</section>
+<!-- ================= COMMODITY STREAMING TICKER STRIP ================= -->
+<section class="glass-floating rounded-xl px-4 py-2.5 flex items-center gap-4 overflow-hidden border border-slate-200 text-xs">
+<div class="flex items-center gap-1.5 font-bold text-slate-900 uppercase font-label-sm shrink-0">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+        APMC Marquee:
+      </div>
+<div class="flex items-center gap-6 overflow-x-auto whitespace-nowrap scrollbar-none font-mono text-slate-700 text-[12px]">
+<div class="flex items-center gap-1">
+<span>Tomato (Azadpur):</span>
+<span class="font-bold text-slate-900">₹2,480/Q</span>
+<span class="text-emerald-600 font-semibold">▲ 12.4%</span>
+</div>
+<span class="text-slate-300">|</span>
+<div class="flex items-center gap-1">
+<span>Onion Red (Nashik):</span>
+<span class="font-bold text-slate-900">₹3,850/Q</span>
+<span class="text-emerald-600 font-semibold">▲ 4.1%</span>
+</div>
+<span class="text-slate-300">|</span>
+<div class="flex items-center gap-1">
+<span>Potato Jyoti (Agra):</span>
+<span class="font-bold text-slate-900">₹1,640/Q</span>
+<span class="text-rose-600 font-semibold">▼ 1.8%</span>
+</div>
+<span class="text-slate-300">|</span>
+<div class="flex items-center gap-1">
+<span>Green Chilli (Guntur):</span>
+<span class="font-bold text-slate-900">₹6,200/Q</span>
+<span class="text-emerald-600 font-semibold">▲ 8.6%</span>
+</div>
+<span class="text-slate-300">|</span>
+<div class="flex items-center gap-1">
+<span>Cauliflower (Hapur):</span>
+<span class="font-bold text-slate-900">₹1,950/Q</span>
+<span class="text-slate-500 font-semibold">▬ 0.0%</span>
+</div>
+</div>
+</section>
+</main>
+<!-- ================= SUBTLE MINIMAL FOOTER ================= -->
+<footer class="mt-8 border-t border-slate-200/70 bg-white/60 py-6 text-center text-xs text-slate-500 font-body-sm">
+<div class="max-w-[1440px] mx-auto px-margin-desktop flex flex-wrap items-center justify-between gap-4">
+<div class="flex items-center gap-2">
+<span class="font-headline-md font-bold text-primary">Krishi Bazaar</span>
+<span>— National APMC Intelligence Framework</span>
+</div>
+<div>
+        Telemetry synchronized with Agmarknet, Directorate of Marketing &amp; Inspection (DMI), Ministry of Agriculture.
+      </div>
+<div class="flex items-center gap-4 text-slate-600">
+<a class="hover:text-primary transition-colors" href="#">API Docs</a>
+<a class="hover:text-primary transition-colors" href="#">GBM Methodology</a>
+<a class="hover:text-primary transition-colors" href="#">Support Desk</a>
+</div>
+</div>
+</footer>
+<!-- Micro-interactions Script -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Small interactivity for tabs
+      const tabs = document.querySelectorAll('button');
+      tabs.forEach(tab => {
+        tab.addEventListener('click', function(e) {
+          if (this.textContent.includes('Outlook') || this.textContent.includes('Forecast') || this.textContent.includes('Historical')) {
+            tabs.forEach(t => {
+              t.classList.remove('bg-white', 'text-slate-900', 'font-bold', 'shadow-xs');
+              t.classList.add('text-slate-600');
+            });
+            this.classList.add('bg-white', 'text-slate-900', 'font-bold', 'shadow-xs');
+            this.classList.remove('text-slate-600');
+          }
+        });
+      });
+    });
+  </script>
+</body></html>

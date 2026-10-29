@@ -21,22 +21,22 @@ INSERT INTO public.forecast_models (name, description) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- Alter forecasts table to add model_id
-ALTER TABLE public.forecasts 
+ALTER TABLE public.forecasts
 ADD COLUMN IF NOT EXISTS model_id uuid REFERENCES public.forecast_models(id);
 
 -- Link existing forecasts to 'auto' model to maintain integrity
-UPDATE public.forecasts 
-SET model_id = (SELECT id FROM public.forecast_models WHERE name = 'auto') 
+UPDATE public.forecasts
+SET model_id = (SELECT id FROM public.forecast_models WHERE name = 'auto')
 WHERE model_id IS NULL;
 
 -- Drop the old unique constraint to allow revision history (multiple generated_at for the same forecast_date)
 ALTER TABLE public.forecasts DROP CONSTRAINT IF EXISTS uq_forecast;
 
--- Add a new unique constraint that includes generated_at and model_id to prevent exact duplicates 
+-- Add a new unique constraint that includes generated_at and model_id to prevent exact duplicates
 -- but allow new runs on the same date to be stored
-ALTER TABLE public.forecasts ADD CONSTRAINT uq_forecast_revision 
+ALTER TABLE public.forecasts ADD CONSTRAINT uq_forecast_revision
 UNIQUE (market_id, commodity_id, forecast_date, model_id, generated_at);
 
 -- Create an index to support fetching the "latest" forecast efficiently
-CREATE INDEX IF NOT EXISTS idx_forecasts_history 
+CREATE INDEX IF NOT EXISTS idx_forecasts_history
 ON public.forecasts (market_id, commodity_id, forecast_date, generated_at DESC);

@@ -96,14 +96,14 @@ class NaiveLastWeekSameDay:
         from forecasting.engine import apply_postprocessing
         if not self._last_date:
             return [(float("nan"), float("nan"), float("nan"))] * horizon
-            
+
         origin = forecast_origin or self._last_date
         raw = []
         for i in range(1, horizon + 1):
             target = origin + timedelta(days=i)
             lag = target - timedelta(days=7)
             raw.append(self._lookup.get(lag, float("nan")))
-            
+
         processed = apply_postprocessing(raw, self.sigma, sanity=None)
         final_processed = []
         for r, (p, lo, hi) in zip(raw, processed):
@@ -122,7 +122,7 @@ class FeatureOLSAdapter:
         if features is None:
             raise ValueError("FeatureOLS requires features")
         self._model = FeatureOLSModel(prices, features)
-        
+
     def predict(self, horizon: int = HORIZON, forecast_origin: Optional[date] = None) -> List[Tuple[float, float, float]]:
         from forecasting.engine import apply_postprocessing
         raw = self._model.predict(horizon, forecast_origin)
@@ -134,7 +134,7 @@ class HoltWintersAdapter:
         from forecasting.models import HoltWintersModel
         prices = [p for _, p in series]
         self._model = HoltWintersModel(prices)
-        
+
     def predict(self, horizon: int = HORIZON, forecast_origin: Optional[date] = None) -> List[Tuple[float, float, float]]:
         from forecasting.engine import apply_postprocessing
         raw = self._model.predict(horizon, forecast_origin)
@@ -261,19 +261,19 @@ def run_backtest(
     """
     from forecasting.engine import build_daily_series
     from forecasting.features import build_feature_matrix
-    
+
     if model_names is None:
         model_names = ["ma", "ols", "naive", "feature_ols", "holt_winters", "gbm"]
-        
+
     for name in model_names:
         if name not in MODEL_REGISTRY:
             raise ValueError(f"Unknown model name {name!r}")
-            
+
     if "naive" not in model_names:
         model_names.append("naive")
-        
+
     cutoff = (get_ist_today() - timedelta(days=history_days)).isoformat()
-    
+
     # 1. Fetch data globally
     raw_history = {}
     weather = []
@@ -322,10 +322,10 @@ def run_backtest(
         s = build_daily_series(rows)
         if len(s) == 0:
             continue
-            
+
         from forecasting.engine import build_daily_rows
         winning_rows = [row for _, row in build_daily_rows(rows)]
-            
+
         feat = build_feature_matrix(
             series=winning_rows,
             weather=[w for w in weather if w.get("market_id") == m],
@@ -345,30 +345,30 @@ def run_backtest(
             md = s[-1][0]
             if max_d is None or md > max_d:
                 max_d = md
-                
+
     if not max_d:
         return BacktestReport(datetime.now(timezone.utc).isoformat(), BACKTEST_PROTOCOL, HORIZON, history_days, evaluation_scope, False, [], {})
-        
+
     first_fold_start = max_d - timedelta(days=TOTAL_TEST_DAYS) + timedelta(days=1)
-    
+
     # 3. Setup accumulator pool
     pool = {
         name: {
-            "actuals": [], "preds": [], "lowers": [], "uppers": [], "last_train_prices": [], 
+            "actuals": [], "preds": [], "lowers": [], "uppers": [], "last_train_prices": [],
             "n_missing_history": 0, "n_execution_failure": 0, "n_invalid_prediction": 0, "n_unscored_target": 0, "n_valid_predictions": 0,
             "name": name, "hits": 0, "considered": 0, "incomplete_folds": 0
         } for name in model_names
     }
-    
+
     pair_accumulators = {
         (m, c): {
-            name: {"actuals": [], "preds": [], "lowers": [], "uppers": [], "folds": [], 
+            name: {"actuals": [], "preds": [], "lowers": [], "uppers": [], "folds": [],
                    "n_missing_history": 0, "n_execution_failure": 0, "n_invalid_prediction": 0, "n_unscored_target": 0, "n_valid_predictions": 0,
                    "incomplete_folds": 0}
             for name in model_names
         } for (m, c) in full_series.keys()
     }
-    
+
     pair_fold_stats = {
         (m, c): {
             "requested_calendar_folds": N_FOLDS,
@@ -384,7 +384,7 @@ def run_backtest(
     for fold_idx in range(N_FOLDS):
         fold_start = first_fold_start + timedelta(days=fold_idx * FOLD_SIZE)
         fold_end = fold_start + timedelta(days=FOLD_SIZE - 1)
-        
+
         # Train global GBM for this fold
         global_gbm = None
         if "gbm" in model_names:
@@ -409,23 +409,23 @@ def run_backtest(
             except Exception as e:
                 logger.warning("fold_global_gbm_failed", fold=fold_idx, error=str(e))
                 global_gbm = None
-                
+
         # Iterate over pairs for local training & prediction
         for (m, c), s in full_series.items():
             train_s = [(d, p) for (d, p) in s if d < fold_start]
             test_s = [(d, p) for (d, p) in s if fold_start <= d <= fold_end]
-            
+
             if not train_s:
                 pair_fold_stats[(m, c)]["skipped_insufficient_training_folds"] += 1
                 continue
-            
+
             pair_fold_stats[(m, c)]["executed_folds"] += 1
             if test_s:
                 pair_fold_stats[(m, c)]["folds_with_observed_test_data"] += 1
-                
+
             last_train_price = train_s[-1][1]
             train_f = [f for (d, p), f in zip(s, full_features[(m, c)]) if d < fold_start]
-            
+
             for name in model_names:
                 preds = []
                 try:
@@ -462,7 +462,7 @@ def run_backtest(
                         "target_dates": [d.isoformat() if isinstance(d, date) else d for d, _ in test_s]
                     })
                     continue
-                    
+
                 fold_actuals = []
                 fold_preds = []
                 for i in range(FOLD_SIZE):
@@ -471,7 +471,7 @@ def run_backtest(
                     if not actual_match:
                         pair_accumulators[(m, c)][name]["n_unscored_target"] += 1
                         continue # Date not present in test_s, don't score
-                        
+
                     actual = actual_match[0]
                     if i < len(preds):
                         p, lo, hi = preds[i]
@@ -480,14 +480,14 @@ def run_backtest(
                         hi_f = _safe_float(hi)
                     else:
                         p_f = lo_f = hi_f = float("nan")
-                        
+
                     is_nan = p_f is None or not math.isfinite(p_f)
-                    
+
                     pair_accumulators[(m, c)][name]["actuals"].append(actual)
                     pair_accumulators[(m, c)][name]["preds"].append(p_f if not is_nan else float("nan"))
                     pair_accumulators[(m, c)][name]["lowers"].append(lo_f if lo_f is not None else float("nan"))
                     pair_accumulators[(m, c)][name]["uppers"].append(hi_f if hi_f is not None else float("nan"))
-                    
+
                     if is_nan:
                         if name == "naive":
                             pair_accumulators[(m, c)][name]["n_missing_history"] += 1
@@ -495,10 +495,10 @@ def run_backtest(
                             pair_accumulators[(m, c)][name]["n_invalid_prediction"] += 1
                     else:
                         pair_accumulators[(m, c)][name]["n_valid_predictions"] += 1
-                        
+
                     fold_actuals.append(actual)
                     fold_preds.append(p_f if not is_nan else float("nan"))
-                    
+
                 if fold_actuals:
                     pair_accumulators[(m, c)][name]["folds"].append({
                         "last_train_price": last_train_price,
@@ -516,7 +516,7 @@ def run_backtest(
             actuals = acc[name]["actuals"]
             if not actuals:
                 continue
-                
+
             preds = acc[name]["preds"]
             mae_val = mae(actuals, preds)
             mape_val = mape_winsorized(actuals, preds)
@@ -528,7 +528,7 @@ def run_backtest(
                 cov = float('nan')
             else:
                 cov = interval_coverage(acc[name]["uppers"], acc[name]["lowers"], actuals)
-            
+
             # Directional accuracy uses all paired instances (weekly means over actual matching dates)
             folds = acc[name]["folds"]
             total_hits, total_considered, incomplete_folds, evaluated_fold_indices = directional_accuracy(
@@ -536,15 +536,15 @@ def run_backtest(
                 [f["preds"] for f in folds],
                 [f["actuals"] for f in folds]
             )
-            
+
             da_evaluated_samples = []
             for idx in evaluated_fold_indices:
                 f = folds[idx]
                 for d in f["target_dates"]:
                     da_evaluated_samples.append(f"{m}|{c}|{idx}|{d}")
-            
+
             total_valid = acc[name]["n_valid_predictions"]
-            
+
             if total_valid > 0:
                 status = "blocked" if incomplete_folds > 0 else "ok"
                 reason = "incomplete_fold_predictions" if incomplete_folds > 0 else None
@@ -558,7 +558,7 @@ def run_backtest(
                     reason = "invalid_prediction"
                 else:
                     reason = "insufficient_training_or_calibration_history"
-                    
+
             mr = ModelResult(
                 model=name,
                 status=status,
@@ -578,7 +578,7 @@ def run_backtest(
                 da_evaluated_samples=da_evaluated_samples,
             )
             pair_models.append(mr)
-            
+
             # Pool to global
             pool[name]["actuals"].extend(actuals)
             pool[name]["preds"].extend(preds)
@@ -592,11 +592,11 @@ def run_backtest(
             pool[name]["hits"] += total_hits
             pool[name]["considered"] += total_considered
             pool[name]["incomplete_folds"] += incomplete_folds
-            
+
         per_pair.append(PairResult(
-            market_id=m, 
-            commodity_id=c, 
-            n_obs=n_obs, 
+            market_id=m,
+            commodity_id=c,
+            n_obs=n_obs,
             fold_stats=FoldStats(**pair_fold_stats[(m, c)]),
             models=pair_models
         ))

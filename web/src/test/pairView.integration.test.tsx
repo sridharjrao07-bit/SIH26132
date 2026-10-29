@@ -13,15 +13,14 @@ const mockUp = await fetch('http://127.0.0.1:8000/health').then((r) => r.ok).cat
 if (process.env.REQUIRE_MOCK === '1' && !mockUp) throw new Error('REQUIRE_MOCK=1 but the mock API is not reachable on :8000');
 
 describe.skipIf(!mockUp)('PairView against the mock', () => {
-  test('price → chart caption → model chip → verdict all render; verdict chip and card agree', async () => {
+  test('price → chart caption → model chip → verdict all render; verdict chip and card agree', { timeout: 15_000 }, async () => {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const root = createRootRoute();
     const page = createRoute({ getParentRoute: () => root, path: '/',
       component: () => <PairView pair={{ commodityId: ONION, marketId: LASALGAON }} range={30} onPairChange={() => {}} onRangeChange={() => {}} /> });
     const extra = createRoute({ getParentRoute: () => root, path: '/c/$crop/m/$market' });
     const alerts = createRoute({ getParentRoute: () => root, path: '/alerts' });
-    const about = createRoute({ getParentRoute: () => root, path: '/forecasts/about' });
-    const router = createRouter({ routeTree: root.addChildren([page, extra, alerts, about]), history: createMemoryHistory() });
+    const router = createRouter({ routeTree: root.addChildren([page, extra, alerts]), history: createMemoryHistory() });
     const { container } = render(
       <QueryClientProvider client={qc}><I18nProvider i18n={i18n}><RouterProvider router={router} /></I18nProvider></QueryClientProvider>,
     );

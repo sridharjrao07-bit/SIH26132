@@ -1,0 +1,5 @@
+{
+  "dataset": {"rows": 980, "series": 20, "date_min": "01/08/2026", "date_max": "31/08/2026"},
+  "holdout": {"test_observations_per_series": 7, "aggregation": "mean of per-series metrics", "naive": {"mae": 42.2171, "rmse": 48.8155, "r2": -2.1473}, "mean": {"mae": 38.6315, "rmse": 46.3578, "r2": -1.2786}, "linear_trend": {"mae": 29.5953, "rmse": 37.2335, "r2": -0.4950}},
+  "interpretation": "Insufficient evidence for a production accuracy claim; refresh the dataset and rerun forecasting gates. Metrics are not pooled across observations."
+}

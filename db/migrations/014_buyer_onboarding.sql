@@ -9,8 +9,8 @@ ALTER TABLE public.buyers
     ADD COLUMN IF NOT EXISTS review_notes TEXT;
 
 -- Existing seeded buyers (from 008) are already approved system entities
-UPDATE public.buyers 
-SET verification_state = 'approved' 
+UPDATE public.buyers
+SET verification_state = 'approved'
 WHERE verified = true AND owner_user_id IS NULL;
 
 -- Policy: Buyers insert own profile
@@ -27,8 +27,8 @@ DROP POLICY IF EXISTS "Public can read verified buyers" ON public.buyers;
 CREATE POLICY "Public can read verified buyers"
     ON public.buyers FOR SELECT
     USING (
-        auth.uid() = owner_user_id 
-        OR verified = true 
+        auth.uid() = owner_user_id
+        OR verified = true
         OR verification_state = 'approved'
         OR public.has_role('admin')
     );
@@ -39,6 +39,6 @@ DROP POLICY IF EXISTS "Owners read offers" ON public.offers;
 CREATE POLICY "Owners read offers"
     ON public.offers FOR SELECT
     USING (
-        auth.uid() = user_id 
+        auth.uid() = user_id
         OR auth.uid() = (SELECT owner_user_id FROM public.buyers WHERE id = buyer_id)
     );

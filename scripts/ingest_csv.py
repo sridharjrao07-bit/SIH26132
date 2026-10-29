@@ -23,7 +23,7 @@ async def main():
 
     supabase: Client = create_client(supabase_url, supabase_key)
     csv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "gov_prices.csv")
-    
+
     if not os.path.exists(csv_path):
         print(f"CSV not found at {csv_path}")
         sys.exit(1)
@@ -42,7 +42,7 @@ async def main():
         for row in resp.data
         if row["sanity_min"] is not None and row["sanity_max"] is not None
     }
-    
+
     resp = supabase.table("markets").select("id, name, source_code").execute()
     market_map = {}
     for row in resp.data:
@@ -52,7 +52,7 @@ async def main():
                 market_map[norm_k] = row["id"]
 
     validator = PriceValidator(commodity_id_map, sanity_bands)
-    
+
     print("Parsing CSV...")
     valid_records = []
     rejected_count = 0
@@ -79,22 +79,22 @@ async def main():
                     source="csv",
                     raw_payload=row
                 )
-                
+
                 valid_dict, reason = validator.validate_and_normalize(raw)
                 if not valid_dict:
                     rejected_count += 1
                     continue
-                
+
                 market_key = " ".join(row["Market"].strip().lower().split())
                 market_id = market_map.get(market_key)
                 if not market_id:
                     alt_key = market_key.replace(" apmc", "").replace(" market", "").strip()
                     market_id = market_map.get(alt_key)
-                    
+
                 if not market_id:
                     rejected_count += 1
                     continue
-                    
+
                 valid_dict["market_id"] = market_id
                 valid_records.append(valid_dict)
             except Exception as e:
@@ -105,7 +105,7 @@ async def main():
     print(f"Parsed {len(valid_records)} valid records. Rejected {rejected_count} records.")
     for err in parse_errors:
         print(f"  malformed row example: {err}")
-    
+
     if valid_records:
         print("Upserting to DB...")
         chunk_size = 200

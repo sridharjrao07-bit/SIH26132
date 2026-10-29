@@ -134,7 +134,7 @@ def test_make_forecast_rows_blend_high():
 def test_engine_run(fake_supabase):
     # We will seed 12 rows so it gives MA medium
     prices_seed = []
-    
+
     # 1. A row that should be ignored by the 60-day cutoff
     prices_seed.append({
         "market_id": MARKET_ID_LASALGAON,
@@ -143,7 +143,7 @@ def test_engine_run(fake_supabase):
         "modal_price": 1000,
         "source": "data_gov_in"
     })
-    
+
     # 2. 12 rows within the 60-day window
     for i in range(12):
         prices_seed.append({
@@ -162,7 +162,7 @@ def test_engine_run(fake_supabase):
     assert summary["pairs_insufficient"] == 0
     assert summary["pairs_skipped"] == 0
     assert summary["rows_written"] == 7
-    
+
     upserts = fake_supabase.upsert_calls()
     assert len(upserts) == 1
     assert len(upserts[0]["payload"]) == 7
@@ -277,7 +277,7 @@ def test_forecast_engine_upsert_payload_contains_generated_at(fake_supabase):
 def test_engine_run_with_feature_ols(fake_supabase, monkeypatch):
     """FORECAST_MODEL=feature_ols with n≥20 + built feature matrix → rows have method='feature_ols'."""
     import app.config
-    
+
     # Mock settings to use feature_ols
     old_settings = app.config.get_settings()
     class MockSettings:
@@ -285,12 +285,12 @@ def test_engine_run_with_feature_ols(fake_supabase, monkeypatch):
             if name == "forecast_model":
                 return "feature_ols"
             return getattr(old_settings, name)
-            
+
     monkeypatch.setattr("forecasting.engine.get_settings", MockSettings)
-    
+
     from datetime import date, timedelta
     today = date.today()
-    
+
     prices_seed = []
     # 100 rows, strong signal to ensure it does not fallback due to insufficient rank
     for i in range(100):
@@ -304,28 +304,28 @@ def test_engine_run_with_feature_ols(fake_supabase, monkeypatch):
             "variety": "General",
         })
     fake_supabase.seed("prices", prices_seed)
-    
+
     # Need to also seed weather so it doesn't fail entirely, though empty is fine if it handles it
-    
+
     from forecasting.engine import ForecastEngine
     engine = ForecastEngine(fake_supabase)
     summary = engine.run()
-    
+
     assert summary["pairs_ok"] == 1
-    
+
     upserts = fake_supabase.upsert_calls()
     assert len(upserts) == 1
-    
+
     rows = upserts[0]["payload"]
     for row in rows:
         assert row["method"] == "feature_ols"
         assert row["confidence"] == "high"
 
 def test_engine_run_gbm_fallback(fake_supabase, monkeypatch):
-    """If the configured candidate model (e.g. GBM) throws an exception during engine execution, 
+    """If the configured candidate model (e.g. GBM) throws an exception during engine execution,
     the engine must catch it and fallback to the baseline (blend or MA)."""
     import app.config
-    
+
     # Mock settings
     old_settings = app.config.get_settings()
     class MockSettings:
@@ -333,14 +333,14 @@ def test_engine_run_gbm_fallback(fake_supabase, monkeypatch):
             if name == "forecast_model":
                 return "gbm"
             return getattr(old_settings, name)
-            
+
     monkeypatch.setattr("forecasting.engine.get_settings", MockSettings)
-    
+
     # Mock train_global_gbm to fail
     def failing_train_global_gbm(*args, **kwargs):
         raise ValueError("Simulated GBM training failure in production engine")
     monkeypatch.setattr("forecasting.gbm.train_global_gbm", failing_train_global_gbm)
-    
+
     from datetime import date, timedelta
     today = date.today()
     prices_seed = []
@@ -354,15 +354,15 @@ def test_engine_run_gbm_fallback(fake_supabase, monkeypatch):
             "source": "data_gov_in"
         })
     fake_supabase.seed("prices", prices_seed)
-    
+
     from forecasting.engine import ForecastEngine
     engine = ForecastEngine(fake_supabase)
     summary = engine.run()
-    
+
     assert summary["pairs_ok"] == 1
     upserts = fake_supabase.upsert_calls()
     assert len(upserts) == 1
-    
+
     rows = upserts[0]["payload"]
     for row in rows:
         assert row["method"] == "blend"
@@ -372,7 +372,7 @@ def test_engine_run_gbm_fallback(fake_supabase, monkeypatch):
 def test_engine_run_feature_ols_fallback(fake_supabase, monkeypatch):
     """Feature build failure or rank deficient -> existing blend method (assert fallback, not crash)"""
     import app.config
-    
+
     # Mock settings
     old_settings = app.config.get_settings()
     class MockSettings:
@@ -380,9 +380,9 @@ def test_engine_run_feature_ols_fallback(fake_supabase, monkeypatch):
             if name == "forecast_model":
                 return "feature_ols"
             return getattr(old_settings, name)
-            
+
     monkeypatch.setattr("forecasting.engine.get_settings", MockSettings)
-    
+
     # To force a fallback, we can provide <10 observations (actually n<20 for blend, but say n=15)
     # wait, if n < 10*p it falls back. If p=8, 10*8 = 80. n=25 < 80!
     # Wait, in the previous test we got feature_ols, how?
@@ -393,7 +393,7 @@ def test_engine_run_feature_ols_fallback(fake_supabase, monkeypatch):
     # But for this test, we can just provide exactly 25 rows and it WILL fallback!
     from datetime import date, timedelta
     today = date.today()
-    
+
     prices_seed = []
     for i in range(25):
         prices_seed.append({
@@ -404,11 +404,11 @@ def test_engine_run_feature_ols_fallback(fake_supabase, monkeypatch):
             "source": "data_gov_in"
         })
     fake_supabase.seed("prices", prices_seed)
-    
+
     from forecasting.engine import ForecastEngine
     engine = ForecastEngine(fake_supabase)
     summary = engine.run()
-    
+
     assert summary["pairs_ok"] == 1
     upserts = fake_supabase.upsert_calls()
     rows = upserts[0]["payload"]
@@ -419,7 +419,7 @@ def test_engine_run_feature_ols_fallback(fake_supabase, monkeypatch):
 def test_engine_global_features(fake_supabase, monkeypatch):
     """Regression test for P1: Engine must fetch weather and events once, and pass them."""
     import app.config
-    
+
     # Mock settings to use feature_ols
     old_settings = app.config.get_settings()
     class MockSettings:
@@ -427,12 +427,12 @@ def test_engine_global_features(fake_supabase, monkeypatch):
             if name == "forecast_model":
                 return "feature_ols"
             return getattr(old_settings, name)
-            
+
     monkeypatch.setattr("forecasting.engine.get_settings", MockSettings)
-    
+
     from datetime import date, timedelta
     today = date.today()
-    
+
     prices_seed = []
     for i in range(100):
         prices_seed.append({
@@ -451,29 +451,29 @@ def test_engine_global_features(fake_supabase, monkeypatch):
     fake_supabase.seed("weather_daily", weather_seed)
     fake_supabase.seed("live_events_published", [{"event_date": (today - timedelta(days=50)).isoformat(), "event_type": "weather", "direction": "down", "magnitude": "major", "confidence": 1.0, "provenance_mode": "live", "publication_date": (today - timedelta(days=50)).isoformat()}])
     fake_supabase.seed("markets", [{"id": "m1", "district": "Nashik"}])
-    
+
     from forecasting.engine import ForecastEngine
     engine = ForecastEngine(fake_supabase)
-    
+
     # We spy on build_feature_matrix
     original_build = None
     captured_kwargs = {}
-    
+
     def mock_build_feature_matrix(*args, **kwargs):
         captured_kwargs.update(kwargs)
         return original_build(*args, **kwargs)
-        
+
     import forecasting.features
     original_build = forecasting.features.build_feature_matrix
     monkeypatch.setattr("forecasting.features.build_feature_matrix", mock_build_feature_matrix)
-    
+
     engine.run()
-    
+
     assert "weather" in captured_kwargs
     assert "events" in captured_kwargs
     assert len(captured_kwargs["weather"]) > 0
     assert len(captured_kwargs["events"]) > 0
-    
+
     upserts = fake_supabase.upsert_calls()
     rows = upserts[0]["payload"]
     features_used = rows[0]["features_used"]
@@ -484,11 +484,11 @@ def test_backtest_arrival_qty_winner(fake_supabase, monkeypatch):
     """Regression test for P1: Backtest must assign the winner row's arrival_qty."""
     from datetime import date, timedelta
     today = date.today()
-    
+
     # We want to test that build_feature_matrix receives the correct arrival_qty
     # We need to spy on build_feature_matrix called inside run_backtest
     prices_seed = []
-    
+
     # Let's add 60 rows so run_backtest actually processes it
     for i in range(60):
         d = (today - timedelta(days=60-i)).isoformat()
@@ -507,22 +507,22 @@ def test_backtest_arrival_qty_winner(fake_supabase, monkeypatch):
                 "market_id": "m1", "commodity_id": "c1", "arrival_date": d,
                 "modal_price": 2000, "arrival_qty": 10.0, "source": "data_gov_in", "variety": "General"
             })
-            
+
     fake_supabase.seed("prices", prices_seed)
-    
+
     captured_history = []
-    
+
     import forecasting.features
     original_build = forecasting.features.build_feature_matrix
     def mock_build_feature_matrix(series=None, **kwargs):
         captured_history.extend(series)
         return original_build(series=series, **kwargs)
-        
+
     monkeypatch.setattr("forecasting.features.build_feature_matrix", mock_build_feature_matrix)
-    
+
     from forecasting.backtest import run_backtest
     run_backtest(fake_supabase, pairs=[("m1", "c1")], history_days=100, model_names=["ma"])
-    
+
     assert len(captured_history) > 0
     # The last element should have arrival_qty = 99.0, not 5.0
     last_qty = captured_history[-1]["arrival_qty"]

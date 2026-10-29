@@ -40,7 +40,7 @@ jobs:
           else
             RANGE="${{ github.event.before }}..${{ github.sha }}"
           fi
-          
+
           for c in $(git rev-list "$RANGE"); do
             ad=$(git log -1 --format="%at" $c)
             cd=$(git log -1 --format="%ct" $c)

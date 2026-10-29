@@ -129,12 +129,12 @@ async def test_no_aliases_source_logs_failed(fake_supabase):
     from ingestion.runner import IngestionRunner
 
     from tests.conftest import StubAdapter
-    
+
     # Adapter has source "unknown_source", which has no aliases
     adapter = StubAdapter(source="unknown_source")
     runner = IngestionRunner(supabase=fake_supabase, adapters=[adapter])
     await runner.run(district="Nashik", state="Maharashtra")
-    
+
     logs = fake_supabase.log_rows()
     assert len(logs) == 1
     assert logs[0]["source"] == "unknown_source"

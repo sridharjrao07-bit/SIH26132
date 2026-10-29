@@ -1,7 +1,7 @@
 [project]
 name = "krishi-bazaar"
 version = "2.0.0"
-description = "SIH26132 market linkage and price discovery API (backend only)"
+description = "DirectLink — SIH26033 farmer-to-consumer disintermediation engine and API"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 license = { text = "MIT" }
@@ -10,8 +10,8 @@ license = { text = "MIT" }
 # Runtime is Python 3.12 (Dockerfile / CI).
 target-version = "py312"
 line-length = 100
-src = ["app", "events", "ingestion", "forecasting", "notifications", "tests", "demo", "scripts"]
-exclude = [".venv", "venv", "build", "dist", "docs/archive"]
+src = ["app", "direct", "events", "ingestion", "forecasting", "notifications", "tests", "demo", "scripts"]
+exclude = [".venv", "venv", "build", "dist", "docs/archive", "legacy"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
@@ -36,5 +36,5 @@ addopts = "-q"
 markers = ["db: requires a real Postgres"]
 
 [tool.coverage.run]
-source = ["app", "events", "ingestion", "forecasting", "notifications"]
+source = ["app", "direct", "events", "ingestion", "forecasting", "notifications"]
 omit = ["tests/*", "demo/*", "scripts/*"]

@@ -5,12 +5,12 @@ import { usePrefs } from '../stores/prefs.ts';
 import { LANGS, LANG_LABEL } from '../i18n/locales.ts';
 import { useOnline } from '../ui/hooks.ts';
 
-function Icon({ name }: { name: 'today' | 'prices' | 'sell' | 'alerts' | 'account' }) {
+function Icon({ name }: { name: 'today' | 'prices' | 'direct' | 'sell' | 'account' }) {
   const paths = {
     today: <><path d="M4 11.5 12 5l8 6.5"/><path d="M6.5 10.5V20h11v-9.5M10 20v-5h4v5"/></>,
     prices: <><path d="M4 19V9M10 19V5M16 19v-7M22 19V3"/><path d="M2 19h22"/></>,
     sell: <><path d="M5 7h14l-1 13H6L5 7Z"/><path d="M9 7a3 3 0 0 1 6 0"/></>,
-    alerts: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></>,
+    direct: <><path d="M12 3v18"/><path d="M5 8h14"/><path d="M8 8l-3 6h6L8 8Z"/><path d="M16 8l-3 6h6l-3-6Z"/></>,
     account: <><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></>,
   };
   return <svg aria-hidden width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
@@ -52,13 +52,13 @@ function OfflineBanner() {
 const navItems = [
   { to: '/', label: <Trans>Today</Trans>, icon: 'today' as const, exact: true },
   { to: '/bhav', label: <Trans>Prices</Trans>, icon: 'prices' as const },
+  { to: '/direct', label: <Trans>Direct</Trans>, icon: 'direct' as const },
   { to: '/sell', label: <Trans>Sell</Trans>, icon: 'sell' as const },
-  { to: '/alerts', label: <Trans>Alerts</Trans>, icon: 'alerts' as const },
   { to: '/account', label: <Trans>Account</Trans>, icon: 'account' as const },
 ];
 
 function DesktopNav() {
-  return <nav className="hidden items-center gap-1 lg:flex">{navItems.map((item) => (
+  return <nav className="hidden">{navItems.map((item) => (
     <Link key={item.to} to={item.to} activeOptions={{ exact: item.exact }} className="diagonal-small px-3 py-2 text-sm font-medium text-ink-2 transition-colors hover:bg-paper-2 hover:text-ink" activeProps={{ className: 'bg-saffron text-paper hover:bg-saffron hover:text-paper' }}>{item.label}</Link>
   ))}</nav>;
 }
@@ -70,27 +70,56 @@ function BottomNav() {
   ))}</nav>;
 }
 
+function CommandSidebar() {
+  return (
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[300px] flex-col border-r border-rule bg-paper px-5 py-5 lg:flex">
+      <Link to="/" className="flex items-center gap-3 px-2">
+        <span className="grid size-10 place-items-center rounded-lg bg-card text-lg font-extrabold text-sell shadow-panel">कृ</span>
+        <span className="leading-none"><strong className="block text-xl font-extrabold text-sell">कृषी भाव</strong><small className="mt-1 block font-mono text-[10px] uppercase tracking-[0.16em] text-ink-2">Mandi OS v2.4</small></span>
+      </Link>
+      <div className="mt-8 rounded-xl border border-rule bg-card p-4 shadow-panel">
+        <p className="eyebrow">बाजार समिती (APMC)</p>
+        <p className="mt-2 text-xl font-bold text-sell">लासलगाव APMC</p>
+        <div className="mt-3 flex items-center justify-between font-mono text-xs text-ink-2"><span>MH-15 · NASHIK</span><span>● Gate #04<br />Active</span></div>
+      </div>
+      <nav className="mt-5 grid gap-2" aria-label="Command navigation">
+        {navItems.map((item) => (
+          <Link key={item.to} to={item.to} activeOptions={{ exact: item.exact }} className="tap flex items-center gap-3 rounded-lg px-4 text-lg font-semibold text-ink-2 transition-colors hover:bg-card hover:text-ink" activeProps={{ className: 'tap flex items-center gap-3 rounded-lg bg-card px-4 text-lg font-semibold text-sell shadow-panel' }}>
+            <Icon name={item.icon} />{item.label}
+          </Link>
+        ))}
+      </nav>
+      <div className="mt-auto rounded-xl border border-rule bg-card p-4 font-mono text-xs text-ink-2 shadow-panel">
+        <div className="flex justify-between"><span>नेटवर्क टेलिमेट्री</span><strong className="text-sell">99.8% SYNC</strong></div>
+        <p className="mt-2 text-ink-2">◉ 4G+ ULTRA LOW-LAT<br />RTT 14ms · Lasalgaon Hub</p>
+        <div className="mt-3 flex justify-between"><span>KRISHI-NODE #884</span><strong className="text-sell">SECURE</strong></div>
+      </div>
+    </aside>
+  );
+}
+
 export function AppShell() {
   const district = usePrefs((s) => s.district);
   const ticker = [`${district} mandi network`, 'Prices refreshed from official reports', 'Forecast confidence shown with every outlook', 'Tap any market to compare'];
   return (
     <div className="min-h-dvh bg-paper pb-20 lg:pb-0">
-      <header className="sticky top-0 z-20 border-b border-rule bg-paper/90 backdrop-blur-xl">
+      <CommandSidebar />
+      <header className="sticky top-0 z-20 border-b border-rule bg-paper/90 backdrop-blur-xl lg:ml-[300px]">
         <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-5 px-4 sm:px-6 lg:px-8">
-          <Link to="/" className="flex shrink-0 items-center gap-3">
-            <span className="diagonal-small grid size-9 place-items-center bg-saffron text-lg font-extrabold text-paper">K</span>
-            <span className="leading-none"><strong className="block text-[17px] font-extrabold">KRISHI BAZAAR</strong><small className="mt-1 hidden font-mono text-[10px] uppercase tracking-[0.2em] text-ink-2 sm:block">Mandi intelligence</small></span>
+          <Link to="/" className="flex shrink-0 items-center gap-3 lg:hidden">
+            <span className="grid size-9 place-items-center rounded-sm bg-ink text-lg font-extrabold text-paper">कृ</span>
+            <span className="leading-none"><strong className="block text-[17px] font-extrabold">कृषी भाव</strong><small className="mt-1 hidden font-mono text-[10px] uppercase tracking-[0.16em] text-ink-2 sm:block">थेट • लासलगाव APMC</small></span>
           </Link>
           <DesktopNav />
           <div className="ml-auto flex items-center gap-2"><SyncStatus/><LanguageSwitch/></div>
         </div>
       </header>
       <OfflineBanner />
-       <div className="flex overflow-hidden border-b border-rule bg-paper-2 text-ink">
+       <div className="flex overflow-hidden border-b border-rule bg-paper-2 text-ink lg:ml-[300px]">
          <div className="z-10 shrink-0 bg-saffron px-4 py-2 font-mono text-xs font-semibold text-paper diagonal-small">LIVE MANDI</div>
         <div className="overflow-hidden"><div className="ticker-track flex gap-10 whitespace-nowrap py-2 font-mono text-xs">{[...ticker, ...ticker].map((item, index) => <span key={`${item}-${index}`}>{item}</span>)}</div></div>
       </div>
-      <main className="mx-auto max-w-[1440px] px-3 py-5 sm:px-6 lg:px-8"><Outlet /></main>
+      <main className="mx-auto max-w-[1440px] px-3 py-5 sm:px-6 lg:ml-[300px] lg:px-8"><Outlet /></main>
       <BottomNav />
     </div>
   );

@@ -81,7 +81,7 @@ export default defineConfig({
     // unavailable"). In the forks pool, Node's global fetch is available normally.
     pool: 'forks',
     // Allow jsdom tests to reach the local mock API on :8000.
-    testEnvironmentOptions: {
+    environmentOptions: {
       url: 'http://127.0.0.1:8000',
       pretendToBeVisual: true,
       resources: 'usable',

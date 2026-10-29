@@ -37,13 +37,13 @@ async def test_date_filter_included_when_passed(data_gov_adapter):
                 ]
             })
         )
-        
+
         test_date = date(2026, 9, 14)
         records = await data_gov_adapter.fetch_prices("Nashik", "Onion", date=test_date)
-        
+
         assert len(records) == 1
         assert records[0].modal_price == 1500
-        
+
         # Verify the date filter was passed to the URL
         request = route.calls.last.request
         assert "filters%5Barrival_date%5D=14%2F09%2F2026" in str(request.url) or "filters[arrival_date]=14/09/2026" in str(request.url)
@@ -66,9 +66,9 @@ async def test_date_filter_omitted_when_none(data_gov_adapter):
                 ]
             })
         )
-        
+
         await data_gov_adapter.fetch_prices("Nashik", "Onion", date=None)
-        
+
         request = route.calls.last.request
         assert "arrival_date" not in str(request.url)
 

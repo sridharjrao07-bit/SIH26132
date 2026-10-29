@@ -1,7 +1,7 @@
 -- db/migrations/023_events_identity.sql
 --
 -- Restructure events to support one-to-many extraction (one source document -> multiple events).
--- 
+--
 -- 1. Create source_documents table.
 -- 2. Link events to source_documents.
 -- 3. Replace source_url UNIQUE constraint on events with a deterministic event identity.
@@ -50,4 +50,3 @@ ALTER TABLE public.events DROP CONSTRAINT IF EXISTS events_source_url_key;
 
 -- Enforce deterministic event identity per source document
 CREATE UNIQUE INDEX IF NOT EXISTS events_identity_idx ON public.events (source_document_id, event_hash);
-

@@ -37,7 +37,7 @@ STABLE
 SET search_path = public
 AS $$
     -- Security Check: Only allow users with the 'buyer' role to execute this logic.
-    -- If called by another role, return empty set (or we could raise exception, 
+    -- If called by another role, return empty set (or we could raise exception,
     -- but SQL functions returning empty is safe).
     SELECT
         l.id,

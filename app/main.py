@@ -6,24 +6,12 @@ from app.config import get_settings
 from app.errors import json_for_api_error
 from app.rate_limit import limiter
 from app.routers import (
-    admin_router,
-    alerts_router,
-    buyers_router,
     commodities_router,
-    dashboard_router,
-    forecasts_router,
-    grievances_router,
-    intelligence_router,
-    logistics_router,
+    direct_router,
     lots_router,
     markets_router,
-    matching_router,
-    offers_router,
-    payments_router,
     prices_router,
     profile_router,
-    sms_router,
-    storage_router,
 )
 from app.security import SecurityHeadersMiddleware
 from fastapi import FastAPI, HTTPException, Request
@@ -59,8 +47,6 @@ async def lifespan(app: FastAPI):
     _configure_logging(settings.log_level)
     from app.startup_checks import run_startup_checks
     run_startup_checks(settings)
-    from app.routers.sms import warmup_verifier
-    warmup_verifier()
     scheduler = None
     if settings.run_scheduler:
         from app.services.jobs import schedule_startup_catchup, setup_scheduler
@@ -83,10 +69,12 @@ def create_app() -> FastAPI:
         title="Krishi Bazaar API",
         version="2.0.0",
         description=(
-            "Market linkage and price discovery API (SIH26132). "
-            "Mandi prices, forecasts, sale-window advice, lots, buyer matching, "
-            "offers, payments and grievances."
-        ),
+        "Market linkage and price discovery API (SIH26132 / SIH26033). "
+        "Mandi prices, forecasts, sale-window advice, lots, buyer matching, "
+        "offers, payments and grievances — plus the SIH26033 direct channel: "
+        "value-chain margin attribution, fair farm-gate discovery, surplus-"
+        "optimal farm-to-consumer allocation and truck-load consolidation."
+    ),
         lifespan=lifespan,
         docs_url=None if production else "/docs",
         redoc_url=None if production else "/redoc",
@@ -171,21 +159,9 @@ def create_app() -> FastAPI:
     app.include_router(markets_router)
     app.include_router(commodities_router)
     app.include_router(prices_router)
-    app.include_router(forecasts_router)
-    app.include_router(alerts_router, prefix="/api/v1")
-    app.include_router(sms_router, prefix="/api/v1")
-    app.include_router(admin_router, prefix="/api/v1")
-    app.include_router(dashboard_router)
-    app.include_router(buyers_router)
     app.include_router(lots_router)
-    app.include_router(offers_router)
-    app.include_router(payments_router)
-    app.include_router(grievances_router)
-    app.include_router(logistics_router)
-    app.include_router(storage_router)
-    app.include_router(matching_router)
+    app.include_router(direct_router)
     app.include_router(profile_router)
-    app.include_router(intelligence_router)
 
     return app
 

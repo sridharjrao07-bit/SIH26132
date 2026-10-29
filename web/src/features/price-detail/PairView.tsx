@@ -1,5 +1,5 @@
 import { lazy, Suspense, useMemo } from 'react';
-import { useNavigate } from '@tanstack/react-router';
+import { Link } from '@tanstack/react-router';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { Trans, useLingui } from '@lingui/react/macro';
 import {
@@ -46,7 +46,6 @@ export function PairView({ pair, range, onPairChange, onRangeChange }: Props) {
   const { t } = useLingui();
   const lang = usePrefs((s) => s.lang);
   const district = usePrefs((s) => s.district);
-  const navigate = useNavigate();
 
   const commodities = useQuery(commoditiesQuery());
   const markets = useQuery(marketsQuery(district));
@@ -201,9 +200,10 @@ export function PairView({ pair, range, onPairChange, onRangeChange }: Props) {
         </Section>
 
         <Section>
-          <button className="tap w-full rounded-lg bg-ink px-4 font-semibold text-paper transition-all hover:-translate-y-0.5 hover:bg-sell-deep" onClick={() => navigate({ to: '/alerts' })}>
-            <Trans>Send me an SMS when the price changes</Trans>
-          </button>
+          <Link to="/direct" className="tap flex items-center justify-between font-semibold">
+            <Trans>Where your rupee goes</Trans><span aria-hidden>›</span>
+          </Link>
+          <p className="mt-1 text-sm text-ink-2"><Trans>See how this price splits between the farmer and everyone in between.</Trans></p>
         </Section>
 
         <Section>

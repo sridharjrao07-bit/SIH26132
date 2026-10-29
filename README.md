@@ -1,8 +1,49 @@
-# Krishi Bazaar — SIH26132 (backend)
+# Krishi Bazaar — SIH26132 (backend) + DirectLink (SIH26033)
 
 [![Run in Postman](https://run.pstmn.io/button.svg)](krishi_bazaar_sih.postman_collection.json)
 
-Market linkage and price discovery API for farmers (Government of Maharashtra / MSInS).
+Market linkage and price discovery API for farmers (Government of Maharashtra / MSInS),
+plus **DirectLink**, the disintermediation engine for SIH26033.
+
+## DirectLink — cutting the chain (SIH26033)
+
+> **Problem statement:** *multiple intermediaries reduce the farmer's earnings and
+> increase the consumer's price.*
+
+DirectLink attacks that from four directions: attribute the leak exactly, cut
+the chain and re-price the trade, consolidate so small orders can ship, and
+settle traceably so the claim can be audited.
+
+```bash
+python demo/direct_channel_demo.py      # the whole argument, offline
+```
+
+No database, no network, no API keys — every figure is computed live. Five
+acts: where the consumer's rupee goes today, what one lane looks like with the
+chain removed, why a housing society cannot fill a truck alone, a 60-lot ×
+25-group district plan, and one crate's traceable receipt.
+
+| Piece | Where |
+|---|---|
+| Algorithm and architecture | [`docs/DIRECT_CHANNEL.md`](docs/DIRECT_CHANNEL.md) |
+| Engine (pure, no I/O) | `direct/` |
+| HTTP API (9 routes) | `app/routers/direct.py` |
+| Schema | `db/migrations/038_direct_channel.sql`, `039_direct_fulfilment.sql` |
+
+**Both anchors are real published government data.** Farm gate: data.gov.in
+daily mandi prices, Lasalgaon APMC onion modal **₹2,226/quintal** (26 Sep 2026,
+committed in `data/gov_prices_60days.csv`). Retail: Ministry of Consumer
+Affairs / Department of Consumer Affairs daily wholesale-and-retail dataset
+(`fcainfoweb.nic.in`), **₹5,392/quintal**, loaded live when configured and from
+a committed snapshot otherwise — see `ingestion/dca_retail.py`.
+
+Headline result on those numbers: the farmer keeps **48 paise** of the
+consumer's rupee, and **85%** of the ₹2,401/quintal spread is pure margin
+rather than work done. DirectLink pays the farmer **₹3,637 (+63.4%)** and
+charges the consumer **₹3,917 (−27.4%)** — both sides better off than their
+fallback, by construction, not by assertion.
+
+---
 
 This repository holds the **FastAPI + Supabase backend**. The farmer/buyer PWA lives in [`web/`](web/) (Vite + React; see [`web/README.md`](web/README.md)), with its design record in [`docs/frontend/`](docs/frontend/). HTTP contract: [`docs/API.md`](docs/API.md). Layout: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). How to contribute: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
@@ -16,6 +57,11 @@ This repository holds the **FastAPI + Supabase backend**. The farmer/buyer PWA l
 | Lots, grading, digital offers, payments | `/lots/` `/offers/` `/payments/` |
 | Logistics + disputes | `/logistics/bookings` `/grievances/` |
 | Transparent record | `GET /lots/{id}/ledger` |
+| **Where the consumer's rupee goes** (SIH26033) | `POST /api/v1/direct/rupee` |
+| **What a direct trade should cost** (SIH26033) | `POST /api/v1/direct/fair-price` |
+| **Match lots to consumers, optimally** (SIH26033) | `POST /api/v1/direct/plan` |
+| **Pool orders until a truck is viable** (SIH26033) | `POST /api/v1/direct/group-buy` |
+| **Scan a crate's receipt** (SIH26033) | `GET /api/v1/direct/trace/{token}` |
 
 ### Architecture
 ```mermaid
@@ -25,6 +71,7 @@ graph TD
     Services --> DB[(Supabase PostgreSQL)]
     Services --> Match[Matching Engine]
     Services --> Forecast[Forecasting Engine]
+    Services --> Direct[DirectLink Engine]
 ```
 
 ### Tech Stack Justification
@@ -112,15 +159,35 @@ ruff check .
 pytest -q
 ```
 
-Offline: FakeSupabase, no network. Live checks (uvicorn + real `.env`):
+Live checks (uvicorn + real `.env`):
 
 ```bat
 python scripts/test_db.py
-python demo/reconcile.py
-python demo/live_smoke.py
+python scripts/exercise_rpc.py
 ```
 
-Judge path: [`docs/DEMO.md`](docs/DEMO.md). Full demo runbook (live + offline-mock fallback, pre-flight, recovery): [`docs/DEMO_RUNBOOK.md`](docs/DEMO_RUNBOOK.md).
+**Demo rehearsal — run this before presenting:**
+
+```bash
+python scripts/rehearse_demo.py
+```
+
+Runs the numerical audit, the five-act demo, the migration linter, the suite and
+ruff, and prints one PASS/FAIL line per step. `--fast` skips the suite.
+
+**The demo itself needs no credentials at all:**
+
+```bash
+.venv/bin/python demo/direct_channel_demo.py
+```
+
+Judge path and the full runbook (what to say per act, what to say about
+accuracy, recovery table): **[`docs/DEMO_RUNBOOK_DIRECTLINK.md`](docs/DEMO_RUNBOOK_DIRECTLINK.md)**.
+
+> `docs/DEMO_RUNBOOK.md`, `docs/DEMO.md` and `demo/reconcile.py` /
+> `demo/live_smoke.py` describe the pre-pivot Krishi Bazaar concept. The two
+> demo scripts now live in `legacy/demo/`; the runbooks are kept for history and
+> are banner-marked at the top.
 
 ## Known Limitations
 
