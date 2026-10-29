@@ -13,7 +13,6 @@ venv
 tests
 docs
 demo
-scripts
 *.log
 htmlcov
 .coverage
