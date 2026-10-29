@@ -1,6 +1,9 @@
 # API contract (frontend team)
 
-This repo is the **backend only**. Serve the UI from another origin and point it at this API.
+This repository contains the **FastAPI + Supabase backend** and the in-repo
+farmer/buyer PWA under [`web/`](../web/). The PWA is built and deployed as a
+separate frontend artifact; this document describes the API it calls. Do not add
+server-rendered farmer HTML or an `ui` router to the backend.
 
 ## Base URL
 

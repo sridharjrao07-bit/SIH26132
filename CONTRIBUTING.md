@@ -1,6 +1,8 @@
 # Contributing (backend)
 
-This repository is the **FastAPI + Supabase API** for SIH26132. The farmer/buyer UI is a **separate frontend repo**. Do not add HTML farmer screens or an `ui` router here.
+This repository contains the **FastAPI + Supabase API** and the in-repo farmer/buyer
+PWA under `web/`. The PWA is a separate deployable artifact, but it is maintained
+in this repository. Do not add server-rendered farmer screens or an `ui` router.
 
 ## Branching
 

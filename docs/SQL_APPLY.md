@@ -20,9 +20,18 @@ If you cannot run the Python script (e.g. missing dependencies), you can apply t
 
 ```sh
 psql -d $DATABASE_URL -f db/migrations/001_schema.sql
-# ... apply up to 034 sequentially
-psql -d $DATABASE_URL -f db/migrations/034_fix_indexes.sql
+# ... apply through the current head sequentially
+psql -d $DATABASE_URL -f db/migrations/043_resolve_gen_random_bytes.sql
 ```
+
+The current migration head is `043_resolve_gen_random_bytes.sql`. Migrations
+`035_fpo_security_patches.sql`, `036_marketplace_hardening.sql`, and
+`037_headlines_require_approved.sql` harden FPO access, marketplace capacity and
+payment invariants, and approved-headline exposure respectively. Migrations
+`038_direct_channel.sql` through `043_resolve_gen_random_bytes.sql` add the
+DirectLink channel, fulfilment and seed data, plus the PostgreSQL crypto
+compatibility fixes. Apply them with the ledger runner; do not edit an applied
+migration in place.
 
 ## Upgrade and Recovery Paths
 
