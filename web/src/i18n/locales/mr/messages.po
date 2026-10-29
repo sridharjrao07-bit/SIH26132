@@ -13,7 +13,7 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/features/price-detail/PairView.tsx:192
+#: src/features/price-detail/PairView.tsx:220
 msgid "— Same as the last price"
 msgstr "— मागील भावाइतकाच"
 
@@ -53,7 +53,7 @@ msgstr "{q} क्विंटल"
 msgid "{qty} qtl"
 msgstr "{qty} क्विंटल"
 
-#: src/features/price-detail/PairView.tsx:119
+#: src/features/price-detail/PairView.tsx:147
 msgid "{r}d"
 msgstr "{r} दि."
 
@@ -62,7 +62,7 @@ msgstr "{r} दि."
 msgid "{rate} per quintal"
 msgstr "{rate} प्रति क्विंटल"
 
-#: src/features/price-detail/PairView.tsx:95
+#: src/features/price-detail/PairView.tsx:123
 msgid "/quintal"
 msgstr "/क्विंटल"
 
@@ -70,11 +70,11 @@ msgstr "/क्विंटल"
 msgid "+ List produce"
 msgstr "+ माल विक्रीस टाका"
 
-#: src/features/price-detail/PairView.tsx:198
+#: src/features/price-detail/PairView.tsx:226
 msgid "▲ {abs} ({p}) since the last price"
 msgstr "▲ मागील भावापेक्षा {abs} ({p}) जास्त"
 
-#: src/features/price-detail/PairView.tsx:198
+#: src/features/price-detail/PairView.tsx:226
 msgid "▼ {abs} ({p}) since the last price"
 msgstr "▼ मागील भावापेक्षा {abs} ({p}) कमी"
 
@@ -84,13 +84,9 @@ msgstr "▼ मागील भावापेक्षा {abs} ({p}) कमी
 msgid "₹ / quintal"
 msgstr "₹ / क्विंटल"
 
-#: src/features/price-detail/PairView.tsx:119
+#: src/features/price-detail/PairView.tsx:147
 msgid "1y"
 msgstr "1 वर्ष"
-
-#: src/features/board/BoardPage.tsx:46
-msgid "7 days"
-msgstr "7 दिवस"
 
 #: src/features/trust/HealthNotice.tsx:24
 msgid "A forecast needs at least {need} days of prices. This mandi has {observations} so far."
@@ -134,7 +130,7 @@ msgstr "स्वीकारा"
 msgid "Accepted"
 msgstr "स्वीकारली"
 
-#: src/app/AppShell.tsx:59
+#: src/app/AppShell.tsx:57
 #: src/features/account/AccountPage.tsx:56
 msgid "Account"
 msgstr "खाते"
@@ -151,7 +147,7 @@ msgstr "'खाते' मध्ये तुमचा मोबाईल नं
 msgid "Admin account"
 msgstr "ॲडमिन खाते"
 
-#: src/features/price-detail/PairView.tsx:161
+#: src/features/price-detail/PairView.tsx:189
 msgid "Advice"
 msgstr "सल्ला"
 
@@ -163,7 +159,7 @@ msgstr "या मालासाठी सल्ला"
 msgid "After you register, an admin verifies you. Only verified buyers are shown to farmers."
 msgstr "नोंदणीनंतर ॲडमिन तुमची पडताळणी करतो. फक्त पडताळलेले खरेदीदार शेतकऱ्यांना दिसतात."
 
-#: src/app/AppShell.tsx:58
+#: src/app/AppShell.tsx:56
 msgid "Alerts"
 msgstr "सूचना"
 
@@ -231,7 +227,7 @@ msgstr "मागील 7 दिवसांच्या भावांची �
 msgid "Bars below: how much produce arrived at the mandi. More arrivals often mean lower prices."
 msgstr "खालील पट्ट्या: बाजारात किती माल आला. आवक जास्त असल्यास भाव अनेकदा कमी होतो."
 
-#: src/charts/PriceForecastChart.tsx:133
+#: src/charts/PriceForecastChart.tsx:136
 msgid "Bars: arrivals at the mandi (quintal)"
 msgstr "पट्ट्या: बाजारातील आवक (क्विंटल)"
 
@@ -312,10 +308,6 @@ msgstr "रद्द करा"
 msgid "Cancelled"
 msgstr "रद्द"
 
-#: src/features/board/BoardPage.tsx:46
-msgid "Change"
-msgstr "बदल"
-
 #: src/auth/RequireAuth.tsx:41
 msgid "Check your email to confirm the account, then sign in."
 msgstr "खाते निश्चित करण्यासाठी तुमचा ईमेल तपासा, मग लॉगिन करा."
@@ -375,7 +367,7 @@ msgid "Create account"
 msgstr "खाते उघडा"
 
 #: src/features/alerts/AlertsPage.tsx:73
-#: src/features/price-detail/PairView.tsx:78
+#: src/features/price-detail/PairView.tsx:83
 #: src/features/sell/NewLotPage.tsx:61
 msgid "Crop"
 msgstr "पीक"
@@ -421,7 +413,7 @@ msgstr "जिल्हा"
 msgid "Email"
 msgstr "ईमेल"
 
-#: src/features/price-detail/PairView.tsx:143
+#: src/features/price-detail/PairView.tsx:171
 msgid "Enlarge the forecast ›"
 msgstr "अंदाज मोठा करून पहा ›"
 
@@ -572,11 +564,7 @@ msgstr "जुन्या चाचण्यांमध्ये प्रत�
 msgid "Institution"
 msgstr "संस्था"
 
-#: src/app/AppShell.tsx:70
-msgid "Krishi Bazaar"
-msgstr "कृषी बाजार"
-
-#: src/app/AppShell.tsx:13
+#: src/app/AppShell.tsx:24
 msgid "Language"
 msgstr "भाषा"
 
@@ -585,7 +573,7 @@ msgstr "भाषा"
 msgid "Last SMS {0}"
 msgstr "शेवटचा SMS {0}"
 
-#: src/features/price-detail/PairView.tsx:93
+#: src/features/price-detail/PairView.tsx:121
 msgid "Latest mandi price (modal)"
 msgstr "बाजारातील ताजा भाव (सर्वसाधारण)"
 
@@ -621,7 +609,7 @@ msgstr "विक्रीस टाका आणि सल्ला घ्य�
 msgid "List produce for sale"
 msgstr "माल विक्रीस टाका"
 
-#: src/app/AppShell.tsx:35
+#: src/app/AppShell.tsx:41
 msgid "Live"
 msgstr "चालू"
 
@@ -646,8 +634,7 @@ msgid "Make offer"
 msgstr "ऑफर द्या"
 
 #: src/features/alerts/AlertsPage.tsx:76
-#: src/features/board/BoardPage.tsx:46
-#: src/features/price-detail/PairView.tsx:81
+#: src/features/price-detail/PairView.tsx:86
 msgid "Mandi"
 msgstr "बाजार"
 
@@ -655,7 +642,7 @@ msgstr "बाजार"
 msgid "Mandi price of {day}"
 msgstr "{day} चा बाजारभाव"
 
-#: src/features/board/BoardPage.tsx:29
+#: src/features/board/BoardPage.tsx:42
 msgid "Mandi prices · {district}"
 msgstr "बाजारभाव · {district}"
 
@@ -677,7 +664,7 @@ msgstr "किमान"
 
 #. placeholder {0}: formatINR(last.min)
 #. placeholder {1}: formatINR(last.max)
-#: src/features/price-detail/PairView.tsx:99
+#: src/features/price-detail/PairView.tsx:127
 msgid "Min {0} · Max {1}"
 msgstr "किमान {0} · कमाल {1}"
 
@@ -737,7 +724,7 @@ msgid "New here? Create an account"
 msgstr "नवीन आहात? खाते उघडा"
 
 #. placeholder {0}: forecastPts.length
-#: src/charts/PriceForecastChart.tsx:88
+#: src/charts/PriceForecastChart.tsx:89
 msgid "next {0} days"
 msgstr "पुढील {0} दिवस"
 
@@ -761,13 +748,13 @@ msgstr "नेटवर्क नाही. सिग्नल आल्या�
 msgid "No end date"
 msgstr "शेवटची तारीख नाही"
 
-#: src/features/board/BoardPage.tsx:58
+#: src/features/board/BoardPage.tsx:102
 #: src/features/trust/methods.ts:28
 msgid "No forecast"
 msgstr "अंदाज नाही"
 
 #. placeholder {0}: series.missingDays
-#: src/features/price-detail/PairView.tsx:132
+#: src/features/price-detail/PairView.tsx:160
 msgid "No mandi price for the last {0} days (dotted line)."
 msgstr "मागील {0} दिवस बाजारभाव नाही (ठिपक्यांची रेषा)."
 
@@ -803,7 +790,7 @@ msgstr "सामान्य"
 msgid "Not decided"
 msgstr "अजून ठरले नाही"
 
-#: src/features/board/BoardPage.tsx:59
+#: src/features/board/BoardPage.tsx:103
 msgid "Not enough data for a forecast yet"
 msgstr "अंदाजासाठी अजून पुरेसा डेटा नाही"
 
@@ -864,7 +851,7 @@ msgstr "ऑफर पाठवली. शेतकऱ्याकडे उत�
 msgid "Offers"
 msgstr "ऑफर"
 
-#: src/app/AppShell.tsx:35
+#: src/app/AppShell.tsx:41
 msgid "Offline"
 msgstr "ऑफलाइन"
 
@@ -882,7 +869,7 @@ msgid "Other"
 msgstr "इतर"
 
 #. placeholder {0}: cropName(crop, lang)
-#: src/features/price-detail/PairView.tsx:171
+#: src/features/price-detail/PairView.tsx:199
 msgid "Other mandis · {0}"
 msgstr "इतर बाजार · {0}"
 
@@ -974,7 +961,6 @@ msgid "Pool lots (FPO)"
 msgstr "माल एकत्र करा (FPO)"
 
 #: src/features/alerts/AlertsPage.tsx:91
-#: src/features/board/BoardPage.tsx:46
 #: src/features/buy/BuyPage.tsx:162
 #: src/features/sell/LotDetailPage.tsx:343
 msgid "Price"
@@ -1001,7 +987,7 @@ msgid "Price history used"
 msgstr "वापरलेला भावांचा इतिहास"
 
 #. placeholder {0}: formatDay(row.date, lang)
-#: src/features/board/BoardPage.tsx:63
+#: src/features/board/BoardPage.tsx:113
 msgid "Price of {0}"
 msgstr "{0} चा भाव"
 
@@ -1009,7 +995,7 @@ msgstr "{0} चा भाव"
 msgid "Price rose {pct} in {days} days."
 msgstr "{days} दिवसांत भाव {pct} ने वाढला."
 
-#: src/features/price-detail/PairView.tsx:113
+#: src/features/price-detail/PairView.tsx:141
 msgid "Price trend"
 msgstr "भावाचा कल"
 
@@ -1017,7 +1003,7 @@ msgstr "भावाचा कल"
 msgid "Price was steady over {days} days."
 msgstr "{days} दिवसांत भाव स्थिर राहिला."
 
-#: src/app/AppShell.tsx:56
+#: src/app/AppShell.tsx:54
 msgid "Prices"
 msgstr "बाजारभाव"
 
@@ -1025,7 +1011,7 @@ msgstr "बाजारभाव"
 msgid "Prices are checked about once an hour. There are no notifications inside the app."
 msgstr "भाव साधारण तासातून एकदा तपासले जातात. ॲपमध्ये सूचना येत नाहीत."
 
-#: src/features/board/BoardPage.tsx:77
+#: src/features/board/BoardPage.tsx:125
 msgid "Prices in ₹ per quintal. Change is against the previous reported day."
 msgstr "भाव ₹ प्रति क्विंटल. बदल मागील नोंदवलेल्या दिवसाच्या तुलनेत."
 
@@ -1082,7 +1068,7 @@ msgstr "लागणारे प्रमाण"
 msgid "quintal"
 msgstr "क्विंटल"
 
-#: src/features/price-detail/PairView.tsx:115
+#: src/features/price-detail/PairView.tsx:143
 msgid "Range"
 msgstr "कालावधी"
 
@@ -1154,7 +1140,7 @@ msgstr "जतन झाले."
 msgid "Seasonal smoothing"
 msgstr "हंगामी सरासरी पद्धत"
 
-#: src/app/AppShell.tsx:57
+#: src/app/AppShell.tsx:55
 msgid "Sell"
 msgstr "विक्री"
 
@@ -1172,7 +1158,7 @@ msgstr "खरेदीदारांच्या ऑफर तुमच्य�
 msgid "Send"
 msgstr "पाठवा"
 
-#: src/features/price-detail/PairView.tsx:177
+#: src/features/price-detail/PairView.tsx:205
 msgid "Send me an SMS when the price changes"
 msgstr "भाव बदलल्यावर मला SMS पाठवा"
 
@@ -1288,16 +1274,16 @@ msgstr "हा माल सापडला नाही."
 msgid "This mandi has not reported a price for this crop in the last 15 days. Try a nearby mandi below."
 msgstr "या बाजाराने मागील 15 दिवसांत या पिकाचा भाव नोंदवलेला नाही. खालील जवळचा बाजार पहा."
 
-#: src/charts/PriceForecastChart.tsx:109
+#: src/charts/PriceForecastChart.tsx:110
 msgid "today"
 msgstr "आज"
 
-#: src/app/AppShell.tsx:55
+#: src/app/AppShell.tsx:53
 msgid "Today"
 msgstr "आज"
 
 #. placeholder {0}: formatINR(f.predicted_price)
-#: src/features/board/BoardPage.tsx:60
+#: src/features/board/BoardPage.tsx:104
 msgid "Tomorrow likely {0}"
 msgstr "उद्या संभाव्य {0}"
 
@@ -1335,7 +1321,7 @@ msgstr "{0} पर्यंत"
 msgid "Until then, every forecast is shown with its likely range and the name of the model that made it, never as a single certain number."
 msgstr "तोपर्यंत प्रत्येक अंदाज त्याच्या संभाव्य पट्ट्यासह आणि तो देणाऱ्या मॉडेलच्या नावासह दाखवला जातो, कधीही एकच निश्चित आकडा म्हणून नाही."
 
-#: src/app/AppShell.tsx:35
+#: src/app/AppShell.tsx:41
 msgid "Updating…"
 msgstr "अद्ययावत करत आहे…"
 
@@ -1403,7 +1389,7 @@ msgstr "हा माल मागे घ्यायचा? हे परत �
 msgid "Withdrawn"
 msgstr "मागे घेतला"
 
-#: src/app/AppShell.tsx:45
+#: src/app/AppShell.tsx:49
 msgid "You are offline. Showing the prices saved on this phone. Check the date on each price."
 msgstr "तुम्ही ऑफलाइन आहात. या फोनवर साठवलेले भाव दाखवत आहोत. प्रत्येक भावाची तारीख तपासा."
 

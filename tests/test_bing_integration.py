@@ -1,8 +1,9 @@
-import pytest
 from datetime import date
-from events.sources import NewsFeedSource, SourceMode
+
+import pytest
 from app.config import get_settings
-import os
+from events.sources import NewsFeedSource, SourceMode
+
 
 @pytest.mark.asyncio
 async def test_newsfeed_source_live():

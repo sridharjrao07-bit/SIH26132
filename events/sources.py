@@ -4,10 +4,10 @@ from typing import List
 
 import httpx
 import structlog
+from app.config import get_settings
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from .base import RawHeadline
-from app.config import get_settings
 
 logger = structlog.get_logger()
 

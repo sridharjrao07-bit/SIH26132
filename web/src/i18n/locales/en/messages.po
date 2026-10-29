@@ -13,7 +13,7 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/features/price-detail/PairView.tsx:192
+#: src/features/price-detail/PairView.tsx:220
 msgid "— Same as the last price"
 msgstr "— Same as the last price"
 
@@ -53,7 +53,7 @@ msgstr "{q} qtl"
 msgid "{qty} qtl"
 msgstr "{qty} qtl"
 
-#: src/features/price-detail/PairView.tsx:119
+#: src/features/price-detail/PairView.tsx:147
 msgid "{r}d"
 msgstr "{r}d"
 
@@ -62,7 +62,7 @@ msgstr "{r}d"
 msgid "{rate} per quintal"
 msgstr "{rate} per quintal"
 
-#: src/features/price-detail/PairView.tsx:95
+#: src/features/price-detail/PairView.tsx:123
 msgid "/quintal"
 msgstr "/quintal"
 
@@ -70,11 +70,11 @@ msgstr "/quintal"
 msgid "+ List produce"
 msgstr "+ List produce"
 
-#: src/features/price-detail/PairView.tsx:198
+#: src/features/price-detail/PairView.tsx:226
 msgid "▲ {abs} ({p}) since the last price"
 msgstr "▲ {abs} ({p}) since the last price"
 
-#: src/features/price-detail/PairView.tsx:198
+#: src/features/price-detail/PairView.tsx:226
 msgid "▼ {abs} ({p}) since the last price"
 msgstr "▼ {abs} ({p}) since the last price"
 
@@ -84,13 +84,9 @@ msgstr "▼ {abs} ({p}) since the last price"
 msgid "₹ / quintal"
 msgstr "₹ / quintal"
 
-#: src/features/price-detail/PairView.tsx:119
+#: src/features/price-detail/PairView.tsx:147
 msgid "1y"
 msgstr "1y"
-
-#: src/features/board/BoardPage.tsx:46
-msgid "7 days"
-msgstr "7 days"
 
 #: src/features/trust/HealthNotice.tsx:24
 msgid "A forecast needs at least {need} days of prices. This mandi has {observations} so far."
@@ -134,7 +130,7 @@ msgstr "Accept"
 msgid "Accepted"
 msgstr "Accepted"
 
-#: src/app/AppShell.tsx:59
+#: src/app/AppShell.tsx:57
 #: src/features/account/AccountPage.tsx:56
 msgid "Account"
 msgstr "Account"
@@ -151,7 +147,7 @@ msgstr "Add your phone number in Account, otherwise the SMS cannot reach you."
 msgid "Admin account"
 msgstr "Admin account"
 
-#: src/features/price-detail/PairView.tsx:161
+#: src/features/price-detail/PairView.tsx:189
 msgid "Advice"
 msgstr "Advice"
 
@@ -163,7 +159,7 @@ msgstr "Advice for this lot"
 msgid "After you register, an admin verifies you. Only verified buyers are shown to farmers."
 msgstr "After you register, an admin verifies you. Only verified buyers are shown to farmers."
 
-#: src/app/AppShell.tsx:58
+#: src/app/AppShell.tsx:56
 msgid "Alerts"
 msgstr "Alerts"
 
@@ -231,7 +227,7 @@ msgstr "Average of the last 7 days of prices, carried forward. Used when a mandi
 msgid "Bars below: how much produce arrived at the mandi. More arrivals often mean lower prices."
 msgstr "Bars below: how much produce arrived at the mandi. More arrivals often mean lower prices."
 
-#: src/charts/PriceForecastChart.tsx:133
+#: src/charts/PriceForecastChart.tsx:136
 msgid "Bars: arrivals at the mandi (quintal)"
 msgstr "Bars: arrivals at the mandi (quintal)"
 
@@ -312,10 +308,6 @@ msgstr "Cancel"
 msgid "Cancelled"
 msgstr "Cancelled"
 
-#: src/features/board/BoardPage.tsx:46
-msgid "Change"
-msgstr "Change"
-
 #: src/auth/RequireAuth.tsx:41
 msgid "Check your email to confirm the account, then sign in."
 msgstr "Check your email to confirm the account, then sign in."
@@ -375,7 +367,7 @@ msgid "Create account"
 msgstr "Create account"
 
 #: src/features/alerts/AlertsPage.tsx:73
-#: src/features/price-detail/PairView.tsx:78
+#: src/features/price-detail/PairView.tsx:83
 #: src/features/sell/NewLotPage.tsx:61
 msgid "Crop"
 msgstr "Crop"
@@ -421,7 +413,7 @@ msgstr "District"
 msgid "Email"
 msgstr "Email"
 
-#: src/features/price-detail/PairView.tsx:143
+#: src/features/price-detail/PairView.tsx:171
 msgid "Enlarge the forecast ›"
 msgstr "Enlarge the forecast ›"
 
@@ -572,11 +564,7 @@ msgstr "In past tests, the real price stayed inside this range {inTen} times out
 msgid "Institution"
 msgstr "Institution"
 
-#: src/app/AppShell.tsx:70
-msgid "Krishi Bazaar"
-msgstr "Krishi Bazaar"
-
-#: src/app/AppShell.tsx:13
+#: src/app/AppShell.tsx:24
 msgid "Language"
 msgstr "Language"
 
@@ -585,7 +573,7 @@ msgstr "Language"
 msgid "Last SMS {0}"
 msgstr "Last SMS {0}"
 
-#: src/features/price-detail/PairView.tsx:93
+#: src/features/price-detail/PairView.tsx:121
 msgid "Latest mandi price (modal)"
 msgstr "Latest mandi price (modal)"
 
@@ -621,7 +609,7 @@ msgstr "List and get advice"
 msgid "List produce for sale"
 msgstr "List produce for sale"
 
-#: src/app/AppShell.tsx:35
+#: src/app/AppShell.tsx:41
 msgid "Live"
 msgstr "Live"
 
@@ -646,8 +634,7 @@ msgid "Make offer"
 msgstr "Make offer"
 
 #: src/features/alerts/AlertsPage.tsx:76
-#: src/features/board/BoardPage.tsx:46
-#: src/features/price-detail/PairView.tsx:81
+#: src/features/price-detail/PairView.tsx:86
 msgid "Mandi"
 msgstr "Mandi"
 
@@ -655,7 +642,7 @@ msgstr "Mandi"
 msgid "Mandi price of {day}"
 msgstr "Mandi price of {day}"
 
-#: src/features/board/BoardPage.tsx:29
+#: src/features/board/BoardPage.tsx:42
 msgid "Mandi prices · {district}"
 msgstr "Mandi prices · {district}"
 
@@ -677,7 +664,7 @@ msgstr "min"
 
 #. placeholder {0}: formatINR(last.min)
 #. placeholder {1}: formatINR(last.max)
-#: src/features/price-detail/PairView.tsx:99
+#: src/features/price-detail/PairView.tsx:127
 msgid "Min {0} · Max {1}"
 msgstr "Min {0} · Max {1}"
 
@@ -737,7 +724,7 @@ msgid "New here? Create an account"
 msgstr "New here? Create an account"
 
 #. placeholder {0}: forecastPts.length
-#: src/charts/PriceForecastChart.tsx:88
+#: src/charts/PriceForecastChart.tsx:89
 msgid "next {0} days"
 msgstr "next {0} days"
 
@@ -761,13 +748,13 @@ msgstr "No connection. Try again when you have signal."
 msgid "No end date"
 msgstr "No end date"
 
-#: src/features/board/BoardPage.tsx:58
+#: src/features/board/BoardPage.tsx:102
 #: src/features/trust/methods.ts:28
 msgid "No forecast"
 msgstr "No forecast"
 
 #. placeholder {0}: series.missingDays
-#: src/features/price-detail/PairView.tsx:132
+#: src/features/price-detail/PairView.tsx:160
 msgid "No mandi price for the last {0} days (dotted line)."
 msgstr "No mandi price for the last {0} days (dotted line)."
 
@@ -803,7 +790,7 @@ msgstr "Normal"
 msgid "Not decided"
 msgstr "Not decided"
 
-#: src/features/board/BoardPage.tsx:59
+#: src/features/board/BoardPage.tsx:103
 msgid "Not enough data for a forecast yet"
 msgstr "Not enough data for a forecast yet"
 
@@ -864,7 +851,7 @@ msgstr "Offer sent. The farmer has 48 hours to reply."
 msgid "Offers"
 msgstr "Offers"
 
-#: src/app/AppShell.tsx:35
+#: src/app/AppShell.tsx:41
 msgid "Offline"
 msgstr "Offline"
 
@@ -882,7 +869,7 @@ msgid "Other"
 msgstr "Other"
 
 #. placeholder {0}: cropName(crop, lang)
-#: src/features/price-detail/PairView.tsx:171
+#: src/features/price-detail/PairView.tsx:199
 msgid "Other mandis · {0}"
 msgstr "Other mandis · {0}"
 
@@ -974,7 +961,6 @@ msgid "Pool lots (FPO)"
 msgstr "Pool lots (FPO)"
 
 #: src/features/alerts/AlertsPage.tsx:91
-#: src/features/board/BoardPage.tsx:46
 #: src/features/buy/BuyPage.tsx:162
 #: src/features/sell/LotDetailPage.tsx:343
 msgid "Price"
@@ -1001,7 +987,7 @@ msgid "Price history used"
 msgstr "Price history used"
 
 #. placeholder {0}: formatDay(row.date, lang)
-#: src/features/board/BoardPage.tsx:63
+#: src/features/board/BoardPage.tsx:113
 msgid "Price of {0}"
 msgstr "Price of {0}"
 
@@ -1009,7 +995,7 @@ msgstr "Price of {0}"
 msgid "Price rose {pct} in {days} days."
 msgstr "Price rose {pct} in {days} days."
 
-#: src/features/price-detail/PairView.tsx:113
+#: src/features/price-detail/PairView.tsx:141
 msgid "Price trend"
 msgstr "Price trend"
 
@@ -1017,7 +1003,7 @@ msgstr "Price trend"
 msgid "Price was steady over {days} days."
 msgstr "Price was steady over {days} days."
 
-#: src/app/AppShell.tsx:56
+#: src/app/AppShell.tsx:54
 msgid "Prices"
 msgstr "Prices"
 
@@ -1025,7 +1011,7 @@ msgstr "Prices"
 msgid "Prices are checked about once an hour. There are no notifications inside the app."
 msgstr "Prices are checked about once an hour. There are no notifications inside the app."
 
-#: src/features/board/BoardPage.tsx:77
+#: src/features/board/BoardPage.tsx:125
 msgid "Prices in ₹ per quintal. Change is against the previous reported day."
 msgstr "Prices in ₹ per quintal. Change is against the previous reported day."
 
@@ -1082,7 +1068,7 @@ msgstr "Quantity needed"
 msgid "quintal"
 msgstr "quintal"
 
-#: src/features/price-detail/PairView.tsx:115
+#: src/features/price-detail/PairView.tsx:143
 msgid "Range"
 msgstr "Range"
 
@@ -1154,7 +1140,7 @@ msgstr "Saved."
 msgid "Seasonal smoothing"
 msgstr "Seasonal smoothing"
 
-#: src/app/AppShell.tsx:57
+#: src/app/AppShell.tsx:55
 msgid "Sell"
 msgstr "Sell"
 
@@ -1172,7 +1158,7 @@ msgstr "Selling needs an account so buyers' offers reach you and every step is r
 msgid "Send"
 msgstr "Send"
 
-#: src/features/price-detail/PairView.tsx:177
+#: src/features/price-detail/PairView.tsx:205
 msgid "Send me an SMS when the price changes"
 msgstr "Send me an SMS when the price changes"
 
@@ -1288,16 +1274,16 @@ msgstr "This lot was not found."
 msgid "This mandi has not reported a price for this crop in the last 15 days. Try a nearby mandi below."
 msgstr "This mandi has not reported a price for this crop in the last 15 days. Try a nearby mandi below."
 
-#: src/charts/PriceForecastChart.tsx:109
+#: src/charts/PriceForecastChart.tsx:110
 msgid "today"
 msgstr "today"
 
-#: src/app/AppShell.tsx:55
+#: src/app/AppShell.tsx:53
 msgid "Today"
 msgstr "Today"
 
 #. placeholder {0}: formatINR(f.predicted_price)
-#: src/features/board/BoardPage.tsx:60
+#: src/features/board/BoardPage.tsx:104
 msgid "Tomorrow likely {0}"
 msgstr "Tomorrow likely {0}"
 
@@ -1335,7 +1321,7 @@ msgstr "Until {0}"
 msgid "Until then, every forecast is shown with its likely range and the name of the model that made it, never as a single certain number."
 msgstr "Until then, every forecast is shown with its likely range and the name of the model that made it, never as a single certain number."
 
-#: src/app/AppShell.tsx:35
+#: src/app/AppShell.tsx:41
 msgid "Updating…"
 msgstr "Updating…"
 
@@ -1403,7 +1389,7 @@ msgstr "Withdraw this lot? This cannot be undone."
 msgid "Withdrawn"
 msgstr "Withdrawn"
 
-#: src/app/AppShell.tsx:45
+#: src/app/AppShell.tsx:49
 msgid "You are offline. Showing the prices saved on this phone. Check the date on each price."
 msgstr "You are offline. Showing the prices saved on this phone. Check the date on each price."
 
