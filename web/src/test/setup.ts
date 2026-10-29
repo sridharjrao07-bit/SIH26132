@@ -28,7 +28,6 @@ function wrapFetchWithSignalStrip(originalFetch: any) {
 
 try {
   const { fetch: undiciFetch, Headers: UHeaders, Request: URequest, Response: UResponse } =
-    // @ts-expect-error – undici is a Node.js built-in not in @types/node yet for all versions
     await import('undici');
   vi.stubGlobal('fetch', wrapFetchWithSignalStrip(undiciFetch));
   vi.stubGlobal('Headers', UHeaders);
