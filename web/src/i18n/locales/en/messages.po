@@ -88,10 +88,6 @@ msgstr "₹ / quintal"
 msgid "1y"
 msgstr "1y"
 
-#: src/features/board/BoardPage.tsx:46
-#~ msgid "7 days"
-#~ msgstr "7 days"
-
 #: src/features/trust/HealthNotice.tsx:24
 msgid "A forecast needs at least {need} days of prices. This mandi has {observations} so far."
 msgstr "A forecast needs at least {need} days of prices. This mandi has {observations} so far."
@@ -311,10 +307,6 @@ msgstr "Cancel"
 #: src/features/sell/labels.ts:35
 msgid "Cancelled"
 msgstr "Cancelled"
-
-#: src/features/board/BoardPage.tsx:46
-#~ msgid "Change"
-#~ msgstr "Change"
 
 #: src/auth/RequireAuth.tsx:41
 msgid "Check your email to confirm the account, then sign in."
@@ -571,10 +563,6 @@ msgstr "In past tests, the real price stayed inside this range {inTen} times out
 #: src/features/sell/labels.ts:55
 msgid "Institution"
 msgstr "Institution"
-
-#: src/app/AppShell.tsx:70
-#~ msgid "Krishi Bazaar"
-#~ msgstr "Krishi Bazaar"
 
 #: src/app/AppShell.tsx:24
 msgid "Language"

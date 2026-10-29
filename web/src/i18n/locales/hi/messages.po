@@ -88,10 +88,6 @@ msgstr "₹ / क्विंटल"
 msgid "1y"
 msgstr "1 साल"
 
-#: src/features/board/BoardPage.tsx:46
-#~ msgid "7 days"
-#~ msgstr "7 दिन"
-
 #: src/features/trust/HealthNotice.tsx:24
 msgid "A forecast needs at least {need} days of prices. This mandi has {observations} so far."
 msgstr "अनुमान के लिए कम से कम {need} दिन के भाव चाहिए। इस मंडी में अभी तक {observations} दिन के भाव हैं।"
@@ -311,10 +307,6 @@ msgstr "रद्द करें"
 #: src/features/sell/labels.ts:35
 msgid "Cancelled"
 msgstr "रद्द"
-
-#: src/features/board/BoardPage.tsx:46
-#~ msgid "Change"
-#~ msgstr "बदलाव"
 
 #: src/auth/RequireAuth.tsx:41
 msgid "Check your email to confirm the account, then sign in."
@@ -571,10 +563,6 @@ msgstr "पुराने परीक्षणों में असली �
 #: src/features/sell/labels.ts:55
 msgid "Institution"
 msgstr "संस्था"
-
-#: src/app/AppShell.tsx:70
-#~ msgid "Krishi Bazaar"
-#~ msgstr "कृषि बाज़ार"
 
 #: src/app/AppShell.tsx:24
 msgid "Language"
