@@ -365,7 +365,8 @@ def test_engine_run_gbm_fallback(fake_supabase, monkeypatch):
     
     rows = upserts[0]["payload"]
     for row in rows:
-        assert row["method"] == "blend"
+        assert row["method"] == "feature_ols"
+        assert row["fallback_from"] == "gbm"
         assert row["status"] == "ok"
         assert "predicted_price" in row
 
