@@ -110,14 +110,17 @@ def features(data):
         return 0.0, 1.0
     whole = sum(modal == round(modal) for modal, _, _ in usable) / len(usable)
     coverage = len(usable) / len(data) if data else 0.0
-    if coverage < 0.90:
+    banded = [
+        (modal, minimum, maximum) for modal, minimum, maximum in usable
+        if minimum is not None and maximum is not None and minimum > 0 and maximum > 0
+    ]
+    if coverage < 0.90 or len(banded) / len(usable) < 0.90:
         return whole, 1.0
     band = sum(
-        minimum is not None and maximum is not None
-        and .88 <= minimum / modal <= .94
+        .88 <= minimum / modal <= .94
         and 1.06 <= maximum / modal <= 1.13
-        for modal, minimum, maximum in usable
-    ) / len(usable)
+        for modal, minimum, maximum in banded
+    ) / len(banded)
     return whole, band
 
 
