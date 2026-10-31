@@ -7,6 +7,7 @@ import argparse
 import csv
 import datetime as dt
 import os
+import random
 import statistics
 import sys
 from collections import defaultdict
@@ -103,48 +104,73 @@ def conformal(points, alpha=0.05, calibration=60, minimum=20):
     return result
 
 
+def summarize_series(observations, weight):
+    points = evaluate(observations, weight)
+    conf = conformal(points)
+    if not points or not conf:
+        return None
+    # Compare both interval methods on exactly the conformal arm's origins.
+    paired = points[len(points) - len(conf):]
+    prices = [value for _, value in observations]
+    scale = statistics.median(prices)
+    mape = statistics.fmean(abs(actual - prediction) / actual * 100
+                            for actual, prediction, _ in paired)
+    param_cov = statistics.fmean(abs(actual - prediction) <= margin
+                                 for actual, prediction, margin in paired)
+    param_width = statistics.fmean(2 * margin for _, _, margin in paired) / scale
+    conf_cov = statistics.fmean(abs(actual - prediction) <= q
+                                for actual, prediction, q in conf)
+    conf_width = statistics.fmean(2 * q for _, _, q in conf) / scale
+    return mape, param_cov, param_width, conf_cov, conf_width, len(paired)
+
+
+def percentile(values, q):
+    return sorted(values)[int(q * (len(values) - 1))]
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("csv_path")
     parser.add_argument("--commodity")
     parser.add_argument("--min-dates", type=int, default=130)
-    parser.add_argument("--top", type=int, default=20)
+    parser.add_argument("--top", type=int, default=20, help="deepest-series cohort size")
+    parser.add_argument("--random", type=int, default=200, dest="random_count")
     args = parser.parse_args()
     series = load(args.csv_path)
     if args.commodity:
         series = {key: values for key, values in series.items()
                   if str(key[3]).lower() == args.commodity.lower()}
-    deep = sorted(((key, values) for key, values in series.items()
-                   if len(values) >= args.min_dates), key=lambda item: -len(item[1]))[:args.top]
-    print(f"series with >= {args.min_dates} dates: {len(deep)}")
-    if not deep:
+    eligible = [(key, values) for key, values in series.items() if len(values) >= args.min_dates]
+    deepest = sorted(eligible, key=lambda item: -len(item[1]))[:args.top]
+    rng = random.Random(42)
+    random_cohort = rng.sample(eligible, min(args.random_count, len(eligible)))
+    print(f"series with >= {args.min_dates} dates: {len(eligible)}")
+    if not eligible:
         print("nothing to evaluate")
         return 1
-    pooled = defaultdict(list)
-    for key, observations in deep:
+
+    for cohort_name, cohort in ((f"deepest-{len(deepest)}", deepest),
+                                (f"random-{len(random_cohort)}", random_cohort)):
+        pooled = defaultdict(list)
+        for key, observations in cohort:
+            for weight in (0.0, 0.2, 0.4, 0.6, 0.8, 1.0):
+                result = summarize_series(observations, weight)
+                if result:
+                    pooled[weight].append(result)
+            print(f"{key[0]} / {key[2]} / {key[3]} ({len(observations)} dates)")
+        print(f"=== {cohort_name} ===")
         for weight in (0.0, 0.2, 0.4, 0.6, 0.8, 1.0):
-            points = evaluate(observations, weight)
-            if not points:
+            values = pooled[weight]
+            if not values:
                 continue
-            actual = [a for a, _, _ in points]
-            mape = statistics.fmean(abs(a - p) / a * 100 for a, p, _ in points)
-            coverage = statistics.fmean(abs(a - p) <= margin for a, p, margin in points)
-            width = statistics.fmean(2 * margin for _, _, margin in points)
-            conf = conformal(points)
-            conf_coverage = statistics.fmean(abs(a - p) <= q for a, p, q in conf) if conf else None
-            conf_width = statistics.fmean(2 * q for _, _, q in conf) if conf else None
-            pooled[weight].append((mape, coverage, width, len(points), conf_coverage, conf_width))
-        print(f"{key[0]} / {key[2]} / {key[3]} ({len(observations)} dates)")
-    print("=== pooled over series ===")
-    for weight in sorted(pooled):
-        values = pooled[weight]
-        conformal_values = [v for v in values if v[4] is not None]
-        conformal_text = (f"conf_cov={statistics.fmean(v[4] for v in conformal_values):.4f} "
-                          f"conf_width={statistics.fmean(v[5] for v in conformal_values):.2f}"
-                          if conformal_values else "conf=insufficient-calibration")
-        print(f"w={weight:.1f} series={len(values)} MAPE={statistics.fmean(v[0] for v in values):.4f}% "
-              f"param_cov={statistics.fmean(v[1] for v in values):.4f} width={statistics.fmean(v[2] for v in values):.2f} "
-              f"{conformal_text}")
+            mapes = [v[0] for v in values]
+            print(f"w={weight:.1f} series={len(values)} n={sum(v[5] for v in values)} "
+                  f"MAPE_median={statistics.median(mapes):.4f}% "
+                  f"MAPE_IQR={percentile(mapes,.75)-percentile(mapes,.25):.4f} "
+                  f"param_cov={statistics.fmean(v[1] for v in values):.4f} "
+                  f"param_rel_width={statistics.fmean(v[2] for v in values):.4f} "
+                  f"conf_cov={statistics.fmean(v[3] for v in values):.4f} "
+                  f"conf_rel_width={statistics.fmean(v[4] for v in values):.4f}")
     return 0
 
 
