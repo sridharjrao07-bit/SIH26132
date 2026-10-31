@@ -90,16 +90,16 @@ def evaluate(observations, weight):
     return results
 
 
-def conformal(points, alpha=0.05, calibration=60, minimum=20):
+def conformal(points, alpha=0.05, calibration=60, minimum=20, eval_from=0):
     """Rolling split-conformal intervals over the same paired points."""
     errors = [abs(actual - prediction) for actual, prediction, _ in points]
     result = []
-    for index, (actual, prediction, _) in enumerate(points):
+    start = max(calibration, minimum, eval_from)
+    for index in range(start, len(points)):
         window = errors[max(0, index - calibration):index]
-        if len(window) < minimum:
-            continue
         ranked = sorted(window)
         q = ranked[min(len(ranked) - 1, int(round((1 - alpha) * len(ranked))) - 1)]
+        actual, prediction, _ = points[index]
         result.append((actual, prediction, q))
     return result
 
@@ -131,11 +131,12 @@ def percentile(values, q):
 def coverage_sweep(cohort, weight=0.4, windows=(40, 60, 120, 180, 240, 300)):
     """Summarize per-series conformal coverage across calibration windows."""
     evaluated = [evaluate(observations, weight) for _, observations in cohort]
+    eval_from = max(windows)
     output = []
     for calibration in windows:
         coverages = []
         for points in evaluated:
-            scored = conformal(points, calibration=calibration)
+            scored = conformal(points, calibration=calibration, eval_from=eval_from)
             if scored:
                 coverages.append(statistics.fmean(
                     abs(actual - prediction) <= q
