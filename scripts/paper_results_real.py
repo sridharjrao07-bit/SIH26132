@@ -48,8 +48,8 @@ def load(path):
             if day is None or modal <= 0:
                 continue
             key = (row.get("State") or row.get("state"),
-                   row.get("District") or row.get("district_name"),
-                   row.get("Market") or row.get("market_name"),
+                   row.get("District") or row.get("district") or row.get("district_name") or row.get("District Name"),
+                   row.get("Market") or row.get("market_name") or row.get("Market Name"),
                    row.get("Commodity") or row.get("commodity"))
             series[key][day] = modal
     return {key: sorted(values.items()) for key, values in series.items()}
@@ -89,6 +89,20 @@ def evaluate(observations, weight):
     return results
 
 
+def conformal(points, alpha=0.05, calibration=60, minimum=20):
+    """Rolling split-conformal intervals over the same paired points."""
+    errors = [abs(actual - prediction) for actual, prediction, _ in points]
+    result = []
+    for index, (actual, prediction, _) in enumerate(points):
+        window = errors[max(0, index - calibration):index]
+        if len(window) < minimum:
+            continue
+        ranked = sorted(window)
+        q = ranked[min(len(ranked) - 1, int(round((1 - alpha) * len(ranked))) - 1)]
+        result.append((actual, prediction, q))
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("csv_path")
@@ -116,14 +130,21 @@ def main():
             mape = statistics.fmean(abs(a - p) / a * 100 for a, p, _ in points)
             coverage = statistics.fmean(abs(a - p) <= margin for a, p, margin in points)
             width = statistics.fmean(2 * margin for _, _, margin in points)
-            pooled[weight].append((mape, coverage, width, len(points)))
+            conf = conformal(points)
+            conf_coverage = statistics.fmean(abs(a - p) <= q for a, p, q in conf) if conf else None
+            conf_width = statistics.fmean(2 * q for _, _, q in conf) if conf else None
+            pooled[weight].append((mape, coverage, width, len(points), conf_coverage, conf_width))
         print(f"{key[0]} / {key[2]} / {key[3]} ({len(observations)} dates)")
     print("=== pooled over series ===")
     for weight in sorted(pooled):
         values = pooled[weight]
+        conformal_values = [v for v in values if v[4] is not None]
+        conformal_text = (f"conf_cov={statistics.fmean(v[4] for v in conformal_values):.4f} "
+                          f"conf_width={statistics.fmean(v[5] for v in conformal_values):.2f}"
+                          if conformal_values else "conf=insufficient-calibration")
         print(f"w={weight:.1f} series={len(values)} MAPE={statistics.fmean(v[0] for v in values):.4f}% "
-              f"param_cov={statistics.fmean(v[1] for v in values):.4f} "
-              f"width={statistics.fmean(v[2] for v in values):.2f}")
+              f"param_cov={statistics.fmean(v[1] for v in values):.4f} width={statistics.fmean(v[2] for v in values):.2f} "
+              f"{conformal_text}")
     return 0
 
 
