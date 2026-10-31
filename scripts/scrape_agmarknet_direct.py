@@ -152,6 +152,7 @@ def parse_price_records(html: str, default_state: str = "Maharashtra", default_d
 
     header = [h.lower() for h in parser.rows[0]]
 
+    district_idx = next((i for i, h in enumerate(header) if "district" in h), None)
     mkt_idx = next((i for i, h in enumerate(header) if "market" in h), 1)
     comm_idx = next((i for i, h in enumerate(header) if "commodity" in h), 2)
     var_idx = next((i for i, h in enumerate(header) if "variety" in h), 3)
@@ -180,9 +181,14 @@ def parse_price_records(html: str, default_state: str = "Maharashtra", default_d
             min_val = float(re.sub(r"[^\d.]", "", row[min_idx])) if min_idx < len(row) else modal_val * 0.9
             max_val = float(re.sub(r"[^\d.]", "", row[max_idx])) if max_idx < len(row) else modal_val * 1.1
 
+            district = (
+                row[district_idx].strip()
+                if district_idx is not None and district_idx < len(row) and row[district_idx].strip()
+                else default_district
+            )
             records.append({
                 "State": default_state,
-                "District": default_district,
+                "District": district,
                 "Market": row[mkt_idx].strip(),
                 "Commodity": row[comm_idx].strip(),
                 "Variety": row[var_idx].strip() if var_idx < len(row) else "General",

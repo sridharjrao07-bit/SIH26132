@@ -1,4 +1,5 @@
 import asyncio
+import argparse
 import csv
 import os
 import sys
@@ -15,6 +16,21 @@ from ingestion.validator import PriceValidator
 load_dotenv()
 
 async def main():
+    parser = argparse.ArgumentParser(description="Validate and ingest a government price CSV")
+    parser.add_argument(
+        "--csv",
+        dest="csv_file",
+        default=None,
+        help="CSV file to ingest (default: data/gov_prices.csv)",
+    )
+    parser.add_argument(
+        "--source",
+        choices=("csv", "agmarknet", "data_gov_in"),
+        default="csv",
+        help="provenance to persist for these rows (default: csv)",
+    )
+    args = parser.parse_args()
+
     supabase_url = os.environ.get("SUPABASE_URL")
     supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
     if not supabase_url or not supabase_key:
@@ -22,7 +38,9 @@ async def main():
         sys.exit(1)
 
     supabase: Client = create_client(supabase_url, supabase_key)
-    csv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "gov_prices.csv")
+    csv_path = args.csv_file or os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "gov_prices.csv")
+    if not os.path.isabs(csv_path):
+        csv_path = os.path.join(os.getcwd(), csv_path)
     
     if not os.path.exists(csv_path):
         print(f"CSV not found at {csv_path}")
@@ -76,7 +94,7 @@ async def main():
                     unit="quintal",
                     variety=row.get("Variety", "General"),
                     grade=row.get("Grade", "General"),
-                    source="csv",
+                    source=args.source,
                     raw_payload=row
                 )
                 
