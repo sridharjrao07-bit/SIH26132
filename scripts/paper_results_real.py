@@ -128,6 +128,32 @@ def percentile(values, q):
     return sorted(values)[int(q * (len(values) - 1))]
 
 
+def coverage_sweep(cohort, weight=0.4, windows=(40, 60, 120, 180, 240, 300)):
+    """Summarize per-series conformal coverage across calibration windows."""
+    evaluated = [evaluate(observations, weight) for _, observations in cohort]
+    output = []
+    for calibration in windows:
+        coverages = []
+        for points in evaluated:
+            scored = conformal(points, calibration=calibration)
+            if scored:
+                coverages.append(statistics.fmean(
+                    abs(actual - prediction) <= q
+                    for actual, prediction, q in scored
+                ))
+        if coverages:
+            output.append((
+                calibration,
+                len(coverages),
+                statistics.fmean(coverages),
+                statistics.median(coverages),
+                percentile(coverages, 0.10),
+                percentile(coverages, 0.90),
+                sum(value < 0.90 for value in coverages) / len(coverages),
+            ))
+    return output
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("csv_path")
@@ -171,6 +197,11 @@ def main():
                   f"param_rel_width={statistics.fmean(v[2] for v in values):.4f} "
                   f"conf_cov={statistics.fmean(v[3] for v in values):.4f} "
                   f"conf_rel_width={statistics.fmean(v[4] for v in values):.4f}")
+        print("calibration sweep (w=0.4):")
+        for calibration, count, mean, median, p10, p90, below in coverage_sweep(cohort):
+            print(f"  calibration={calibration:>3} series={count} mean={mean:.4f} "
+                  f"median={median:.4f} p10={p10:.4f} p90={p90:.4f} "
+                  f"share_below_90={below:.3f}")
     return 0
 
 
