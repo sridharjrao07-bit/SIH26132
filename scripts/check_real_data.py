@@ -61,12 +61,23 @@ def main() -> int:
         return 1
 
     span = (max(dates) - min(dates)).days
+    distinct_dates = len(set(dates))
     synthetic_ratio = synthetic_band_rows / len(rows)
+    whole_modal_ratio = sum(
+        1 for row in rows if float(row["Modal_x0020_Price"]) == round(float(row["Modal_x0020_Price"]))
+    ) / len(rows)
     print(f"rows={len(rows)} dates={min(dates)}..{max(dates)} span_days={span}")
+    print(f"distinct_dates={distinct_dates} whole_modal_ratio={whole_modal_ratio:.3f}")
     print(f"synthetic_band_ratio={synthetic_ratio:.3f}")
 
     if span > args.days:
         print(f"FAIL: date span exceeds --days {args.days}")
+        return 1
+    if distinct_dates < 130:
+        print(f"FAIL: only {distinct_dates} distinct dates — need 130 for 74+56 walk-forward")
+        return 1
+    if whole_modal_ratio < 0.85:
+        print("FAIL: modal prices are not whole-rupee values — not mandi quotes")
         return 1
     if synthetic_ratio >= 0.95:
         print("FAIL: rows match the historical synthetic price-band fingerprint")
