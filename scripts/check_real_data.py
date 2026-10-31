@@ -42,17 +42,20 @@ def main() -> int:
 
     dates = []
     synthetic_band_rows = 0
+    whole_modal_rows = 0
     malformed = 0
     nonpositive = 0
     for row in rows:
         try:
-            dates.append(datetime.strptime(row["Arrival_Date"], "%d/%m/%Y").date())
+            parsed_date = datetime.strptime(row["Arrival_Date"], "%d/%m/%Y").date()
             minimum = float(row["Min_x0020_Price"])
             maximum = float(row["Max_x0020_Price"])
             modal = float(row["Modal_x0020_Price"])
             if modal <= 0 or minimum <= 0 or maximum <= 0:
                 nonpositive += 1
                 continue
+            dates.append(parsed_date)
+            whole_modal_rows += modal == round(modal)
             if 0.88 <= minimum / modal <= 0.94 and 1.06 <= maximum / modal <= 1.13:
                 synthetic_band_rows += 1
         except (KeyError, TypeError, ValueError):
@@ -67,13 +70,15 @@ def main() -> int:
     if nonpositive:
         print(f"note: dropping {nonpositive} non-positive rows ({100 * nonpositive / len(rows):.2f}%)")
 
+    if not dates:
+        print("FAIL: no usable positive-price rows")
+        return 1
+    usable_rows = len(dates)
     span = (max(dates) - min(dates)).days
     distinct_dates = len(set(dates))
-    synthetic_ratio = synthetic_band_rows / len(rows)
-    whole_modal_ratio = sum(
-        1 for row in rows if float(row["Modal_x0020_Price"]) == round(float(row["Modal_x0020_Price"]))
-    ) / len(rows)
-    print(f"rows={len(rows)} dates={min(dates)}..{max(dates)} span_days={span}")
+    synthetic_ratio = synthetic_band_rows / usable_rows
+    whole_modal_ratio = whole_modal_rows / usable_rows
+    print(f"rows={len(rows)} usable_rows={usable_rows} dates={min(dates)}..{max(dates)} span_days={span}")
     print(f"distinct_dates={distinct_dates} whole_modal_ratio={whole_modal_ratio:.3f}")
     print(f"synthetic_band_ratio={synthetic_ratio:.3f}")
 
