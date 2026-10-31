@@ -99,23 +99,25 @@ def r1(path):
 
 
 def features(data):
-    modal_values = []
-    eligible = []
+    usable = []
     for row in data:
         modal = f(row.get("Modal_x0020_Price"))
         minimum = f(row.get("Min_x0020_Price"))
         maximum = f(row.get("Max_x0020_Price"))
-        if modal is not None:
-            modal_values.append(modal)
-        if modal is None or modal <= 0 or minimum is None or maximum is None:
-            continue
-        eligible.append((modal, minimum, maximum))
-    if not modal_values:
+        if modal is not None and modal > 0:
+            usable.append((modal, minimum, maximum))
+    if not usable:
         return 0.0, 1.0
-    whole = sum(modal == round(modal) for modal in modal_values) / len(modal_values)
-    band = (sum(.88 <= minimum / modal <= .94 and 1.06 <= maximum / modal <= 1.13
-                for modal, minimum, maximum in eligible) / len(eligible)
-            if eligible else 1.0)
+    whole = sum(modal == round(modal) for modal, _, _ in usable) / len(usable)
+    coverage = len(usable) / len(data) if data else 0.0
+    if coverage < 0.90:
+        return whole, 1.0
+    band = sum(
+        minimum is not None and maximum is not None
+        and .88 <= minimum / modal <= .94
+        and 1.06 <= maximum / modal <= 1.13
+        for modal, minimum, maximum in usable
+    ) / len(usable)
     return whole, band
 
 
