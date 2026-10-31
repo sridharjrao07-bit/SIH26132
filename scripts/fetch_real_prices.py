@@ -26,6 +26,7 @@ MARKETS = {
     "yeola": "Yeola APCM",
     "nashik": "Nashik APCM",
     "manmad": "Manmad APCM",
+    "nampur": "Nampur APCM",
 }
 FIELDS = [
     "State", "District", "Market", "Commodity", "Variety", "Grade",
