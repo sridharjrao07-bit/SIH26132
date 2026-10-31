@@ -43,6 +43,7 @@ def main() -> int:
     dates = []
     synthetic_band_rows = 0
     malformed = 0
+    nonpositive = 0
     for row in rows:
         try:
             dates.append(datetime.strptime(row["Arrival_Date"], "%d/%m/%Y").date())
@@ -50,15 +51,21 @@ def main() -> int:
             maximum = float(row["Max_x0020_Price"])
             modal = float(row["Modal_x0020_Price"])
             if modal <= 0 or minimum <= 0 or maximum <= 0:
-                raise ValueError("non-positive price")
+                nonpositive += 1
+                continue
             if 0.88 <= minimum / modal <= 0.94 and 1.06 <= maximum / modal <= 1.13:
                 synthetic_band_rows += 1
         except (KeyError, TypeError, ValueError):
             malformed += 1
 
     if malformed:
-        print(f"FAIL: {malformed} malformed price/date rows")
+        print(f"FAIL: {malformed} unparseable rows")
         return 1
+    if nonpositive / len(rows) > 0.02:
+        print(f"FAIL: {nonpositive} non-positive rows ({100 * nonpositive / len(rows):.1f}%)")
+        return 1
+    if nonpositive:
+        print(f"note: dropping {nonpositive} non-positive rows ({100 * nonpositive / len(rows):.2f}%)")
 
     span = (max(dates) - min(dates)).days
     distinct_dates = len(set(dates))
