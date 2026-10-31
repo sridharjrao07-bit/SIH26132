@@ -72,6 +72,13 @@ def r1(path):
             states[row["State"]].append(value)
     state_medians = sorted((state, statistics.median(values), len(values))
                            for state, values in states.items() if len(values) >= 5)
+    if state_medians:
+        lowest = min(state_medians, key=lambda item: item[1])
+        highest = max(state_medians, key=lambda item: item[1])
+        state_spread = highest[1] / lowest[1]
+        state_spread_pair = (lowest[0], lowest[1], highest[0], highest[1])
+    else:
+        state_spread, state_spread_pair = None, None
     return {
         "rows": len(data), "markets": len({r["Market"] for r in data}),
         "commodities": len({r["Commodity"] for r in data}),
@@ -84,18 +91,31 @@ def r1(path):
                   "mad": mad, "robust_cv": 1.4826 * mad / median,
                   "p10": quantile(prices, .1), "p90": quantile(prices, .9),
                   "p90_over_p10": quantile(prices, .9) / quantile(prices, .1),
-                  "trimmed_min": prices[0], "trimmed_max": prices[-1]},
+                  "trimmed_min": prices[0], "trimmed_max": prices[-1],
+                  "trimmed_ratio": prices[-1] / prices[0]},
         "state_medians": state_medians,
+        "state_spread": state_spread, "state_spread_pair": state_spread_pair,
     }
 
 
 def features(data):
-    values = [f(r["Modal_x0020_Price"]) for r in data]
-    values = [v for v in values if v not in (None, 0)]
-    whole = sum(v == round(v) for v in values) / len(values)
-    band = sum(.88 <= f(r["Min_x0020_Price"]) / f(r["Modal_x0020_Price"]) <= .94
-               and 1.06 <= f(r["Max_x0020_Price"]) / f(r["Modal_x0020_Price"]) <= 1.13
-               for r in data) / len(data)
+    modal_values = []
+    eligible = []
+    for row in data:
+        modal = f(row.get("Modal_x0020_Price"))
+        minimum = f(row.get("Min_x0020_Price"))
+        maximum = f(row.get("Max_x0020_Price"))
+        if modal is not None:
+            modal_values.append(modal)
+        if modal is None or modal <= 0 or minimum is None or maximum is None:
+            continue
+        eligible.append((modal, minimum, maximum))
+    if not modal_values:
+        return 0.0, 1.0
+    whole = sum(modal == round(modal) for modal in modal_values) / len(modal_values)
+    band = (sum(.88 <= minimum / modal <= .94 and 1.06 <= maximum / modal <= 1.13
+                for modal, minimum, maximum in eligible) / len(eligible)
+            if eligible else 1.0)
     return whole, band
 
 
@@ -159,7 +179,16 @@ def r3(days=400, seed=42):
                 statistics.mean(2 * q for _, _, _, q in points))
 
     ablation = [(weight, summary(evaluate(weight))) for weight in [i / 10 for i in range(11)]]
-    return len(series), summary(evaluate(.4)), ablation
+    naive_zero_width_points = sum(
+        1 for origin in origins if origin >= TRAIN_DEPTH
+        for h in range(1, HORIZON + 1) if origin + h - 1 < len(series)
+    )
+    mape_spread = max(result[1][0] for result in ablation) - min(result[1][0] for result in ablation)
+    return {
+        "series": len(series), "production": summary(evaluate(.4)),
+        "naive_zero_width_points": naive_zero_width_points,
+        "ablation": ablation, "mape_spread": mape_spread,
+    }
 
 
 def main():
@@ -174,13 +203,19 @@ def main():
         print(f"error: real snapshot not found: {args.real}", file=sys.stderr)
         return 2
     if not args.skip_r1:
-        print("R1", r1(args.real))
+        result = r1(args.real)
+        print("R1", result)
+        print("state_spread      :", result["state_spread"], result["state_spread_pair"])
+        print("trimmed_ratio     :", result["onion"]["trimmed_ratio"])
     if not args.skip_r2:
         result, sweep = r2(args.real, args.synth)
         print("R2", result)
         print("R2 contamination_sweep", sweep)
     if not args.skip_r3:
-        print("R3", r3())
+        result = r3()
+        print("R3", result)
+        print("R3 naive_zero_width_points=", result["naive_zero_width_points"])
+        print("R3 mape_spread_across_weights=", result["mape_spread"], "pp")
     return 0
 
 
