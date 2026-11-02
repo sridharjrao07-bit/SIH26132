@@ -86,21 +86,26 @@ def evaluate(observations, weight):
         prediction = weight * ma.level + (1 - weight) * (lr.intercept + lr.slope * (lr._n + HORIZON_DAYS - 1))
         sigma = max(ma.sigma, lr.sigma)
         margin = CONFIDENCE_Z * sigma * (HORIZON_DAYS ** 0.5)
-        results.append((actual, prediction, margin))
+        results.append((actual, prediction, margin,
+                        observations[origin][0], observations[target][0]))
     return results
 
 
 def conformal(points, alpha=0.05, calibration=60, minimum=20, eval_from=0):
     """Rolling split-conformal intervals over the same paired points."""
-    errors = [abs(actual - prediction) for actual, prediction, _ in points]
     result = []
-    start = max(calibration, minimum, eval_from)
+    start = max(minimum, eval_from)
     for index in range(start, len(points)):
-        window = errors[max(0, index - calibration):index]
+        origin_date = points[index][3]
+        eligible = [j for j in range(index) if points[j][4] <= origin_date]
+        eligible = eligible[-calibration:]
+        if len(eligible) < minimum:
+            continue
+        window = [abs(points[j][0] - points[j][1]) for j in eligible]
         ranked = sorted(window)
         q = ranked[min(len(ranked) - 1, int(round((1 - alpha) * len(ranked))) - 1)]
-        actual, prediction, _ = points[index]
-        result.append((actual, prediction, q))
+        actual, prediction, _, origin_date, target_date = points[index]
+        result.append((actual, prediction, q, origin_date, target_date))
     return result
 
 
@@ -110,17 +115,18 @@ def summarize_series(observations, weight):
     if not points or not conf:
         return None
     # Compare both interval methods on exactly the conformal arm's origins.
-    paired = points[len(points) - len(conf):]
+    conf_keys = {(origin_date, target_date) for _, _, _, origin_date, target_date in conf}
+    paired = [point for point in points if (point[3], point[4]) in conf_keys]
     prices = [value for _, value in observations]
     scale = statistics.median(prices)
     mape = statistics.fmean(abs(actual - prediction) / actual * 100
-                            for actual, prediction, _ in paired)
+                            for actual, prediction, _, _, _ in paired)
     param_cov = statistics.fmean(abs(actual - prediction) <= margin
-                                 for actual, prediction, margin in paired)
-    param_width = statistics.fmean(2 * margin for _, _, margin in paired) / scale
+                                 for actual, prediction, margin, _, _ in paired)
+    param_width = statistics.fmean(2 * margin for _, _, margin, _, _ in paired) / scale
     conf_cov = statistics.fmean(abs(actual - prediction) <= q
-                                for actual, prediction, q in conf)
-    conf_width = statistics.fmean(2 * q for _, _, q in conf) / scale
+                                for actual, prediction, q, _, _ in conf)
+    conf_width = statistics.fmean(2 * q for _, _, q, _, _ in conf) / scale
     return mape, param_cov, param_width, conf_cov, conf_width, len(paired)
 
 
@@ -140,7 +146,7 @@ def coverage_sweep(cohort, weight=0.4, windows=(40, 60, 120, 180, 240, 300)):
             if scored:
                 coverages.append(statistics.fmean(
                     abs(actual - prediction) <= q
-                    for actual, prediction, q in scored
+                    for actual, prediction, q, _, _ in scored
                 ))
         if coverages:
             output.append((
