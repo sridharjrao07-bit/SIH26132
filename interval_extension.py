@@ -130,6 +130,7 @@ def points_for(observations, weight):
 
 
 def conf_values(points, calibration=CALIBRATION, eval_from=0):
+    """Use the last 60 realised, date-valid residuals before each origin."""
     out = []
     for i in range(max(20, eval_from), len(points)):
         eligible = [j for j in range(i)
@@ -140,7 +141,8 @@ def conf_values(points, calibration=CALIBRATION, eval_from=0):
         window = [abs(points[j]["actual"] - points[j]["prediction"])
                   for j in eligible]
         ranked = sorted(window)
-        q = ranked[min(len(ranked) - 1, int(round((1 - ALPHA) * len(ranked))) - 1)]
+        rank = math.ceil((len(ranked) + 1) * (1 - ALPHA))
+        q = ranked[min(len(ranked) - 1, rank - 1)]
         out.append((i, q))
     return out
 

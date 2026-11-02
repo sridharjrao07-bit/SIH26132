@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import csv
 import datetime as dt
+import math
 import os
 import random
 import statistics
@@ -92,7 +93,7 @@ def evaluate(observations, weight):
 
 
 def conformal(points, alpha=0.05, calibration=60, minimum=20, eval_from=0):
-    """Rolling split-conformal intervals over the same paired points."""
+    """Use the last 60 realised, date-valid residuals before each origin."""
     result = []
     start = max(minimum, eval_from)
     for index in range(start, len(points)):
@@ -103,7 +104,8 @@ def conformal(points, alpha=0.05, calibration=60, minimum=20, eval_from=0):
             continue
         window = [abs(points[j][0] - points[j][1]) for j in eligible]
         ranked = sorted(window)
-        q = ranked[min(len(ranked) - 1, int(round((1 - alpha) * len(ranked))) - 1)]
+        rank = math.ceil((len(ranked) + 1) * (1 - alpha))
+        q = ranked[min(len(ranked) - 1, rank - 1)]
         actual, prediction, _, origin_date, target_date = points[index]
         result.append((actual, prediction, q, origin_date, target_date))
     return result
