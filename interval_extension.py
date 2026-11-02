@@ -170,9 +170,16 @@ def arm_metrics(points, arms, median_price):
             print(f"WARNING arm={name} zero_scored_origins")
             continue
         cov = statistics.fmean(abs(r["actual"] - r["prediction"]) <= r["half"] for r in rows)
-        width = statistics.fmean(2 * r["half"] / median_price for r in rows)
-        wink = statistics.median(winkler(r["actual"], r["prediction"], r["half"]) / median_price for r in rows)
-        output[name] = {"coverage": cov, "width": width, "winkler": wink, "n": len(rows)}
+        widths = [2 * r["half"] / median_price for r in rows]
+        winks = [winkler(r["actual"], r["prediction"], r["half"]) / median_price for r in rows]
+        output[name] = {
+            "coverage": cov,
+            "width": statistics.fmean(widths),
+            "width_median": statistics.median(widths),
+            "winkler": statistics.median(winks),
+            "winkler_mean": statistics.fmean(winks),
+            "n": len(rows),
+        }
     return output
 
 
@@ -331,7 +338,9 @@ def aggregate(records):
             continue
         result[arm] = {"coverage": statistics.fmean(v["coverage"] for v in values),
                        "width": statistics.fmean(v["width"] for v in values),
+                       "width_median": statistics.median(v["width_median"] for v in values),
                        "winkler": statistics.median(v["winkler"] for v in values),
+                       "winkler_mean": statistics.fmean(v["winkler_mean"] for v in values),
                        "n": len(values)}
     result["k_median"] = statistics.median([r["metrics"]["k"] for r in records if math.isfinite(r["metrics"]["k"])])
     result["k3_median"] = statistics.median([r["metrics"]["k3"] for r in records if math.isfinite(r["metrics"]["k3"])])
@@ -422,12 +431,13 @@ def ci(values):
 
 def print_table(title, agg):
     print(f"TABLE {title}")
-    print("arm coverage_base width_base relative_width_stat winkler_base n")
+    print("arm coverage_base mean_relative_width median_relative_width median_winkler mean_winkler n")
     for arm in ("param", "conf", "scaled", "resparam", "resparam2", "match", "conf_match", "res_match", "conf_res_match"):
         if arm in agg:
             v = agg[arm]
             print(f"{arm} coverage={v['coverage']:.4f} mean_relative_width={v['width']:.4f} "
-                  f"median_winkler={v['winkler']:.4f} n={v['n']}")
+                  f"median_relative_width={v['width_median']:.4f} median_winkler={v['winkler']:.4f} "
+                  f"mean_winkler={v['winkler_mean']:.4f} n={v['n']}")
     print(f"median_k={agg.get('k_median', float('nan')):.4f} "
           f"median_k3={agg.get('k3_median', float('nan')):.4f} "
           f"median_k_res={agg.get('k_res_median', float('nan')):.4f} "
