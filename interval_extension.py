@@ -189,13 +189,18 @@ def build_series(observations, weight, eval_from=0):
     # Scaled is conformal on residuals normalised by the parametric margin.
     scaled = []
     for i, p in enumerate(points):
-        if i < max(CALIBRATION, 20, eval_from):
+        if i < max(20, eval_from):
             continue
-        prior = points[max(0, i - CALIBRATION):i]
-        ratios = [abs(x["actual"] - x["prediction"]) / x["margin"] for x in prior if x["margin"] > 0]
-        if not ratios:
+        eligible = [j for j in range(i)
+                    if points[j]["target_date"] <= points[i]["origin_date"]]
+        eligible = eligible[-CALIBRATION:]
+        ratios = [abs(points[j]["actual"] - points[j]["prediction"]) / points[j]["margin"]
+                  for j in eligible if points[j]["margin"] > 0]
+        if len(ratios) < 20:
             continue
-        scaled.append({**p, "half": percentile(ratios, 1 - ALPHA) * p["margin"]})
+        ranked = sorted(ratios)
+        rank = math.ceil((len(ranked) + 1) * (1 - ALPHA))
+        scaled.append({**p, "half": ranked[min(len(ranked) - 1, rank - 1)] * p["margin"]})
     arms["scaled"] = scaled
     return points, arms
 
@@ -217,6 +222,64 @@ def apply_match(rows, target_coverage, fixed_k=None):
     if not math.isfinite(k):
         return [], float("nan")
     return [{**r, "half": r["half"] * k} for r in rows], k
+
+
+def crossfit_common_k(records):
+    """Fit one k on each series half and score the held-out half."""
+    if len(records) < 2:
+        return None
+    fold_metrics = []
+    ks = []
+    midpoint = len(records) // 2
+    for train, test in ((records[:midpoint], records[midpoint:]),
+                        (records[midpoint:], records[:midpoint])):
+        target = statistics.fmean(r["metrics"]["conf"]["coverage"] for r in train)
+        param_rows = [row for r in train for row in r["arms"]["param"]]
+        if not param_rows:
+            continue
+        lo, hi = 0.0, 3.0
+        for _ in range(50):
+            mid = (lo + hi) / 2
+            coverage = statistics.fmean(
+                abs(row["actual"] - row["prediction"]) <= mid * row["half"]
+                for row in param_rows)
+            if coverage < target:
+                lo = mid
+            else:
+                hi = mid
+        k = (lo + hi) / 2
+        ks.append(k)
+        per_series = []
+        for r in test:
+            rows = [{**row, "half": k * row["half"]} for row in r["arms"]["param"]]
+            if rows:
+                median_price = r["scale_full"]
+                per_series.append({
+                    "coverage": statistics.fmean(abs(x["actual"] - x["prediction"]) <= x["half"] for x in rows),
+                    "width": statistics.fmean(2 * x["half"] / median_price for x in rows),
+                    "winkler": statistics.median(winkler(x["actual"], x["prediction"], x["half"]) / median_price for x in rows),
+                })
+        if per_series:
+            conf = [r["metrics"]["conf"] for r in test]
+            fold_metrics.append((
+                statistics.fmean(x["coverage"] for x in per_series),
+                statistics.fmean(x["width"] for x in per_series),
+                statistics.median(x["winkler"] for x in per_series),
+                statistics.fmean(x["coverage"] for x in conf),
+                statistics.fmean(x["width"] for x in conf),
+                statistics.median(x["winkler"] for x in conf),
+            ))
+    if not fold_metrics:
+        return None
+    return {
+        "median_k": statistics.median(ks),
+        "param_coverage": statistics.fmean(x[0] for x in fold_metrics),
+        "param_width": statistics.fmean(x[1] for x in fold_metrics),
+        "param_winkler": statistics.median(x[2] for x in fold_metrics),
+        "conf_coverage": statistics.fmean(x[3] for x in fold_metrics),
+        "conf_width": statistics.fmean(x[4] for x in fold_metrics),
+        "conf_winkler": statistics.median(x[5] for x in fold_metrics),
+    }
 
 
 def series_record(observations, weight=0.4, eval_from=0, series_key=None):
@@ -760,6 +823,15 @@ def main():
         print_rescaled_audit(name, records)
         print_stability(name, records)
         print_table_viii(name, records)
+        crossfit = crossfit_common_k(records)
+        if crossfit:
+            print(f"CROSSFIT_COMMON_K cohort={name} folds=2 median_k={crossfit['median_k']:.6f} "
+                  f"heldout_param_coverage={crossfit['param_coverage']:.6f} "
+                  f"heldout_param_width={crossfit['param_width']:.6f} "
+                  f"heldout_param_winkler={crossfit['param_winkler']:.6f} "
+                  f"heldout_conf_coverage={crossfit['conf_coverage']:.6f} "
+                  f"heldout_conf_width={crossfit['conf_width']:.6f} "
+                  f"heldout_conf_winkler={crossfit['conf_winkler']:.6f}")
         boot = bootstrap(records, args.bootstrap)
         print_bootstrap(name, aggregate_values, boot, resamples=args.bootstrap)
         if name == "top-100":
