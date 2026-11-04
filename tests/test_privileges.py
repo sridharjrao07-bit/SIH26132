@@ -79,8 +79,8 @@ def test_migration_coverage():
 
     # Count ratchet — bump when a migration is intentionally added.
     # 003b is a deliberate letter-suffixed grant patch and counts as its own
-    # migration; keep the ratchet aligned with the 001..037 files.
-    EXPECTED_MIGRATIONS = 38
+    # migration; keep the ratchet aligned with the migration directory.
+    EXPECTED_MIGRATIONS = 39
     assert len(sql_files) == EXPECTED_MIGRATIONS, (
         f"Expected {EXPECTED_MIGRATIONS} migrations, found {len(sql_files)}"
     )

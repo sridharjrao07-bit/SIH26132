@@ -1,5 +1,5 @@
-import asyncio
 import argparse
+import asyncio
 import csv
 import os
 import sys
