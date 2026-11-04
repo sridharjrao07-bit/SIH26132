@@ -14,8 +14,12 @@ from collections import defaultdict
 
 sys.path.insert(0, os.getcwd())
 from forecasting.engine import (  # noqa: E402
-    CONFIDENCE_Z, HORIZON_DAYS, MA_WINDOW, OLS_FIT_WINDOW,
-    LinearRegressionModel, MovingAverageModel,
+    CONFIDENCE_Z,
+    HORIZON_DAYS,
+    MA_WINDOW,
+    OLS_FIT_WINDOW,
+    LinearRegressionModel,
+    MovingAverageModel,
 )
 
 DATE_KEYS = ("Arrival_Date", "arrival_date", "price_date", "Price Date", "report_date")
