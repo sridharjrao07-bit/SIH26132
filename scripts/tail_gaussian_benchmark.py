@@ -42,6 +42,7 @@ def main() -> int:
     eligible = [(key, values) for key, values in series.items() if len(values) >= args.min_observations]
     cohort = random.Random(args.seed).sample(eligible, min(args.random, len(eligible)))
     observed = []
+    standardized = []
     lengths = []
     for key, observations in cohort:
         points = points_for(observations, weight=0.4)
@@ -50,10 +51,17 @@ def main() -> int:
             for point in points
             if point["actual"] > 0
         ]
+        sigma_errors = [
+            abs(point["actual"] - point["prediction"]) /
+            (point["margin"] / (1.96 * math.sqrt(7)))
+            for point in points
+            if point["margin"] > 0
+        ]
         if len(errors) >= args.min_origins:
             value = ratio(errors)
             if math.isfinite(value):
                 observed.append({"series": list(key), "origins": len(errors), "ratio": value})
+                standardized.append(ratio(sigma_errors))
                 lengths.append(len(errors))
 
     if not observed:
@@ -79,6 +87,7 @@ def main() -> int:
             "origins": sum(row["origins"] for row in observed),
             "median_ratio": statistics.median(row["ratio"] for row in observed),
             "per_series": observed,
+            "median_standardized_ratio": statistics.median(standardized),
         },
         "gaussian_reference": {
             "median_of_simulation_medians": statistics.median(gaussian_medians),
@@ -92,6 +101,7 @@ def main() -> int:
         f"TAIL_RESULT series={result['observed']['series']} "
         f"origins={result['observed']['origins']} "
         f"observed_ratio={result['observed']['median_ratio']:.4f} "
+        f"standardized_ratio={result['observed']['median_standardized_ratio']:.4f} "
         f"gaussian_ratio={result['gaussian_reference']['median_of_simulation_medians']:.4f} "
         f"simulations={args.simulations} output={args.out}"
     )

@@ -27,6 +27,12 @@ ALPHA = 0.05
 Z = 1.96
 T28 = 2.048407
 WINDOWS = (40, 60, 120, 180, 240, 300)
+# ``step`` reproduces the original paper run: OLS extrapolates seven
+# reporting observations while targets are paired near origin + 7 calendar
+# days. ``calendar`` fits the trend on calendar-day coordinates and forecasts
+# to the actual paired target date; it is the horizon sensitivity requested by
+# the review.
+HORIZON_MODE = "step"
 
 DATE_KEYS = ("Arrival_Date", "arrival_date", "price_date", "Price Date", "report_date")
 MOD_KEYS = ("Modal_x0020_Price", "modal_price", "Modal_Price", "Modal Price (Rs./Quintal)", "as_on_price")
@@ -102,6 +108,23 @@ def ols_window(values):
     return slope, intercept, n, xbar, sxx, s, residuals
 
 
+def ols_calendar_window(observations):
+    window = observations[-OLS_WINDOW:]
+    first_day = window[0][0]
+    xs = [(day - first_day).days for day, _ in window]
+    values = [value for _, value in window]
+    n = len(values)
+    xbar = statistics.fmean(xs)
+    ybar = statistics.fmean(values)
+    sxx = sum((x - xbar) ** 2 for x in xs)
+    slope = sum((x - xbar) * (y - ybar) for x, y in zip(xs, values)) / sxx if sxx else 0.0
+    intercept = ybar - slope * xbar
+    residuals = [y - (intercept + slope * x) for x, y in zip(xs, values)]
+    sse = sum(r * r for r in residuals)
+    s = math.sqrt(sse / (n - 2)) if n > 2 else 0.0
+    return slope, intercept, n, xbar, sxx, s, residuals, first_day
+
+
 def points_for(observations, weight):
     prices = [value for _, value in observations]
     result = []
@@ -112,15 +135,23 @@ def points_for(observations, weight):
         ma_values = history[-MA_WINDOW:]
         ma_level = statistics.fmean(ma_values)
         ma_sigma = statistics.pstdev(ma_values) if len(ma_values) > 1 else 0.0
-        slope, intercept, n, xbar, sxx, s, residuals = ols_window(history)
-        lr_prediction = intercept + slope * (n + HORIZON - 1)
+        if HORIZON_MODE == "calendar":
+            slope, intercept, n, xbar, sxx, s, residuals, first_day = ols_calendar_window(
+                observations[:origin + 1]
+            )
+            x = (observations[target][0] - first_day).days
+            horizon_scale = max(1, (observations[target][0] - observations[origin][0]).days)
+        else:
+            slope, intercept, n, xbar, sxx, s, residuals = ols_window(history)
+            x = n + HORIZON - 1
+            horizon_scale = HORIZON
+        lr_prediction = intercept + slope * x
         lr_sigma = math.sqrt(sum(r * r for r in residuals) / len(residuals)) if residuals else 0.0
         prediction = weight * ma_level + (1 - weight) * lr_prediction
         sigma = max(ma_sigma, lr_sigma)
-        margin = Z * sigma * math.sqrt(HORIZON)
-        x = n + HORIZON - 1
+        margin = Z * sigma * math.sqrt(horizon_scale)
         leverage = math.sqrt(1 + 1 / n + ((x - xbar) ** 2 / sxx if sxx else 0.0))
-        res_margin = T28 * s * leverage * math.sqrt(HORIZON)
+        res_margin = T28 * s * leverage * math.sqrt(horizon_scale)
         result.append({"origin": origin, "target": target,
                        "origin_date": observations[origin][0],
                        "target_date": observations[target][0],
@@ -362,14 +393,30 @@ def point_accuracy(cohort, weight=0.4):
             continue
         prices = [v for _, v in observations]
         lookup = dict(observations)
-        denominator = statistics.fmean(
-            abs(prices[i] - prices[i - 7]) for i in range(7, len(prices)))
+        if HORIZON_MODE == "calendar":
+            lag_pairs = []
+            for i, (day, value) in enumerate(observations):
+                prior = [(abs((day - observations[j][0]).days - HORIZON), observations[j][1])
+                         for j in range(i) if 5 <= (day - observations[j][0]).days <= 9]
+                if prior:
+                    _, lag_value = min(prior, key=lambda item: item[0])
+                    lag_pairs.append(abs(value - lag_value))
+            denominator = statistics.fmean(lag_pairs) if lag_pairs else float("nan")
+        else:
+            denominator = statistics.fmean(
+                abs(prices[i] - prices[i - 7]) for i in range(7, len(prices)))
         per = {name: [] for name in names}
         for p in scored:
             history = prices[:p["origin"] + 1]
             ma = statistics.fmean(history[-MA_WINDOW:])
-            slope, intercept, n, *_ = ols_window(history)
-            ols = intercept + slope * (n + HORIZON - 1)
+            if HORIZON_MODE == "calendar":
+                slope, intercept, n, _, _, _, _, first_day = ols_calendar_window(
+                    observations[:p["origin"] + 1]
+                )
+                ols = intercept + slope * (p["target_date"] - first_day).days
+            else:
+                slope, intercept, n, *_ = ols_window(history)
+                ols = intercept + slope * (n + HORIZON - 1)
             naive = history[-1]
             seasonal = lookup.get(p["origin_date"] - dt.timedelta(days=7), naive)
             blend = weight * ma + (1 - weight) * ols
@@ -897,7 +944,10 @@ def main():
     ap.add_argument("--expected-param", type=float, default=0.9674)
     ap.add_argument("--expected-conf", type=float, default=0.9243)
     ap.add_argument("--expected-mape", type=float, default=7.94)
+    ap.add_argument("--horizon-mode", choices=("step", "calendar"), default="step")
     args = ap.parse_args()
+    global HORIZON_MODE
+    HORIZON_MODE = args.horizon_mode
     os.makedirs(args.out, exist_ok=True)
     series = load(args.csv)
     eligible = [(key, values) for key, values in series.items() if len(values) >= 130]
@@ -1195,7 +1245,8 @@ def main():
         "seed": 42,
         "corpus": {"path": os.path.abspath(args.csv), "rows": sum(len(v) for v in series.values()),
                    "series": len(series), "eligible_series": len(eligible)},
-        "protocol": {"horizon_days": HORIZON, "rolling_window_max": CALIBRATION,
+        "protocol": {"horizon_days": HORIZON, "horizon_mode": HORIZON_MODE,
+                     "rolling_window_max": CALIBRATION,
                      "minimum_realised_residuals": 20,
                      "first_scored_origin_index": 20,
                      "window": "last 60 date-valid realised residuals",
