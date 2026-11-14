@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reviewer-requested horizon and deployable-interval sensitivity analysis."""
+"""Additional horizon and deployable-interval sensitivity analysis."""
 from __future__ import annotations
 
 import argparse

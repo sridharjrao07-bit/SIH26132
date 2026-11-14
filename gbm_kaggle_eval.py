@@ -20,9 +20,12 @@ def rows_for_series(key, observations):
     dates = [day for day, _ in observations]
     prices = [value for _, value in observations]
     rows = []
-    for origin, target in pairs(observations):
-        if origin < 14:
+    points = points_for(observations, 0.4)
+    calibration = dict(__import__("interval_extension").conf_values(points))
+    for index, point in enumerate(points):
+        if index not in calibration:
             continue
+        origin, target = point["origin"], point["target"]
         history = prices[: origin + 1]
         rows.append({
             "state": key[0], "district": key[1], "market": key[2], "commodity": key[3],
@@ -58,7 +61,6 @@ def main():
     eligible = [(key, values) for key, values in series.items() if len(values) >= 130]
     if not eligible:
         raise SystemExit("No eligible series found: requires at least 130 dated observations.")
-    eligible = sorted(eligible, key=lambda item: item[0])
     import random
     cohort = random.Random(args.seed).sample(eligible, min(args.random, len(eligible)))
     rows = [row for key, values in cohort for row in rows_for_series(key, values)]
@@ -71,7 +73,10 @@ def main():
     predictions = []
     for origin_date, group in frame.groupby("origin_date", sort=True):
         train = frame[frame["target_date"] <= origin_date]
-        if len(train) < 10:
+        if train.empty:
+            group = group.copy()
+            group["prediction"] = group["lag1"]
+            predictions.append(group)
             continue
         model = lgb.LGBMRegressor(
             objective="regression",
@@ -111,7 +116,8 @@ def main():
         "skill_vs_naive": 1 - median_mae / median_naive,
         "series_results": by_series,
         "features": feature_columns,
-        "training_rule": "for each origin date, train only rows with target_date <= origin_date",
+        "training_rule": "for each origin date, train only rows with target_date <= origin_date; if no pre-origin rows exist, use the last-value fallback so the common paired origin is retained",
+        "pairing_rule": "same date-valid rolling-calibration origins as interval_extension.py; origins without 20 prior realised residuals are excluded",
         "model": {"lightgbm": lgb.__version__, "learning_rate": 0.05, "n_estimators": 50,
                   "num_leaves": 15, "min_child_samples": 10, "subsample": 0.9},
     }
