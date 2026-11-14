@@ -97,27 +97,37 @@ def main():
         raise SystemExit("No scored origins produced.")
 
     by_series = []
+    observations_by_key = dict(cohort)
     for key, group in scored.groupby(["state", "district", "market", "commodity"]):
         errors = (group["target"] - group["prediction"]).abs()
         naive = (group["target"] - group["lag1"]).abs()
+        observations = observations_by_key[tuple(key)]
+        prices = [value for _, value in observations]
+        lag7_denominator = statistics.fmean(
+            abs(prices[index] - prices[index - 7]) for index in range(7, len(prices))
+        )
         by_series.append({
             "series": list(key), "origins": len(group),
             "mape_pct": float((errors / group["target"]).mean() * 100),
             "mae": float(errors.mean()),
             "naive_mae": float(naive.mean()),
+            "mase": float(errors.mean() / lag7_denominator),
         })
     median_mae = statistics.median(row["mae"] for row in by_series)
     median_naive = statistics.median(row["naive_mae"] for row in by_series)
+    relative_mae_median = statistics.median(row["mae"] / row["naive_mae"] for row in by_series)
     result = {
         "script": "gbm_kaggle_eval.py", "seed": args.seed, "horizon_days": HORIZON,
         "cohort_series": len(cohort), "scored_origins": len(scored),
         "mape_pct_median": statistics.median(row["mape_pct"] for row in by_series),
         "mae_median": median_mae,
+        "mase_median": statistics.median(row["mase"] for row in by_series),
+        "relative_mae_median_per_series": relative_mae_median,
         "skill_vs_naive": 1 - median_mae / median_naive,
         "series_results": by_series,
         "features": feature_columns,
-        "training_rule": "for each origin date, train only rows with target_date <= origin_date; if no pre-origin rows exist, use the last-value fallback so the common paired origin is retained",
-        "pairing_rule": "same date-valid rolling-calibration origins as interval_extension.py; origins without 20 prior realised residuals are excluded",
+        "training_rule": "for each origin date, train only rows with target_date <= origin_date; if an origin date has no pre-origin training rows, retain that paired origin with a last-value fallback",
+        "pairing_rule": "same date-valid paired origins as interval_extension.py; cohort sampled from the unsorted eligible list with seed 42",
         "model": {"lightgbm": lgb.__version__, "learning_rate": 0.05, "n_estimators": 50,
                   "num_leaves": 15, "min_child_samples": 10, "subsample": 0.9},
     }
