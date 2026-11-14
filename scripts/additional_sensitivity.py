@@ -101,7 +101,7 @@ def main():
     records = [record for _, observations in cohort if (record := series_record(observations))]
     arms = ("parametric", "parametric_calibrated", "conformal", "naive_conformal")
     output = {
-        "script": "scripts/reviewer_sensitivity.py",
+        "script": "scripts/additional_sensitivity.py",
         "seed": args.seed,
         "horizon_mode": args.horizon_mode,
         "series": len(records),
@@ -132,3 +132,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
