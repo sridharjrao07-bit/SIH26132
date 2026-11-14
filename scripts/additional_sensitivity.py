@@ -35,6 +35,7 @@ def series_record(observations):
     scale = statistics.median(prices)
     rows = {name: [] for name in ("parametric", "parametric_calibrated", "conformal", "naive_conformal")}
     relative_errors = {"blend": [], "naive": []}
+    absolute_errors = {"blend": [], "naive": []}
     for i in range(20, len(points)):
         point = points[i]
         eligible = [j for j in range(i) if points[j]["target_date"] <= point["origin_date"]][-harness.CALIBRATION:]
@@ -60,6 +61,8 @@ def series_record(observations):
                 rows[name].append(metric(point["actual"], prediction, half, scale))
         relative_errors["blend"].append(abs(point["actual"] - point["prediction"]) / point["actual"])
         relative_errors["naive"].append(abs(point["actual"] - naive_prediction) / point["actual"])
+        absolute_errors["blend"].append(abs(point["actual"] - point["prediction"]))
+        absolute_errors["naive"].append(abs(point["actual"] - naive_prediction))
     if not rows["parametric"]:
         return None
     result = {"n": len(rows["parametric"]), "arms": {}}
@@ -67,10 +70,17 @@ def series_record(observations):
         result["arms"][name] = {
             "coverage": statistics.fmean(v[0] for v in values),
             "width": statistics.fmean(v[1] for v in values),
+            "width_median": statistics.median(v[1] for v in values),
             "winkler_mean": statistics.fmean(v[2] for v in values),
             "winkler_median": statistics.median(v[2] for v in values),
         }
-    result["relative_mae"] = {name: statistics.fmean(values) for name, values in relative_errors.items()}
+    naive_mae = statistics.fmean(absolute_errors["naive"])
+    result["relative_mae"] = {
+        "blend": statistics.fmean(absolute_errors["blend"]) / naive_mae if naive_mae else float("nan"),
+        "naive": 1.0,
+    }
+    result["mape_pct"] = {name: 100 * statistics.fmean(values) for name, values in relative_errors.items()}
+    result["mae"] = {name: statistics.fmean(values) for name, values in absolute_errors.items()}
     return result
 
 
@@ -83,6 +93,14 @@ def bootstrap(records, arm, field, n, seed):
         "lower": harness.percentile(samples, 0.025),
         "upper": harness.percentile(samples, 0.975),
     }
+
+
+def bootstrap_series(records, field, n, seed, statistic):
+    rng = random.Random(seed)
+    values = [record[field] for record in records]
+    samples = [statistic(rng.choices(values, k=len(values))) for _ in range(n)]
+    return {"estimate": statistic(values), "lower": harness.percentile(samples, .025),
+            "upper": harness.percentile(samples, .975)}
 
 
 def main():
@@ -109,15 +127,25 @@ def main():
         "bootstrap": args.bootstrap,
         "arms": {},
         "relative_mae": {
-            name: {"estimate": statistics.fmean(r["relative_mae"][name] for r in records),
-                   "series": len(records)}
+            name: bootstrap_series(
+                [{"value": r["relative_mae"][name]} for r in records], "value",
+                args.bootstrap, args.seed, statistics.median
+            ) | {"series": len(records)}
             for name in ("blend", "naive")
         },
+        "mape_pct": {
+            name: bootstrap_series(
+                [{"value": r["mape_pct"][name]} for r in records], "value",
+                args.bootstrap, args.seed, statistics.median
+            ) | {"series": len(records)}
+            for name in ("blend", "naive")
+        },
+        "skill_vs_naive": {},
     }
     for arm in arms:
         output["arms"][arm] = {
             field: bootstrap(records, arm, field, args.bootstrap, args.seed)
-            for field in ("coverage", "width", "winkler_mean", "winkler_median")
+            for field in ("coverage", "width", "width_median", "winkler_mean", "winkler_median")
         }
     Path(args.out).write_text(json.dumps(output, indent=2, sort_keys=True), encoding="utf-8")
     for arm in arms:
@@ -126,8 +154,21 @@ def main():
               f"width={row['width']['estimate']:.4f} "
               f"winkler_mean={row['winkler_mean']['estimate']:.4f} "
               f"coverage_ci95=[{row['coverage']['lower']:.4f},{row['coverage']['upper']:.4f}]")
+    skill_values = []
+    rng = random.Random(args.seed)
+    for _ in range(args.bootstrap):
+        sample = rng.choices(records, k=len(records))
+        blend_mae = statistics.median(r["mae"]["blend"] for r in sample)
+        naive_mae = statistics.median(r["mae"]["naive"] for r in sample)
+        skill_values.append(1 - blend_mae / naive_mae)
+    output["skill_vs_naive"] = {"estimate": 1 - statistics.median(r["mae"]["blend"] for r in records) /
+                                 statistics.median(r["mae"]["naive"] for r in records),
+                                 "lower": harness.percentile(skill_values, .025),
+                                 "upper": harness.percentile(skill_values, .975)}
+    Path(args.out).write_text(json.dumps(output, indent=2, sort_keys=True), encoding="utf-8")
     print(f"relative_mae blend={output['relative_mae']['blend']['estimate']:.6f} "
-          f"naive={output['relative_mae']['naive']['estimate']:.6f} output={args.out}")
+          f"naive={output['relative_mae']['naive']['estimate']:.6f} "
+          f"skill={output['skill_vs_naive']['estimate']:.4f} output={args.out}")
 
 
 if __name__ == "__main__":
